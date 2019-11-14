@@ -8,8 +8,8 @@ This tap:
 
 - Pulls raw data from the [Google Sheets v4 API](https://developers.google.com/sheets/api)
 - Extracts the following endpoints:
-  - [Spreadsheet File](https://developers.google.com/drive/api/v3/reference/files/get)
-  - [Spreadsheet Metadata, Sheets, Headers](https://developers.google.com/sheets/api/reference/rest/v4/spreadsheets/get)
+  - [File Metadata](https://developers.google.com/drive/api/v3/reference/files/get)
+  - [Spreadsheet Metadata](https://developers.google.com/sheets/api/reference/rest/v4/spreadsheets/get)
   - [Spreadsheet Values](https://developers.google.com/sheets/api/reference/rest/v4/spreadsheets.values/get)
 - For each Sheet:
   - Outputs the schema for each resource (based on the column header and datatypes of first row of data)
@@ -114,8 +114,7 @@ The [**Google Sheets Setup & Authentication**](https://drive.google.com/open?id=
     {
         "currently_syncing": "file_metadata",
         "bookmarks": {
-            "file_metadata": "2019-09-27T22:34:39.000000Z",
-            "sheets_loaded": "2019-09-27T21:55:42.000000Z"
+            "file_metadata": "2019-09-27T22:34:39.000000Z"
         }
     }
     ```

@@ -18,7 +18,8 @@ FILE_METADATA = {
     "api": "files",
     "path": "files/{spreadsheet_id}",
     "key_properties": ["id"],
-    "replication_method": "FULL_TABLE",
+    "replication_method": "INCREMENTAL",
+    "replication_keys": ["modifiedTime"],
     "params": {
         "fields": "id,name,createdTime,modifiedTime,version,teamDriveId,driveId,lastModifyingUser"
     }
