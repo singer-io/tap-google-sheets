@@ -1,0 +1,22 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "spreadsheetId": {
+      "type": ["null", "string"]
+    },
+    "sheetId": {
+      "type": ["null", "integer"]
+    },
+    "sheetTitle": {
+      "type": ["null", "string"]
+    },
+    "loadDate": {
+      "type": ["null", "string"],
+      "format": "date-time"
+    },
+    "lastRowNumber": {
+      "type": ["null", "integer"]
+    }
+  }
+}

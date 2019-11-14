@@ -1,0 +1,44 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": ["null", "string"]
+    },
+    "name": {
+      "type": ["null", "string"]
+    },
+    "version": {
+      "type": ["null", "integer"]
+    },
+    "createdTime": {
+      "type": ["null", "string"],
+      "format": "date-time"
+    },
+    "modifiedTime": {
+      "type": ["null", "string"],
+      "format": "date-time"
+    },
+    "teamDriveId": {
+      "type": ["null", "string"]
+    },
+    "driveId": {
+      "type": ["null", "string"]
+    },
+    "lastModifyingUser": {
+      "type": ["null", "object"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "type": ["null", "integer"]
+        },
+        "displayName": {
+          "type": ["null", "string"]
+        },
+        "emailAdress": {
+          "type": ["null", "string"]
+        }
+      }
+    }
+  }
+}
