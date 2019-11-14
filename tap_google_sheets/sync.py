@@ -5,7 +5,6 @@ import json
 from collections import OrderedDict
 from singer import metrics, metadata, Transformer, utils
 from singer.utils import strptime_to_utc, strftime
-from tap_google_sheets.transform import transform_json
 from tap_google_sheets.streams import STREAMS
 from tap_google_sheets.schema import get_sheet_metadata
 
