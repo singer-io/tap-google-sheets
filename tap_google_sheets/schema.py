@@ -11,19 +11,19 @@ LOGGER = singer.get_logger()
 # https://github.com/singer-io/getting-started/blob/master/docs/DISCOVERY_MODE.md#Metadata
 
 # Convert column index to column letter
-def colnum_string(n):
+def colnum_string(num):
     string = ""
-    while n > 0:
-        n, remainder = divmod(n - 1, 26)
+    while num > 0:
+        num, remainder = divmod(num - 1, 26)
         string = chr(65 + remainder) + string
     return string
 
 
 # Create sheet_metadata_json with columns from sheet
-def get_sheet_schema_columns(sheet, spreadsheet_id, client):
+def get_sheet_schema_columns(sheet):
     sheet_json_schema = OrderedDict()
     data = next(iter(sheet.get('data', [])), {})
-    row_data = data.get('rowData',[])
+    row_data = data.get('rowData', [])
     # spreadsheet is an OrderedDict, with orderd sheets and rows in the repsonse
 
     headers = row_data[0].get('values', [])
@@ -65,33 +65,32 @@ def get_sheet_schema_columns(sheet, spreadsheet_id, client):
             column_name = '{}'.format(header_value)
             if column_name in header_list:
                 raise Exception('DUPLICATE HEADER ERROR: {}'.format(column_name))
-            else:
-                header_list.append(column_name)
+            header_list.append(column_name)
 
             first_value = first_values[i]
-            # LOGGER.info('first_value[{}] = {}'.format(i, json.dumps(first_value, indent=2, sort_keys=True)))
 
             column_effective_value = first_value.get('effectiveValue', {})
             for key in column_effective_value.keys():
                 if key in ('numberValue', 'stringValue', 'boolValue', 'errorType', 'formulaType'):
                     column_effective_value_type = key
 
-            column_number_format = first_values[i].get('effectiveFormat', {}).get('numberFormat', {})
+            column_number_format = first_values[i].get('effectiveFormat', {}).get(
+                'numberFormat', {})
             column_number_format_type = column_number_format.get('type')
 
             # Determine datatype for sheet_json_schema
             #
-            # column_effective_value_type = numberValue, stringValue, boolValue; INVALID: errorType, formulaType
-            #   Reference: https://developers.google.com/sheets/api/reference/rest/v4/spreadsheets/other#ExtendedValue
+            # column_effective_value_type = numberValue, stringValue, boolValue;
+            #  INVALID: errorType, formulaType
+            #  https://developers.google.com/sheets/api/reference/rest/v4/spreadsheets/other#ExtendedValue
             #
-            # column_number_format_type = UNEPECIFIED, TEXT, NUMBER, PERCENT, CURRENCY, DATE, TIME, DATE_TIME, SCIENTIFIC
-            #   Reference: https://developers.google.com/sheets/api/reference/rest/v4/spreadsheets/cells#NumberFormatType
+            # column_number_format_type = UNEPECIFIED, TEXT, NUMBER, PERCENT, CURRENCY, DATE,
+            #   TIME, DATE_TIME, SCIENTIFIC
+            #  https://developers.google.com/sheets/api/reference/rest/v4/spreadsheets/cells#NumberFormatType
             #
             column_format = None # Default
             # column_multiple_of = None # Default
-            if column_effective_value_type in ('formulaValue', 'errorValue'):
-                raise Exception('INVALID DATA TYPE ERROR: {}, value: {}'.format(column_name))
-            elif column_effective_value_type == 'stringValue':
+            if column_effective_value_type == 'stringValue':
                 column_type = ['null', 'string']
                 column_gs_type = 'stringValue'
             elif column_effective_value_type == 'boolValue':
@@ -116,7 +115,9 @@ def get_sheet_schema_columns(sheet, spreadsheet_id, client):
                 else:
                     column_type = ['null', 'number', 'string']
                     column_gs_type = 'numberType'
-
+            elif column_effective_value_type in ('formulaValue', 'errorValue'):
+                raise Exception('INVALID DATA TYPE ERROR: {}, value: {}'.format(column_name, \
+                    column_effective_value_type))
         else: # skipped
             column_is_skipped = True
             skipped = skipped + 1
@@ -130,7 +131,6 @@ def get_sheet_schema_columns(sheet, spreadsheet_id, client):
             # skipped = 2 consecutive skipped headers
             # Remove prior_header column_name
             sheet_json_schema['properties'].pop(prior_header, None)
-            column_count = i - 1
             break
 
         else:
@@ -164,12 +164,14 @@ def get_sheet_metadata(sheet, spreadsheet_id, client):
     stream_metadata = STREAMS.get(stream_name)
     api = stream_metadata.get('api', 'sheets')
     params = stream_metadata.get('params', {})
-    querystring = '&'.join(['%s=%s' % (key, value) for (key, value) in params.items()]).replace('{sheet_title}', sheet_title)
-    path = '{}?{}'.format(stream_metadata.get('path').replace('{spreadsheet_id}', spreadsheet_id), querystring)
+    querystring = '&'.join(['%s=%s' % (key, value) for (key, value) in \
+        params.items()]).replace('{sheet_title}', sheet_title)
+    path = '{}?{}'.format(stream_metadata.get('path').replace('{spreadsheet_id}', \
+        spreadsheet_id), querystring)
 
     sheet_md_results = client.get(path=path, api=api, endpoint=stream_name)
     sheet_cols = sheet_md_results.get('sheets')[0]
-    sheet_schema, columns = get_sheet_schema_columns(sheet_cols, spreadsheet_id, client)
+    sheet_schema, columns = get_sheet_schema_columns(sheet_cols)
 
     return sheet_schema, columns
 
@@ -199,20 +201,22 @@ def get_schemas(client, spreadsheet_id):
             replication_method=stream_metadata.get('replication_method', None)
         )
         field_metadata[stream_name] = mdata
-        
+
         if stream_name == 'spreadsheet_metadata':
             api = stream_metadata.get('api', 'sheets')
             params = stream_metadata.get('params', {})
             querystring = '&'.join(['%s=%s' % (key, value) for (key, value) in params.items()])
-            path = '{}?{}'.format(stream_metadata.get('path').replace('{spreadsheet_id}', spreadsheet_id), querystring)
+            path = '{}?{}'.format(stream_metadata.get('path').replace('{spreadsheet_id}', \
+                spreadsheet_id), querystring)
 
-            spreadsheet_md_results = client.get(path=path, params=querystring, api=api, endpoint=stream_name)
+            spreadsheet_md_results = client.get(path=path, params=querystring, api=api, \
+                endpoint=stream_name)
 
             sheets = spreadsheet_md_results.get('sheets')
             if sheets:
                 for sheet in sheets:
                     sheet_schema, columns = get_sheet_metadata(sheet, spreadsheet_id, client)
-                    # LOGGER.info('sheet_schema = {}'.format(json.dumps(sheet_schema, indent=2, sort_keys=True)))
+                    LOGGER.info('columns = {}'.format(columns))
 
                     sheet_title = sheet.get('properties', {}).get('title')
                     schemas[sheet_title] = sheet_schema
@@ -224,5 +228,5 @@ def get_schemas(client, spreadsheet_id):
                         replication_method='FULL_TABLE'
                     )
                     field_metadata[sheet_title] = sheet_mdata
-            
+
     return schemas, field_metadata

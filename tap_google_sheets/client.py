@@ -1,8 +1,7 @@
 from datetime import datetime, timedelta
+from collections import OrderedDict
 import backoff
 import requests
-from collections import OrderedDict
-
 import singer
 from singer import metrics
 from singer import utils
@@ -123,8 +122,7 @@ def raise_for_error(response):
                 error_code = response.get('error', {}).get('code')
                 ex = get_exception_for_error_code(error_code)
                 raise ex(message)
-            else:
-                raise GoogleError(error)
+            raise GoogleError(error)
         except (ValueError, TypeError):
             raise GoogleError(error)
 
@@ -196,9 +194,7 @@ class GoogleClient: # pylint: disable=too-many-instance-attributes
                           factor=3)
     @utils.ratelimit(100, 100)
     def request(self, method, path=None, url=None, api=None, **kwargs):
-
         self.get_access_token()
-        
         self.base_url = 'https://sheets.googleapis.com/v4'
         if api == 'files':
             self.base_url = 'https://www.googleapis.com/drive/v3'

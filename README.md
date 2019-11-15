@@ -154,7 +154,7 @@ The [**Google Sheets Setup & Authentication**](https://drive.google.com/open?id=
     ```
     Pylint test resulted in the following score:
     ```bash
-    TBD
+    Your code has been rated at 9.78/10
     ```
 
     To [check the tap](https://github.com/singer-io/singer-tools#singer-check-tap) and verify working:
@@ -164,7 +164,31 @@ The [**Google Sheets Setup & Authentication**](https://drive.google.com/open?id=
     ```
     Check tap resulted in the following:
     ```bash
-    TBD
+    The output is valid.
+    It contained 3881 messages for 13 streams.
+
+        13 schema messages
+      3841 record messages
+        27 state messages
+
+    Details by stream:
+    +----------------------+---------+---------+
+    | stream               | records | schemas |
+    +----------------------+---------+---------+
+    | file_metadata        | 1       | 1       |
+    | spreadsheet_metadata | 1       | 1       |
+    | Test-1               | 9       | 1       |
+    | Test 2               | 2       | 1       |
+    | SKU COGS             | 218     | 1       |
+    | Item Master          | 216     | 1       |
+    | Retail Price         | 273     | 1       |
+    | Retail Price NEW     | 284     | 1       |
+    | Forecast Scenarios   | 2681    | 1       |
+    | Promo Type           | 91      | 1       |
+    | Shipping Method      | 47      | 1       |
+    | sheet_metadata       | 9       | 1       |
+    | sheets_loaded        | 9       | 1       |
+    +----------------------+---------+---------+
     ```
 ---
 
