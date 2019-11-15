@@ -151,6 +151,7 @@ class GoogleClient: # pylint: disable=too-many-instance-attributes
     def __exit__(self, exception_type, exception_value, traceback):
         self.__session.close()
 
+
     @backoff.on_exception(backoff.expo,
                           Server5xxError,
                           max_tries=5,
@@ -187,13 +188,13 @@ class GoogleClient: # pylint: disable=too-many-instance-attributes
         LOGGER.info('Authorized, token expires = {}'.format(self.__expires))
 
 
+    # Rate Limit: https://developers.google.com/sheets/api/limits
+    #   100 request per 100 seconds per User
     @backoff.on_exception(backoff.expo,
                           (Server5xxError, ConnectionError, Server429Error),
                           max_tries=7,
                           factor=3)
-    # Rate Limit:
-    #  https://developers.google.com/webmaster-tools/search-console-api-original/v3/limits
-    @utils.ratelimit(1200, 60)
+    @utils.ratelimit(100, 100)
     def request(self, method, path=None, url=None, api=None, **kwargs):
 
         self.get_access_token()
@@ -211,6 +212,7 @@ class GoogleClient: # pylint: disable=too-many-instance-attributes
             del kwargs['endpoint']
         else:
             endpoint = None
+        LOGGER.info('{} URL = {}'.format(endpoint, url))
 
         if 'headers' not in kwargs:
             kwargs['headers'] = {}

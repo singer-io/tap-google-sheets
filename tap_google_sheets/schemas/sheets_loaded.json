@@ -8,7 +8,7 @@
     "sheetId": {
       "type": ["null", "integer"]
     },
-    "sheetTitle": {
+    "title": {
       "type": ["null", "string"]
     },
     "loadDate": {

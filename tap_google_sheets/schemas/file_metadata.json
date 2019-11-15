@@ -30,7 +30,7 @@
       "additionalProperties": false,
       "properties": {
         "kind": {
-          "type": ["null", "integer"]
+          "type": ["null", "string"]
         },
         "displayName": {
           "type": ["null", "string"]
