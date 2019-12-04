@@ -13,6 +13,8 @@ from collections import OrderedDict
 #   data_key: JSON element containing the results list for the endpoint;
 #       default = root (no data_key)
 
+# file_metadata: Queries Google Drive API to get file information and see if file has been modified
+#    Provides audit info about who and when last changed the file.
 FILE_METADATA = {
     "api": "files",
     "path": "files/{spreadsheet_id}",
@@ -24,6 +26,7 @@ FILE_METADATA = {
     }
 }
 
+# spreadsheet_metadata: Queries spreadsheet to get basic information on spreadhsheet and sheets
 SPREADSHEET_METADATA = {
     "api": "sheets",
     "path": "spreadsheets/{spreadsheet_id}",
@@ -34,6 +37,9 @@ SPREADSHEET_METADATA = {
     }
 }
 
+# sheet_metadata: Get Header Row and 1st data row (Rows 1 & 2) from a Sheet on Spreadsheet.
+# This endpoint includes detailed metadata about each cell in the header and first data row
+#   incl. data type, formatting, etc.
 SHEET_METADATA = {
     "api": "sheets",
     "path": "spreadsheets/{spreadsheet_id}",
@@ -45,6 +51,8 @@ SHEET_METADATA = {
     }
 }
 
+# sheets_loaded: Queries a batch of Rows for each Sheet in the Spreadsheet.
+# Each query uses the `values` endpoint, to get data-only, w/out the formatting/type metadata.
 SHEETS_LOADED = {
     "api": "sheets",
     "path": "spreadsheets/{spreadsheet_id}/values/'{sheet_title}'!{range_rows}",
@@ -58,7 +66,7 @@ SHEETS_LOADED = {
     }
 }
 
-# Ensure streams are ordered logically
+# Ensure streams are ordered sequentially, logically.
 STREAMS = OrderedDict()
 STREAMS['file_metadata'] = FILE_METADATA
 STREAMS['spreadsheet_metadata'] = SPREADSHEET_METADATA

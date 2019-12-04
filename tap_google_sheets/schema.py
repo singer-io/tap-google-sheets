@@ -30,8 +30,6 @@ def get_sheet_schema_columns(sheet):
     first_values = row_data[1].get('values', [])
     # LOGGER.info('first_values = {}'.format(json.dumps(first_values, indent=2, sort_keys=True)))
 
-    sheet_json_schema['type'] = 'object'
-    sheet_json_schema['additionalProperties'] = False
     sheet_json_schema = {
         'type': 'object',
         'additionalProperties': False,
@@ -89,42 +87,66 @@ def get_sheet_schema_columns(sheet):
             #  https://developers.google.com/sheets/api/reference/rest/v4/spreadsheets/cells#NumberFormatType
             #
             column_format = None # Default
-            # column_multiple_of = None # Default
             if column_effective_value_type == 'stringValue':
-                column_type = ['null', 'string']
+                col_properties = {'type': ['null', 'string']}
                 column_gs_type = 'stringValue'
             elif column_effective_value_type == 'boolValue':
-                column_type = ['null', 'boolean', 'string']
+                col_properties = {'type': ['null', 'boolean', 'string']}
                 column_gs_type = 'boolValue'
             elif column_effective_value_type == 'numberValue':
                 if column_number_format_type == 'DATE_TIME':
-                    column_type = ['null', 'string']
-                    column_format = 'date-time'
+                    col_properties = {
+                        'type': ['null', 'string'],
+                        'format': 'date-time'
+                    }
                     column_gs_type = 'numberType.DATE_TIME'
                 elif column_number_format_type == 'DATE':
-                    column_type = ['null', 'string']
-                    column_format = 'date'
+                    col_properties = {
+                        'type': ['null', 'string'],
+                        'format': 'date'
+                    }
                     column_gs_type = 'numberType.DATE'
                 elif column_number_format_type == 'TIME':
-                    column_type = ['null', 'string']
-                    column_format = 'time'
+                    col_properties = {
+                        'type': ['null', 'string'],
+                        'format': 'time'
+                    }
                     column_gs_type = 'numberType.TIME'
                 elif column_number_format_type == 'TEXT':
-                    column_type = ['null', 'string']
+                    col_properties = {'type': ['null', 'string']}
                     column_gs_type = 'stringValue'
                 else:
-                    column_type = ['null', 'number', 'string']
+                    # Interesting - order in the anyOf makes a difference.
+                    # Number w/ multipleOf must be listed last, otherwise errors occur.
+                    col_properties =  {
+                        'anyOf': [
+                            {
+                                'type': 'string'
+                            },
+                            {
+                                'type': 'null'
+                            },
+                            {
+                                'type': 'number',
+                                'multipleOf': 1e-15
+                            }
+                        ]
+                    }
                     column_gs_type = 'numberType'
-            elif column_effective_value_type in ('formulaValue', 'errorValue'):
-                raise Exception('INVALID DATA TYPE ERROR: {}, value: {}'.format(column_name, \
+            # Catch-all to deal with other types and set to string
+            # column_effective_value_type: formulaValue, errorValue, or other
+            else:
+                col_properties = {'type': ['null', 'string']}
+                column_gs_type = 'unsupportedValue'
+                LOGGER.info('Unsupported data type: {}, value: {}'.format(column_name, \
                     column_effective_value_type))
+                LOGGER.info('Converting to string.')
         else: # skipped
             column_is_skipped = True
             skipped = skipped + 1
             column_index_str = str(column_index).zfill(2)
             column_name = '__sdc_skip_col_{}'.format(column_index_str)
-            column_type = ['null', 'string']
-            column_format = None
+            col_properties = {'type': ['null', 'string']}
             column_gs_type = 'stringValue'
 
         if skipped >= 2:
@@ -144,10 +166,7 @@ def get_sheet_schema_columns(sheet):
             }
             columns.append(column)
 
-            sheet_json_schema['properties'][column_name] = column
-            sheet_json_schema['properties'][column_name]['type'] = column_type
-            if column_format:
-                sheet_json_schema['properties'][column_name]['format'] = column_format
+            sheet_json_schema['properties'][column_name] = col_properties
 
         prior_header = column_name
         i = i + 1
@@ -155,6 +174,10 @@ def get_sheet_schema_columns(sheet):
     return sheet_json_schema, columns
 
 
+# Get Header Row and 1st data row (Rows 1 & 2) from a Sheet on Spreadsheet w/ sheet_metadata query
+#   endpoint: spreadsheets/{spreadsheet_id}
+#   params: includeGridData = true, ranges = '{sheet_title}'!1:2
+# This endpoint includes detailed metadata about each cell - incl. data type, formatting, etc.
 def get_sheet_metadata(sheet, spreadsheet_id, client):
     sheet_id = sheet.get('properties', {}).get('sheetId')
     sheet_title = sheet.get('properties', {}).get('title')
@@ -170,10 +193,13 @@ def get_sheet_metadata(sheet, spreadsheet_id, client):
         spreadsheet_id), querystring)
 
     sheet_md_results = client.get(path=path, api=api, endpoint=stream_name)
-    sheet_cols = sheet_md_results.get('sheets')[0]
-    sheet_schema, columns = get_sheet_schema_columns(sheet_cols)
+    # sheet_metadata: 1st `sheets` node in results
+    sheet_metadata = sheet_md_results.get('sheets')[0]
 
-    return sheet_schema, columns
+    # Create sheet_json_schema (for discovery/catalog) and columns (for sheet_metadata results)
+    sheet_json_schema, columns = get_sheet_schema_columns(sheet_metadata)
+
+    return sheet_json_schema, columns
 
 
 def get_abs_path(path):
@@ -209,20 +235,23 @@ def get_schemas(client, spreadsheet_id):
             path = '{}?{}'.format(stream_metadata.get('path').replace('{spreadsheet_id}', \
                 spreadsheet_id), querystring)
 
+            # GET spreadsheet_metadata, which incl. sheets (basic metadata for each worksheet)
             spreadsheet_md_results = client.get(path=path, params=querystring, api=api, \
                 endpoint=stream_name)
 
             sheets = spreadsheet_md_results.get('sheets')
             if sheets:
+                # Loop thru each worksheet in spreadsheet
                 for sheet in sheets:
-                    sheet_schema, columns = get_sheet_metadata(sheet, spreadsheet_id, client)
+                    # GET sheet_json_schema for each worksheet (from function above)
+                    sheet_json_schema, columns = get_sheet_metadata(sheet, spreadsheet_id, client)
                     LOGGER.info('columns = {}'.format(columns))
 
                     sheet_title = sheet.get('properties', {}).get('title')
-                    schemas[sheet_title] = sheet_schema
+                    schemas[sheet_title] = sheet_json_schema
                     sheet_mdata = metadata.new()
                     sheet_mdata = metadata.get_standard_metadata(
-                        schema=sheet_schema,
+                        schema=sheet_json_schema,
                         key_properties=['__sdc_row'],
                         valid_replication_keys=None,
                         replication_method='FULL_TABLE'

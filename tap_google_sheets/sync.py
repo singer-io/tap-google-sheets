@@ -125,11 +125,14 @@ def get_data(stream_name,
              range_rows=None):
     if not range_rows:
         range_rows = ''
+    # Replace {placeholder} variables in path
     path = endpoint_config.get('path', stream_name).replace(
         '{spreadsheet_id}', spreadsheet_id).replace('{sheet_title}', stream_name).replace(
             '{range_rows}', range_rows)
     params = endpoint_config.get('params', {})
     api = endpoint_config.get('api', 'sheets')
+    # Add in querystring parameters and replace {placeholder} variables
+    # querystring function ensures parameters are added but not encoded causing API errors
     querystring = '&'.join(['%s=%s' % (key, value) for (key, value) in params.items()]).replace(
         '{sheet_title}', stream_name)
     data = {}
@@ -192,7 +195,7 @@ def excel_to_dttm_str(excel_date_sn, timezone_str=None):
         timezone_str = 'UTC'
     tzn = pytz.timezone(timezone_str)
     sec_per_day = 86400
-    excel_epoch = 25569 # 1970-01-01T00:00:00Z
+    excel_epoch = 25569 # 1970-01-01T00:00:00Z, Lotus Notes Serial Number for Epoch Start Date
     epoch_sec = math.floor((excel_date_sn - excel_epoch) * sec_per_day)
     epoch_dttm = datetime(1970, 1, 1)
     excel_dttm = epoch_dttm + timedelta(seconds=epoch_sec)
@@ -205,85 +208,103 @@ def excel_to_dttm_str(excel_date_sn, timezone_str=None):
 #  Convert from array of values to JSON with column names as keys
 def transform_sheet_data(spreadsheet_id, sheet_id, from_row, columns, sheet_data_rows):
     sheet_data_tf = []
-    is_last_row = False
     row_num = from_row
     # Create sorted list of columns based on columnIndex
     cols = sorted(columns, key=lambda i: i['columnIndex'])
 
     # LOGGER.info('sheet_data_rows: {}'.format(sheet_data_rows))
     for row in sheet_data_rows:
-        # If empty row, return sheet_data_tf w/ is_last_row and row_num - 1
+        # If empty row, SKIP
         if row == []:
-            is_last_row = True
-            return sheet_data_tf, row_num - 1, is_last_row
-        sheet_data_row_tf = {}
-        # Add spreadsheet_id, sheet_id, and row
-        sheet_data_row_tf['__sdc_spreadsheet_id'] = spreadsheet_id
-        sheet_data_row_tf['__sdc_sheet_id'] = sheet_id
-        sheet_data_row_tf['__sdc_row'] = row_num
-        col_num = 1
-        for value in row:
-            # Select column metadata based on column index
-            col = cols[col_num - 1]
-            col_skipped = col.get('columnSkipped')
-            if not col_skipped:
-                col_name = col.get('columnName')
-                col_type = col.get('columnType')
-                # Convert dates/times from Lotus Notes Serial Numbers
-                if col_type == 'numberType.DATE_TIME':
-                    if isinstance(value, (int, float)):
-                        col_val = excel_to_dttm_str(value)
-                    else:
-                        col_val = str(value)
-                elif col_type == 'numberType.DATE':
-                    if isinstance(value, (int, float)):
-                        col_val = excel_to_dttm_str(value)[:10]
-                    else:
-                        col_val = str(value)
-                elif col_type == 'numberType.TIME':
-                    if isinstance(value, (int, float)):
-                        try:
-                            total_secs = value * 86400 # seconds in day
-                            col_val = str(timedelta(seconds=total_secs))
-                        except ValueError:
-                            col_val = str(value)
-                    else:
-                        col_val = str(value)
-                elif col_type == 'numberType':
-                    if isinstance(value, int):
-                        col_val = int(value)
-                    else:
-                        try:
-                            col_val = float(value)
-                        except ValueError:
-                            col_val = str(value)
-                elif col_type == 'stringValue':
-                    col_val = str(value)
-                elif col_type == 'boolValue':
-                    if isinstance(value, bool):
-                        col_val = value
-                    elif isinstance(value, str):
-                        if value.lower() in ('true', 't', 'yes', 'y'):
-                            col_val = True
-                        elif value.lower() in ('false', 'f', 'no', 'n'):
-                            col_val = False
+            LOGGER.info('EMPTY ROW: {}, SKIPPING'.format(row_num))
+        else:
+            sheet_data_row_tf = {}
+            # Add spreadsheet_id, sheet_id, and row
+            sheet_data_row_tf['__sdc_spreadsheet_id'] = spreadsheet_id
+            sheet_data_row_tf['__sdc_sheet_id'] = sheet_id
+            sheet_data_row_tf['__sdc_row'] = row_num
+            col_num = 1
+            for value in row:
+                # Select column metadata based on column index
+                col = cols[col_num - 1]
+                col_skipped = col.get('columnSkipped')
+                if not col_skipped:
+                    col_name = col.get('columnName')
+                    col_type = col.get('columnType')
+                    # Convert dates/times from Lotus Notes Serial Numbers
+                    # DATE-TIME
+                    if col_type == 'numberType.DATE_TIME':
+                        if isinstance(value, (int, float)):
+                            col_val = excel_to_dttm_str(value)
                         else:
                             col_val = str(value)
-                    elif isinstance(value, int):
-                        if value in (1, -1):
-                            col_val = True
-                        elif value == 0:
-                            col_val = False
+                    # DATE
+                    elif col_type == 'numberType.DATE':
+                        if isinstance(value, (int, float)):
+                            col_val = excel_to_dttm_str(value)[:10]
                         else:
                             col_val = str(value)
-
-                else:
-                    col_val = value
-                sheet_data_row_tf[col_name] = col_val
-            col_num = col_num + 1
-        sheet_data_tf.append(sheet_data_row_tf)
+                    # TIME ONLY (NO DATE)
+                    elif col_type == 'numberType.TIME':
+                        if isinstance(value, (int, float)):
+                            try:
+                                total_secs = value * 86400 # seconds in day
+                                # Create string formatted like HH:MM:SS
+                                col_val = str(timedelta(seconds=total_secs))
+                            except ValueError:
+                                col_val = str(value)
+                        else:
+                            col_val = str(value)
+                    # NUMBER (INTEGER AND FLOAT)
+                    elif col_type == 'numberType':
+                        if isinstance(value, int):
+                            col_val = int(value)
+                        elif isinstance(value, float):
+                            # Determine float decimal digits
+                            decimal_digits = str(value)[::-1].find('.')
+                            if decimal_digits > 15:
+                                try:
+                                    # ROUND to multipleOf: 1e-15
+                                    col_val = float(round(value, 15))
+                                except ValueError:
+                                    col_val = str(value)
+                            else: # decimal_digits <= 15, no rounding
+                                try:
+                                    col_val = float(value)
+                                except ValueError:
+                                    col_val = str(value)
+                        else:
+                            col_val = str(value)
+                    # STRING
+                    elif col_type == 'stringValue':
+                        col_val = str(value)
+                    # BOOLEAN
+                    elif col_type == 'boolValue':
+                        if isinstance(value, bool):
+                            col_val = value
+                        elif isinstance(value, str):
+                            if value.lower() in ('true', 't', 'yes', 'y'):
+                                col_val = True
+                            elif value.lower() in ('false', 'f', 'no', 'n'):
+                                col_val = False
+                            else:
+                                col_val = str(value)
+                        elif isinstance(value, int):
+                            if value in (1, -1):
+                                col_val = True
+                            elif value == 0:
+                                col_val = False
+                            else:
+                                col_val = str(value)
+                    # OTHER: Convert everything else to a string
+                    else:
+                        col_val = str(value)
+                    sheet_data_row_tf[col_name] = col_val
+                col_num = col_num + 1
+            # APPEND non-empty row
+            sheet_data_tf.append(sheet_data_row_tf)
         row_num = row_num + 1
-    return sheet_data_tf, row_num, is_last_row
+    return sheet_data_tf, row_num
 
 
 def sync(client, config, catalog, state):
@@ -327,7 +348,7 @@ def sync(client, config, catalog, state):
         return
     # Sync file_metadata if selected
     sync_stream(stream_name, selected_streams, catalog, state, file_metadata_tf, time_extracted)
-    write_bookmark(state, stream_name, strftime(this_datetime))
+    # file_metadata bookmark is updated at the end of sync
 
     # SPREADSHEET_METADATA
     spreadsheet_metadata = {}
@@ -363,7 +384,7 @@ def sync(client, config, catalog, state):
 
             # GET sheet_metadata and columns
             sheet_schema, columns = get_sheet_metadata(sheet, spreadsheet_id, client)
-            LOGGER.info('sheet_schema: {}'.format(sheet_schema))
+            # LOGGER.info('sheet_schema: {}'.format(sheet_schema))
 
             # Transform sheet_metadata
             sheet_metadata_tf = transform_sheet_metadata(spreadsheet_id, sheet, columns)
@@ -414,7 +435,7 @@ def sync(client, config, catalog, state):
                     sheet_data_rows = sheet_data.get('values')
 
                     # Transform batch of rows to JSON with keys for each column
-                    sheet_data_tf, row_num, is_last_row = transform_sheet_data(
+                    sheet_data_tf, row_num = transform_sheet_data(
                         spreadsheet_id=spreadsheet_id,
                         sheet_id=sheet_id,
                         from_row=from_row,
@@ -429,7 +450,7 @@ def sync(client, config, catalog, state):
                         stream_name=sheet_title,
                         records=sheet_data_tf,
                         time_extracted=ss_time_extracted)
-                    LOGGER.info('Sheet: {}, ecords processed: {}'.format(
+                    LOGGER.info('Sheet: {}, records processed: {}'.format(
                         sheet_title, record_count))
 
                     # Update paging from/to_row for next batch
@@ -458,7 +479,7 @@ def sync(client, config, catalog, state):
                 singer.write_message(activate_version_message)
 
                 LOGGER.info('FINISHED Syncing Sheet {}, Total Rows: {}'.format(
-                    sheet_title, row_num - 1))
+                    sheet_title, row_num - 2)) # subtract 1 for header row
 
     stream_name = 'sheet_metadata'
     # Sync sheet_metadata if selected
@@ -467,5 +488,8 @@ def sync(client, config, catalog, state):
     stream_name = 'sheets_loaded'
     # Sync sheet_metadata if selected
     sync_stream(stream_name, selected_streams, catalog, state, sheets_loaded)
+
+    # Update file_metadata bookmark
+    write_bookmark(state, 'file_metadata', strftime(this_datetime))
 
     return
