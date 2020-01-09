@@ -21,6 +21,7 @@ def colnum_string(num):
 
 # Create sheet_metadata_json with columns from sheet
 def get_sheet_schema_columns(sheet):
+    sheet_title = sheet.get('properties', {}).get('title')
     sheet_json_schema = OrderedDict()
     data = next(iter(sheet.get('data', [])), {})
     row_data = data.get('rowData', [])
@@ -62,15 +63,34 @@ def get_sheet_schema_columns(sheet):
             skipped = 0
             column_name = '{}'.format(header_value)
             if column_name in header_list:
-                raise Exception('DUPLICATE HEADER ERROR: {}'.format(column_name))
+                raise Exception('DUPLICATE HEADER ERROR: SHEET: {}, COL: {}, CELL: {}1'.format(
+                    sheet_title, column_name, column_letter))
             header_list.append(column_name)
 
-            first_value = first_values[i]
-
+            first_value = None
+            try:
+                first_value = first_values[i]
+            except IndexError as err:
+                raise Exception('NO VALUE IN 2ND ROW FOR HEADER ERROR. SHEET: {}, COL: {}, CELL: {}2. {}'.format(
+                    sheet_title, column_name, column_letter, err))
+            
             column_effective_value = first_value.get('effectiveValue', {})
-            for key in column_effective_value.keys():
-                if key in ('numberValue', 'stringValue', 'boolValue', 'errorType', 'formulaType'):
-                    column_effective_value_type = key
+
+            col_val = None
+            if column_effective_value == {}:
+                column_effective_value_type = 'stringValue'
+                LOGGER.info('WARNING: NO VALUE IN 2ND ROW FOR HEADER. SHEET: {}, COL: {}, CELL: {}2.'.format(
+                    sheet_title, column_name, column_letter))
+                LOGGER.info('   Setting column datatype to STRING')
+            else:
+                for key, val in column_effective_value.items():
+                    if key in ('numberValue', 'stringValue', 'boolValue'):
+                        column_effective_value_type = key
+                        col_val = str(val)
+                    elif key in ('errorType', 'formulaType'):
+                        col_val = str(val)
+                        raise Exception('DATA TYPE ERROR 2ND ROW VALUE: SHEET: {}, COL: {}, CELL: {}2, TYPE: {}, VALUE: {}'.format(
+                            sheet_title, column_name, column_letter, key, col_val))
 
             column_number_format = first_values[i].get('effectiveFormat', {}).get(
                 'numberFormat', {})
@@ -87,7 +107,13 @@ def get_sheet_schema_columns(sheet):
             #  https://developers.google.com/sheets/api/reference/rest/v4/spreadsheets/cells#NumberFormatType
             #
             column_format = None # Default
-            if column_effective_value_type == 'stringValue':
+            if column_effective_value == {}:
+                col_properties = {'type': ['null', 'string']}
+                column_gs_type = 'stringValue'
+                LOGGER.info('WARNING: 2ND ROW VALUE IS BLANK: SHEET: {}, COL: {}, CELL: {}2'.format(
+                        sheet_title, column_name, column_letter))
+                LOGGER.info('   Setting column datatype to STRING')
+            elif column_effective_value_type == 'stringValue':
                 col_properties = {'type': ['null', 'string']}
                 column_gs_type = 'stringValue'
             elif column_effective_value_type == 'boolValue':
@@ -138,8 +164,8 @@ def get_sheet_schema_columns(sheet):
             else:
                 col_properties = {'type': ['null', 'string']}
                 column_gs_type = 'unsupportedValue'
-                LOGGER.info('Unsupported data type: {}, value: {}'.format(column_name, \
-                    column_effective_value_type))
+                LOGGER.info('WARNING: UNSUPPORTED 2ND ROW VALUE: SHEET: {}, COL: {}, CELL: {}2, TYPE: {}, VALUE: {}'.format(
+                        sheet_title, column_name, column_letter, column_effective_value_type, col_val))
                 LOGGER.info('Converting to string.')
         else: # skipped
             column_is_skipped = True
@@ -148,11 +174,16 @@ def get_sheet_schema_columns(sheet):
             column_name = '__sdc_skip_col_{}'.format(column_index_str)
             col_properties = {'type': ['null', 'string']}
             column_gs_type = 'stringValue'
+            LOGGER.info('WARNING: SKIPPED COLUMN; NO COLUMN HEADER. SHEET: {}, COL: {}, CELL: {}1'.format(
+                sheet_title, column_name, column_letter))
+            LOGGER.info('  This column will be skipped during data loading.')
 
         if skipped >= 2:
             # skipped = 2 consecutive skipped headers
             # Remove prior_header column_name
             sheet_json_schema['properties'].pop(prior_header, None)
+            LOGGER.info('TWO CONSECUTIVE SKIPPED COLUMNS. STOPPING SCAN AT: SHEET: {}, COL: {}, CELL {}1'.format(
+                sheet_title, column_name, column_letter))
             break
 
         else:
@@ -245,7 +276,7 @@ def get_schemas(client, spreadsheet_id):
                 for sheet in sheets:
                     # GET sheet_json_schema for each worksheet (from function above)
                     sheet_json_schema, columns = get_sheet_metadata(sheet, spreadsheet_id, client)
-                    LOGGER.info('columns = {}'.format(columns))
+                    # LOGGER.info('columns = {}'.format(columns))
 
                     sheet_title = sheet.get('properties', {}).get('title')
                     schemas[sheet_title] = sheet_json_schema

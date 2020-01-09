@@ -11,30 +11,37 @@ This tap:
   - [File Metadata](https://developers.google.com/drive/api/v3/reference/files/get)
   - [Spreadsheet Metadata](https://developers.google.com/sheets/api/reference/rest/v4/spreadsheets/get)
   - [Spreadsheet Values](https://developers.google.com/sheets/api/reference/rest/v4/spreadsheets.values/get)
+- Outputs the following metadata streams:
+  - File Metadata: Name, audit/change info from Google Drive
+  - Spreadsheet Metadata: Basic metadata about the Spreadsheet: Title, Locale, URL, etc.
+  - Sheet Metadata: Title, URL, Area (max column and row), and Column Metadata
+    - Column Metadata: Column Header Name, Data type, Format
+  - Sheets Loaded: Sheet title, load date, number of rows
 - For each Sheet:
-  - Outputs the schema for each resource (based on the column header and datatypes of first row of data)
-  - Outputs a record for all columns with column headers, and for each row of data until it reaches an empty row
+  - Outputs the schema for each resource (based on the column header and datatypes of row 2, the first row of data)
+  - Outputs a record for all columns that have column headers, and for each row of data
+  - Emits a Singer ACTIVATE_VERSION message after each sheet is complete. This forces hard deletes on the data downstream if fewer records are sent.
+  - Primary Key for each row in a Sheet is the Row Number:  `__sdc_row`
+  - Each Row in a Sheet also includes Foreign Keys to the Spreadsheet Metadata, `__sdc_spreadsheet_id`, and Sheet Metadata, `__sdc_sheet_id`.
 
 ## API Endpoints
 [**file (GET)**](https://developers.google.com/drive/api/v3/reference/files/get)
 - Endpoint: https://www.googleapis.com/drive/v3/files/${spreadsheet_id}?fields=id,name,createdTime,modifiedTime,version
 - Primary keys: id
-- Replication strategy: Full (GET file audit data for spreadsheet_id in config)
+- Replication strategy: Incremental (GET file audit data for spreadsheet_id in config)
 - Process/Transformations: Replicate Data if Modified
 
 [**metadata (GET)**](https://developers.google.com/drive/api/v3/reference/files/get)
 - Endpoint: https://sheets.googleapis.com/v4/spreadsheets/${spreadsheet_id}?includeGridData=true&ranges=1:2
 - This endpoint eturns spreadsheet metadata, sheet metadata, and value metadata (data type information)
-- Primary keys: spreadsheetId, title, field_name
+- Primary keys: Spreadsheet Id, Sheet Id, Column Index
 - Foreign keys: None
 - Replication strategy: Full (get and replace file metadata for spreadshee_id in config)
 - Process/Transformations:
   - Verify Sheets: Check sheets exist (compared to catalog) and check gridProperties (available area)
     - sheetId, title, index, gridProperties (rowCount, columnCount)
-  - Verify Field Headers (1st row): Check field headers exist (compared to catalog), missing headers (columns to skip), column order/position, and column uniqueness
-    - Header's field_name, position: data.rowData[0].values[i].formattedValue
-  - Create/Verify Datatypes (2nd row): 
-    - Row 2's datatype, format: data.rowData[1].values[i]
+  - Verify Field Headers (1st row): Check field headers exist (compared to catalog), missing headers (columns to skip), column order/position, and column name uniqueness
+  - Create/Verify Datatypes based on 2nd row value and cell metadata 
       - First check:
         - [effectiveValue: key](https://developers.google.com/sheets/api/reference/rest/v4/spreadsheets/other#ExtendedValue)
           - Valid types: numberValue, stringValue, boolValue
@@ -42,20 +49,22 @@ This tap:
       - Then check:
         - [effectiveFormat.numberFormat.type](https://developers.google.com/sheets/api/reference/rest/v4/spreadsheets/cells#NumberFormatType)
           - Valid types: UNEPECIFIED, TEXT, NUMBER, PERCENT, CURRENCY, DATE, TIME, DATE_TIME, SCIENTIFIC
-          - If DATE or DATE_TIME, set JSON schema datatype = string and format = date-time
-        - [effectiveFormat.numberFormat.pattern](https://developers.google.com/sheets/api/reference/rest/v4/spreadsheets/cells#NumberFormat)
+          - Determine JSON schema column data type based on the value and the above cell metadata settings.
+          - If DATE, DATE_TIME, or TIME, set JSON schema format accordingly
 
 [**values (GET)**](https://developers.google.com/sheets/api/reference/rest/v4/spreadsheets.values/get)
 - Endpoint: https://sheets.googleapis.com/v4/spreadsheets/${spreadsheet_id}/values/'${sheet_name}'!${row_range}?dateTimeRenderOption=SERIAL_NUMBER&valueRenderOption=UNFORMATTED_VALUE&majorDimension=ROWS
 - This endpoint loops through sheets and row ranges to get the [unformatted values](https://developers.google.com/sheets/api/reference/rest/v4/ValueRenderOption) (effective values only), dates and datetimes as [serial numbers](https://developers.google.com/sheets/api/reference/rest/v4/DateTimeRenderOption)
-- Primary keys: row
+- Primary keys: _sdc_row
 - Replication strategy: Full (GET file audit data for spreadsheet_id in config)
 - Process/Transformations:
   - Loop through sheets (compared to catalog selection)
     - Send metadata for sheet
-  - Loop through ranges of rows until reaching empty row or area max row (from sheet metadata)
-  - Transform values, if necessary (dates, date-times, boolean, integer, numers)
-  - Process/send records
+  - Loop through ALL columns for columns having a column header
+  - Loop through ranges of rows for ALL rows in sheet available area max row (from sheet metadata)
+  - Transform values, if necessary (dates, date-times, times, boolean). 
+    - Date/time serial numbers converted to date, date-time, and time strings. Google Sheets uses Lotus 1-2-3 [Serial Number](https://developers.google.com/sheets/api/reference/rest/v4/DateTimeRenderOption) format for date/times. These are converted to normal UTC date-time strings.
+  - Process/send records to target
 
 ## Authentication
 The [**Google Sheets Setup & Authentication**](https://drive.google.com/open?id=1FojlvtLwS0-BzGS37R0jEXtwSHqSiO1Uw-7RKQQO-C4) Google Doc provides instructions show how to configure the Google Cloud API credentials to enable Google Drive and Google Sheets APIs, configure Google Cloud to authorize/verify your domain ownership, generate an API key (client_id, client_secret), authenticate and generate a refresh_token, and prepare your tap config.json with the necessary parameters.
