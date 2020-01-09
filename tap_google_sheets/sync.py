@@ -6,6 +6,7 @@ import pytz
 import singer
 from singer import metrics, metadata, Transformer, utils
 from singer.utils import strptime_to_utc, strftime
+from singer.messages import RecordMessage
 from tap_google_sheets.streams import STREAMS
 from tap_google_sheets.schema import get_sheet_metadata
 
@@ -17,14 +18,26 @@ def write_schema(catalog, stream_name):
     schema = stream.schema.to_dict()
     try:
         singer.write_schema(stream_name, schema, stream.key_properties)
+        LOGGER.info('Writing schema for: {}'.format(stream_name))
     except OSError as err:
         LOGGER.info('OS Error writing schema for: {}'.format(stream_name))
         raise err
 
 
-def write_record(stream_name, record, time_extracted):
+def write_record(stream_name, record, time_extracted, version=None):
     try:
-        singer.messages.write_record(stream_name, record, time_extracted=time_extracted)
+        if version:
+            singer.messages.write_message(
+                RecordMessage(
+                    stream=stream_name,
+                    record=record,
+                    version=version,
+                    time_extracted=time_extracted))
+        else:
+            singer.messages.write_record(
+                stream_name=stream_name,
+                record=record,
+                time_extracted=time_extracted)
     except OSError as err:
         LOGGER.info('OS Error writing record for: {}'.format(stream_name))
         LOGGER.info('record: {}'.format(record))
@@ -53,7 +66,8 @@ def write_bookmark(state, stream, value):
 def process_records(catalog,
                     stream_name,
                     records,
-                    time_extracted):
+                    time_extracted,
+                    version=None):
     stream = catalog.get_stream(stream_name)
     schema = stream.schema.to_dict()
     stream_metadata = metadata.to_map(stream.metadata)
@@ -65,7 +79,11 @@ def process_records(catalog,
                     record,
                     schema,
                     stream_metadata)
-                write_record(stream_name, transformed_record, time_extracted=time_extracted)
+                write_record(
+                    stream_name=stream_name,
+                    record=transformed_record,
+                    time_extracted=time_extracted,
+                    version=version)
                 counter.increment()
         return counter.value
 
@@ -206,7 +224,7 @@ def excel_to_dttm_str(excel_date_sn, timezone_str=None):
 
 # Transform sheet_data: add spreadsheet_id, sheet_id, and row, convert dates/times
 #  Convert from array of values to JSON with column names as keys
-def transform_sheet_data(spreadsheet_id, sheet_id, from_row, columns, sheet_data_rows):
+def transform_sheet_data(spreadsheet_id, sheet_id, sheet_title, from_row, columns, sheet_data_rows):
     sheet_data_tf = []
     row_num = from_row
     # Create sorted list of columns based on columnIndex
@@ -229,21 +247,32 @@ def transform_sheet_data(spreadsheet_id, sheet_id, from_row, columns, sheet_data
                 col = cols[col_num - 1]
                 col_skipped = col.get('columnSkipped')
                 if not col_skipped:
+                    # Get column metadata
                     col_name = col.get('columnName')
                     col_type = col.get('columnType')
+                    col_letter = col.get('columnLetter')
+
+                    # NULL values
+                    if value is None or value == '':
+                        col_val = None
+
                     # Convert dates/times from Lotus Notes Serial Numbers
                     # DATE-TIME
-                    if col_type == 'numberType.DATE_TIME':
+                    elif col_type == 'numberType.DATE_TIME':
                         if isinstance(value, (int, float)):
                             col_val = excel_to_dttm_str(value)
                         else:
                             col_val = str(value)
+                            LOGGER.info('WARNING: POSSIBLE DATA TYPE ERROR; SHEET: {}, COL: {}, CELL: {}{}, TYPE: {}, VALUE: {}'.format(
+                                sheet_title, col_name, col_letter, row_num, col_type, value))
                     # DATE
                     elif col_type == 'numberType.DATE':
                         if isinstance(value, (int, float)):
                             col_val = excel_to_dttm_str(value)[:10]
                         else:
                             col_val = str(value)
+                            LOGGER.info('WARNING: POSSIBLE DATA TYPE ERROR; SHEET: {}, COL: {}, CELL: {}{}, TYPE: {}, VALUE: {}'.format(
+                                sheet_title, col_name, col_letter, row_num, col_type, value))
                     # TIME ONLY (NO DATE)
                     elif col_type == 'numberType.TIME':
                         if isinstance(value, (int, float)):
@@ -253,6 +282,8 @@ def transform_sheet_data(spreadsheet_id, sheet_id, from_row, columns, sheet_data
                                 col_val = str(timedelta(seconds=total_secs))
                             except ValueError:
                                 col_val = str(value)
+                                LOGGER.info('WARNING: POSSIBLE DATA TYPE ERROR; SHEET: {}, COL: {}, CELL: {}{}, TYPE: {}, VALUE: {}'.format(
+                                    sheet_title, col_name, col_letter, row_num, col_type, value))
                         else:
                             col_val = str(value)
                     # NUMBER (INTEGER AND FLOAT)
@@ -268,13 +299,19 @@ def transform_sheet_data(spreadsheet_id, sheet_id, from_row, columns, sheet_data
                                     col_val = float(round(value, 15))
                                 except ValueError:
                                     col_val = str(value)
+                                    LOGGER.info('WARNING: POSSIBLE DATA TYPE ERROR; SHEET: {}, COL: {}, CELL: {}{}, TYPE: {}, VALUE: {}'.format(
+                                        sheet_title, col_name, col_letter, row_num, col_type, value))
                             else: # decimal_digits <= 15, no rounding
                                 try:
                                     col_val = float(value)
                                 except ValueError:
                                     col_val = str(value)
+                                    LOGGER.info('WARNING: POSSIBLE DATA TYPE ERROR: SHEET: {}, COL: {}, CELL: {}{}, TYPE: {}, VALUE: {}'.format(
+                                        sheet_title, col_name, col_letter, row_num, col_type, value))
                         else:
                             col_val = str(value)
+                            LOGGER.info('WARNING: POSSIBLE DATA TYPE ERROR: SHEET: {}, COL: {}, CELL: {}{}, TYPE: {}, VALUE: {}'.format(
+                                   sheet_title, col_name, col_letter, row_num, col_type, value))
                     # STRING
                     elif col_type == 'stringValue':
                         col_val = str(value)
@@ -289,6 +326,8 @@ def transform_sheet_data(spreadsheet_id, sheet_id, from_row, columns, sheet_data
                                 col_val = False
                             else:
                                 col_val = str(value)
+                                LOGGER.info('WARNING: POSSIBLE DATA TYPE ERROR; SHEET: {}, COL: {}, CELL: {}{}, TYPE: {}, VALUE: {}'.format(
+                                    sheet_title, col_name, col_letter, row, col_type, value))
                         elif isinstance(value, int):
                             if value in (1, -1):
                                 col_val = True
@@ -296,9 +335,13 @@ def transform_sheet_data(spreadsheet_id, sheet_id, from_row, columns, sheet_data
                                 col_val = False
                             else:
                                 col_val = str(value)
+                                LOGGER.info('WARNING: POSSIBLE DATA TYPE ERROR; SHEET: {}, COL: {}, CELL: {}{}, TYPE: {}, VALUE: {}'.format(
+                                    sheet_title, col_name, col_letter, row, col_type, value))
                     # OTHER: Convert everything else to a string
                     else:
                         col_val = str(value)
+                        LOGGER.info('WARNING: POSSIBLE DATA TYPE ERROR; SHEET: {}, COL: {}, CELL: {}{}, TYPE: {}, VALUE: {}'.format(
+                            sheet_title, col_name, col_letter, row, col_type, value))
                     sheet_data_row_tf[col_name] = col_val
                 col_num = col_num + 1
             # APPEND non-empty row
@@ -400,6 +443,20 @@ def sync(client, config, catalog, state):
                 LOGGER.info('Stream: {}, selected_fields: {}'.format(sheet_title, selected_fields))
                 write_schema(catalog, sheet_title)
 
+                # Emit a Singer ACTIVATE_VERSION message before initial sync (but not subsequent syncs)
+                # everytime after each sheet sync is complete.
+                # This forces hard deletes on the data downstream if fewer records are sent.
+                # https://github.com/singer-io/singer-python/blob/master/singer/messages.py#L137
+                last_integer = int(get_bookmark(state, sheet_title, 0))
+                activate_version = int(time.time() * 1000)
+                activate_version_message = singer.ActivateVersionMessage(
+                        stream=sheet_title,
+                        version=activate_version)
+                if last_integer == 0:
+                    # initial load, send activate_version before AND after data sync
+                    singer.write_message(activate_version_message)
+                    LOGGER.info('INITIAL SYNC, Stream: {}, Activate Version: {}'.format(sheet_title, activate_version))
+
                 # Determine max range of columns and rows for "paging" through the data
                 sheet_last_col_index = 1
                 sheet_last_col_letter = 'A'
@@ -438,6 +495,7 @@ def sync(client, config, catalog, state):
                     sheet_data_tf, row_num = transform_sheet_data(
                         spreadsheet_id=spreadsheet_id,
                         sheet_id=sheet_id,
+                        sheet_title=sheet_title,
                         from_row=from_row,
                         columns=columns,
                         sheet_data_rows=sheet_data_rows)
@@ -449,16 +507,25 @@ def sync(client, config, catalog, state):
                         catalog=catalog,
                         stream_name=sheet_title,
                         records=sheet_data_tf,
-                        time_extracted=ss_time_extracted)
+                        time_extracted=ss_time_extracted,
+                        version=activate_version)
                     LOGGER.info('Sheet: {}, records processed: {}'.format(
                         sheet_title, record_count))
-
+                    
                     # Update paging from/to_row for next batch
                     from_row = to_row + 1
                     if to_row + batch_rows > sheet_max_row:
                         to_row = sheet_max_row
                     else:
                         to_row = to_row + batch_rows
+
+                # End of Stream: Send Activate Version and update State
+                singer.write_message(activate_version_message)
+                write_bookmark(state, sheet_title, activate_version)
+                LOGGER.info('COMPLETE SYNC, Stream: {}, Activate Version: {}'.format(sheet_title, activate_version))
+                LOGGER.info('FINISHED Syncing Sheet {}, Total Rows: {}'.format(
+                    sheet_title, row_num - 2)) # subtract 1 for header row
+                update_currently_syncing(state, None)
 
                 # SHEETS_LOADED
                 # Add sheet to sheets_loaded
@@ -469,17 +536,6 @@ def sync(client, config, catalog, state):
                 sheet_loaded['loadDate'] = strftime(utils.now())
                 sheet_loaded['lastRowNumber'] = row_num
                 sheets_loaded.append(sheet_loaded)
-
-                # Emit a Singer ACTIVATE_VERSION message after each sheet is complete.
-                # This forces hard deletes on the data downstream if fewer records are sent.
-                # https://github.com/singer-io/singer-python/blob/master/singer/messages.py#L137
-                activate_version_message = singer.ActivateVersionMessage(
-                    stream=sheet_title,
-                    version=int(time.time() * 1000))
-                singer.write_message(activate_version_message)
-
-                LOGGER.info('FINISHED Syncing Sheet {}, Total Rows: {}'.format(
-                    sheet_title, row_num - 2)) # subtract 1 for header row
 
     stream_name = 'sheet_metadata'
     # Sync sheet_metadata if selected
