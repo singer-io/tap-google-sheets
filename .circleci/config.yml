@@ -37,7 +37,7 @@ jobs:
                        --email=harrison+sandboxtest@stitchdata.com \
                        --password=$SANDBOX_PASSWORD \
                        --client-id=50 \
-                       tap_tester.suites.google-sheets
+                       tap_tester.suites.google_sheets
 workflows:
   version: 2
   commit:
