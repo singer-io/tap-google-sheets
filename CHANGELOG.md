@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.0.4
+  * Add logic to skip empty worksheets in Discovery and Sync mode.
+
 ## 0.0.3
   * Update README.md documentation. Improved logging and handling of errors and warnings. Better null handling in Discovery and Sync. Fix issues with activate version messages.
 
