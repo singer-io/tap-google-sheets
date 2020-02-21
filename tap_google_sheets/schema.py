@@ -151,14 +151,14 @@ def get_sheet_schema_columns(sheet):
                         col_properties =  {
                             'anyOf': [
                                 {
-                                    'type': 'string'
-                                },
-                                {
                                     'type': 'null'
                                 },
                                 {
                                     'type': 'number',
                                     'multipleOf': 1e-15
+                                },
+                                {
+                                    'type': 'string'
                                 }
                             ]
                         }
