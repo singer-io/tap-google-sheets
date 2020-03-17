@@ -20,10 +20,10 @@ REQUIRED_CONFIG_KEYS = [
     'user_agent'
 ]
 
-def do_discover(client, spreadsheet_id):
+def do_discover(client, spreadsheet_id, select_streams):
 
     LOGGER.info('Starting discover')
-    catalog = discover(client, spreadsheet_id)
+    catalog = discover(client, spreadsheet_id, select_streams)
     json.dump(catalog.to_dict(), sys.stdout, indent=2)
     LOGGER.info('Finished discover')
 
@@ -44,9 +44,10 @@ def main():
 
         config = parsed_args.config
         spreadsheet_id = config.get('spreadsheet_id')
+        select_streams = config.get('select_streams')
 
         if parsed_args.discover:
-            do_discover(client, spreadsheet_id)
+            do_discover(client, spreadsheet_id, select_streams)
         elif parsed_args.catalog:
             sync(client=client,
                  config=config,
