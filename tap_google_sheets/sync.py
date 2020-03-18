@@ -388,6 +388,8 @@ def sync(client, config, catalog, state):
     LOGGER.info('last_datetime = {}, this_datetime = {}'.format(last_datetime, this_datetime))
     if this_datetime <= last_datetime:
         LOGGER.info('this_datetime <= last_datetime, FILE NOT CHANGED. EXITING.')
+        # Update file_metadata bookmark
+        write_bookmark(state, 'file_metadata', strftime(this_datetime))
         return
     # Sync file_metadata if selected
     sync_stream(stream_name, selected_streams, catalog, state, file_metadata_tf, time_extracted)
