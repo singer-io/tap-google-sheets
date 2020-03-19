@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.0.1
+  * Emit state file for incremental sync where bookmark not exceeded.
+
 ## 1.0.0
   * No change from `v0.0.4`
 
