@@ -74,8 +74,6 @@ def get_sheet_schema_columns(sheet):
             try:
                 first_value = first_values[i]
             except IndexError as err:
-                import ipdb; ipdb.set_trace()
-                1+1
                 raise Exception('NO VALUE IN 2ND ROW FOR HEADER ERROR. SHEET: {}, COL: {}, CELL: {}2. {}'.format(
                     sheet_title, column_name, column_letter, err))
 
