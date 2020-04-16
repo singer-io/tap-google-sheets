@@ -29,7 +29,8 @@ def get_sheet_schema_columns(sheet):
         # Empty sheet, SKIP
         LOGGER.info('SKIPPING Empty Sheet: {}'.format(sheet_title))
         return None, None
-    else:
+
+    try:
         # spreadsheet is an OrderedDict, with orderd sheets and rows in the repsonse
         headers = row_data[0].get('values', [])
         first_values = row_data[1].get('values', [])
@@ -77,7 +78,7 @@ def get_sheet_schema_columns(sheet):
                 except IndexError as err:
                     raise Exception('NO VALUE IN 2ND ROW FOR HEADER ERROR. SHEET: {}, COL: {}, CELL: {}2. {}'.format(
                         sheet_title, column_name, column_letter, err))
-                
+
                 column_effective_value = first_value.get('effectiveValue', {})
 
                 col_val = None
@@ -207,6 +208,10 @@ def get_sheet_schema_columns(sheet):
             i = i + 1
 
         return sheet_json_schema, columns
+    except:
+        # Empty sheet, SKIP
+        LOGGER.info('SKIPPING Malformed Sheet: {}'.format(sheet_title))
+        return None, None
 
 
 # Get Header Row and 1st data row (Rows 1 & 2) from a Sheet on Spreadsheet w/ sheet_metadata query
