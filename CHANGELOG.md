@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.0.2
+  * Skip sheets for which we fail to generate a schema
+
 ## 1.0.1
   * Emit state file for incremental sync where bookmark not exceeded.
 
