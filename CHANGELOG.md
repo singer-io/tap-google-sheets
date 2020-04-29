@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.0.3
+  * Fix issues: slashes `/` in sheet name 404 error; Discovery malformed sheet error when 2nd row final column value(s) are `NULL`.
+
 ## 1.0.2
   * Skip sheets for which we fail to generate a schema
 
