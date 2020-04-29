@@ -1,6 +1,8 @@
 import time
 import math
 import json
+import re
+import urllib.parse
 from datetime import datetime, timedelta
 import pytz
 import singer
@@ -75,10 +77,14 @@ def process_records(catalog,
         for record in records:
             # Transform record for Singer.io
             with Transformer() as transformer:
-                transformed_record = transformer.transform(
-                    record,
-                    schema,
-                    stream_metadata)
+                try:
+                    transformed_record = transformer.transform(
+                        record,
+                        schema,
+                        stream_metadata)
+                except Exception as err:
+                    LOGGER.error('{}'.format(err))
+                    raise RuntimeError(err)
                 write_record(
                     stream_name=stream_name,
                     record=transformed_record,
@@ -144,22 +150,26 @@ def get_data(stream_name,
     if not range_rows:
         range_rows = ''
     # Replace {placeholder} variables in path
+    # Encode stream_name: fixes issue w/ special characters in sheet name
+    stream_name_escaped = re.escape(stream_name)
+    stream_name_encoded = urllib.parse.quote_plus(stream_name)
     path = endpoint_config.get('path', stream_name).replace(
-        '{spreadsheet_id}', spreadsheet_id).replace('{sheet_title}', stream_name).replace(
+        '{spreadsheet_id}', spreadsheet_id).replace('{sheet_title}', stream_name_encoded).replace(
             '{range_rows}', range_rows)
     params = endpoint_config.get('params', {})
     api = endpoint_config.get('api', 'sheets')
     # Add in querystring parameters and replace {placeholder} variables
     # querystring function ensures parameters are added but not encoded causing API errors
     querystring = '&'.join(['%s=%s' % (key, value) for (key, value) in params.items()]).replace(
-        '{sheet_title}', stream_name)
+        '{sheet_title}', stream_name_encoded)
+    LOGGER.info('URL: {}/{}?{}'.format(client.base_url, path, querystring))
     data = {}
     time_extracted = utils.now()
     data = client.get(
         path=path,
         api=api,
         params=querystring,
-        endpoint=stream_name)
+        endpoint=stream_name_escaped)
     return data, time_extracted
 
 

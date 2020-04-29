@@ -1,5 +1,7 @@
 import os
 import json
+import re
+import urllib.parse
 from collections import OrderedDict
 import singer
 from singer import metadata
@@ -74,8 +76,11 @@ def get_sheet_schema_columns(sheet):
             try:
                 first_value = first_values[i]
             except IndexError as err:
-                raise Exception('NO VALUE IN 2ND ROW FOR HEADER ERROR. SHEET: {}, COL: {}, CELL: {}2. {}'.format(
+                LOGGER.info('NO VALUE IN 2ND ROW FOR HEADER. SHEET: {}, COL: {}, CELL: {}2. {}'.format(
                     sheet_title, column_name, column_letter, err))
+                first_value = {}
+                first_values.append(first_value)
+                pass
 
             column_effective_value = first_value.get('effectiveValue', {})
 
@@ -221,20 +226,23 @@ def get_sheet_metadata(sheet, spreadsheet_id, client):
     stream_metadata = STREAMS.get(stream_name)
     api = stream_metadata.get('api', 'sheets')
     params = stream_metadata.get('params', {})
+    sheet_title_encoded = urllib.parse.quote_plus(sheet_title)
+    sheet_title_escaped = re.escape(sheet_title)
     querystring = '&'.join(['%s=%s' % (key, value) for (key, value) in \
-        params.items()]).replace('{sheet_title}', sheet_title)
+        params.items()]).replace('{sheet_title}', sheet_title_encoded)
     path = '{}?{}'.format(stream_metadata.get('path').replace('{spreadsheet_id}', \
         spreadsheet_id), querystring)
 
-    sheet_md_results = client.get(path=path, api=api, endpoint=stream_name)
+    sheet_md_results = client.get(path=path, api=api, endpoint=sheet_title_escaped)
     # sheet_metadata: 1st `sheets` node in results
     sheet_metadata = sheet_md_results.get('sheets')[0]
 
     # Create sheet_json_schema (for discovery/catalog) and columns (for sheet_metadata results)
     try:
         sheet_json_schema, columns = get_sheet_schema_columns(sheet_metadata)
-    except:
-        LOGGER.info('SKIPPING Malformed sheet: {}'.format(sheet_title))
+    except Exception as err:
+        LOGGER.warning('{}'.format(err))
+        LOGGER.warning('SKIPPING Malformed sheet: {}'.format(sheet_title))
         sheet_json_schema, columns = None, None
 
     return sheet_json_schema, columns
