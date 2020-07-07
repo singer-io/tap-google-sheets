@@ -71,12 +71,13 @@ The [**Google Sheets Setup & Authentication**](https://drive.google.com/open?id=
 - Enable Googe Drive APIs and Authorization Scope: https://www.googleapis.com/auth/drive.metadata.readonly
 - Enable Google Sheets API and Authorization Scope: https://www.googleapis.com/auth/spreadsheets.readonly
 - Tap config.json parameters:
-  - client_id: identifies your application
-  - client_secret: authenticates your application
-  - refresh_token: generates an access token to authorize your session
-  - spreadsheet_id: unique identifier for each spreadsheet in Google Drive
-  - start_date: absolute minimum start date to check file modified
-  - user_agent: tap-name and email address; identifies your application in the Remote API server logs
+  - client_id (Required): identifies your application
+  - client_secret (Required): authenticates your application
+  - refresh_token (Required): generates an access token to authorize your session
+  - spreadsheet_id (Required): unique identifier for each spreadsheet in Google Drive
+  - start_date (Required): absolute minimum start date to check file modified
+  - user_agent (Required): tap-name and email address; identifies your application in the Remote API server logs
+  - batch_rows (Optional): integer representing how many rows each GET request can fetch at most
 
 ## Quick Start
 
