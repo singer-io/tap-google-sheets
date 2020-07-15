@@ -505,7 +505,7 @@ def sync(client, config, catalog, state):
                             spreadsheet_id=spreadsheet_id,
                             range_rows=range_rows)
                         # Data is returned as a list of arrays, an array of values for each row
-                        sheet_data_rows = sheet_data.get('values')
+                        sheet_data_rows = sheet_data.get('values', [])
 
                         # Transform batch of rows to JSON with keys for each column
                         sheet_data_tf, row_num = transform_sheet_data(
