@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.0.4
+  * Return an empty list when we retrieve cells that return no values [#17](https://github.com/singer-io/tap-google-sheets/pull/17)
+
 ## 1.0.3
   * Fix issues: slashes `/` in sheet name 404 error; Discovery malformed sheet error when 2nd row final column value(s) are `NULL`.
 
