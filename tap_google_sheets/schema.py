@@ -149,6 +149,9 @@ def get_sheet_schema_columns(sheet):
                 elif column_number_format_type == 'TEXT':
                     col_properties = {'type': ['null', 'string']}
                     column_gs_type = 'stringValue'
+                elif column_number_format_type == 'NUMBER':
+                    col_properties = {'type': ['null', 'number']}
+                    column_gs_type = 'numberType'
                 else:
                     # Interesting - order in the anyOf makes a difference.
                     # Number w/ multipleOf must be listed last, otherwise errors occur.
