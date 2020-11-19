@@ -1,8 +1,5 @@
 {
-    "client_id": "YOUR_CLIENT_ID",
-    "client_secret": "YOUR_CLIENT_SECRET",
-    "refresh_token": "YOUR_REFRESH_TOKEN",
+    "credentials_file": "client-secrets.json",
     "spreadsheet_id": "YOUR_GOOGLE_SPREADSHEET_ID",
-    "start_date": "2019-01-01T00:00:00Z",
-    "user_agent": "tap-google-search-console <api_user_email@example.com>"
+    "start_date": "2019-01-01T00:00:00Z"
 }

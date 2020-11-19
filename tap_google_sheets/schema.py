@@ -224,16 +224,13 @@ def get_sheet_metadata(sheet, spreadsheet_id, client):
 
     stream_name = 'sheet_metadata'
     stream_metadata = STREAMS.get(stream_name)
-    api = stream_metadata.get('api', 'sheets')
     params = stream_metadata.get('params', {})
-    sheet_title_encoded = urllib.parse.quote_plus(sheet_title)
-    sheet_title_escaped = re.escape(sheet_title)
-    querystring = '&'.join(['%s=%s' % (key, value) for (key, value) in \
-        params.items()]).replace('{sheet_title}', sheet_title_encoded)
-    path = '{}?{}'.format(stream_metadata.get('path').replace('{spreadsheet_id}', \
-        spreadsheet_id), querystring)
 
-    sheet_md_results = client.get(path=path, api=api, endpoint=sheet_title_escaped)
+    # GET sheet_metadata
+    sheet_md_results = client.request(endpoint=stream_name,
+                                      spreadsheet_id=spreadsheet_id,
+                                      sheet_title=sheet_title,
+                                      params=params)
     # sheet_metadata: 1st `sheets` node in results
     sheet_metadata = sheet_md_results.get('sheets')[0]
 
@@ -275,15 +272,12 @@ def get_schemas(client, spreadsheet_id):
         field_metadata[stream_name] = mdata
 
         if stream_name == 'spreadsheet_metadata':
-            api = stream_metadata.get('api', 'sheets')
             params = stream_metadata.get('params', {})
-            querystring = '&'.join(['%s=%s' % (key, value) for (key, value) in params.items()])
-            path = '{}?{}'.format(stream_metadata.get('path').replace('{spreadsheet_id}', \
-                spreadsheet_id), querystring)
 
             # GET spreadsheet_metadata, which incl. sheets (basic metadata for each worksheet)
-            spreadsheet_md_results = client.get(path=path, params=querystring, api=api, \
-                endpoint=stream_name)
+            spreadsheet_md_results = client.request(endpoint=stream_name,
+                                                    spreadsheet_id=spreadsheet_id,
+                                                    params=params)
 
             sheets = spreadsheet_md_results.get('sheets')
             if sheets:
