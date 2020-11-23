@@ -279,24 +279,24 @@ def get_schemas(client, spreadsheet_id):
                                                     spreadsheet_id=spreadsheet_id,
                                                     params=params)
 
-            sheets = spreadsheet_md_results.get('sheets')
-            if sheets:
-                # Loop thru each worksheet in spreadsheet
-                for sheet in sheets:
-                    # GET sheet_json_schema for each worksheet (from function above)
-                    sheet_json_schema, columns = get_sheet_metadata(sheet, spreadsheet_id, client)
+            sheets = spreadsheet_md_results.get('sheets', [])
 
-                    # SKIP empty sheets (where sheet_json_schema and columns are None)
-                    if sheet_json_schema and columns:
-                        sheet_title = sheet.get('properties', {}).get('title')
-                        schemas[sheet_title] = sheet_json_schema
-                        sheet_mdata = metadata.new()
-                        sheet_mdata = metadata.get_standard_metadata(
-                            schema=sheet_json_schema,
-                            key_properties=['__sdc_row'],
-                            valid_replication_keys=None,
-                            replication_method='FULL_TABLE'
-                        )
-                        field_metadata[sheet_title] = sheet_mdata
+            # Loop thru each worksheet in spreadsheet
+            for sheet in sheets:
+                # GET sheet_json_schema for each worksheet (from function above)
+                sheet_json_schema, columns = get_sheet_metadata(sheet, spreadsheet_id, client)
+
+                # SKIP empty sheets (where sheet_json_schema and columns are None)
+                if sheet_json_schema and columns:
+                    sheet_title = sheet.get('properties', {}).get('title')
+                    schemas[sheet_title] = sheet_json_schema
+                    sheet_mdata = metadata.new()
+                    sheet_mdata = metadata.get_standard_metadata(
+                        schema=sheet_json_schema,
+                        key_properties=['__sdc_row'],
+                        valid_replication_keys=None,
+                        replication_method='FULL_TABLE'
+                    )
+                    field_metadata[sheet_title] = sheet_mdata
 
     return schemas, field_metadata
