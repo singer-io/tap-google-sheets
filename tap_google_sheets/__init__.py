@@ -12,12 +12,9 @@ from tap_google_sheets.sync import sync
 LOGGER = singer.get_logger()
 
 REQUIRED_CONFIG_KEYS = [
-    'client_id',
-    'client_secret',
-    'refresh_token',
+    'credentials_file',
     'spreadsheet_id',
-    'start_date',
-    'user_agent'
+    'start_date'
 ]
 
 def do_discover(client, spreadsheet_id):
@@ -33,10 +30,7 @@ def main():
 
     parsed_args = singer.utils.parse_args(REQUIRED_CONFIG_KEYS)
 
-    with GoogleClient(parsed_args.config['client_id'],
-                      parsed_args.config['client_secret'],
-                      parsed_args.config['refresh_token'],
-                      parsed_args.config['user_agent']) as client:
+    with GoogleClient(parsed_args.config['credentials_file']) as client:
 
         state = {}
         if parsed_args.state:

@@ -141,35 +141,17 @@ def get_selected_fields(catalog, stream_name):
             pass
     return selected_fields
 
-
 def get_data(stream_name,
              endpoint_config,
              client,
-             spreadsheet_id,
-             range_rows=None):
-    if not range_rows:
-        range_rows = ''
-    # Replace {placeholder} variables in path
-    # Encode stream_name: fixes issue w/ special characters in sheet name
-    stream_name_escaped = re.escape(stream_name)
-    stream_name_encoded = urllib.parse.quote_plus(stream_name)
-    path = endpoint_config.get('path', stream_name).replace(
-        '{spreadsheet_id}', spreadsheet_id).replace('{sheet_title}', stream_name_encoded).replace(
-            '{range_rows}', range_rows)
+             **kwargs):
     params = endpoint_config.get('params', {})
-    api = endpoint_config.get('api', 'sheets')
-    # Add in querystring parameters and replace {placeholder} variables
-    # querystring function ensures parameters are added but not encoded causing API errors
-    querystring = '&'.join(['%s=%s' % (key, value) for (key, value) in params.items()]).replace(
-        '{sheet_title}', stream_name_encoded)
-    LOGGER.info('URL: {}/{}?{}'.format(client.base_url, path, querystring))
-    data = {}
+    LOGGER.info('GET {}'.format(stream_name))
     time_extracted = utils.now()
-    data = client.get(
-        path=path,
-        api=api,
-        params=querystring,
-        endpoint=stream_name_escaped)
+    data = client.request(
+        endpoint=stream_name,
+        params=params,
+        **kwargs)
     return data, time_extracted
 
 
@@ -382,7 +364,7 @@ def sync(client, config, catalog, state):
     file_metadata_config = STREAMS.get(stream_name)
 
     # GET file_metadata
-    LOGGER.info('GET file_meatadata')
+    LOGGER.info('GET file_metadata')
     file_metadata, time_extracted = get_data(stream_name=stream_name,
                                              endpoint_config=file_metadata_config,
                                              client=client,
@@ -497,11 +479,12 @@ def sync(client, config, catalog, state):
                     while not is_last_row and from_row < sheet_max_row and to_row <= sheet_max_row:
                         range_rows = 'A{}:{}{}'.format(from_row, sheet_last_col_letter, to_row)
 
-                        # GET sheet_data for a worksheet tab
+                        # GET sheets_loaded for a worksheet tab
                         sheet_data, time_extracted = get_data(
-                            stream_name=sheet_title,
+                            stream_name='sheets_loaded',
                             endpoint_config=sheets_loaded_config,
                             client=client,
+                            sheet_title=sheet_title,
                             spreadsheet_id=spreadsheet_id,
                             range_rows=range_rows)
                         # Data is returned as a list of arrays, an array of values for each row

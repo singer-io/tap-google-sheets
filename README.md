@@ -67,16 +67,21 @@ This tap:
   - Process/send records to target
 
 ## Authentication
-The [**Google Sheets Setup & Authentication**](https://drive.google.com/open?id=1FojlvtLwS0-BzGS37R0jEXtwSHqSiO1Uw-7RKQQO-C4) Google Doc provides instructions show how to configure the Google Cloud API credentials to enable Google Drive and Google Sheets APIs, configure Google Cloud to authorize/verify your domain ownership, generate an API key (client_id, client_secret), authenticate and generate a refresh_token, and prepare your tap config.json with the necessary parameters.
-- Enable Googe Drive APIs and Authorization Scope: https://www.googleapis.com/auth/drive.metadata.readonly
-- Enable Google Sheets API and Authorization Scope: https://www.googleapis.com/auth/spreadsheets.readonly
-- Tap config.json parameters:
-  - client_id: identifies your application
-  - client_secret: authenticates your application
-  - refresh_token: generates an access token to authorize your session
-  - spreadsheet_id: unique identifier for each spreadsheet in Google Drive
-  - start_date: absolute minimum start date to check file modified
-  - user_agent: tap-name and email address; identifies your application in the Remote API server logs
+
+You will need a Google developer project to use this tool. After [creating a project](https://console.developers.google.com/projectcreate) (or selecting an existing one) in your Google developers console the authentication can be configured in two different ways:
+
+- Via an OAuth client which will ask the user to login to its Google user account.
+  
+  Please check the [“Creating application credentials”](https://github.com/googleapis/google-api-python-client/blob/d0110cf4f7aaa93d6f56fc028cd6a1e3d8dd300a/docs/oauth-installed.md#creating-application-credentials) paragraph of the Google Python library to download your Google credentials file.
+
+- Via a Service account (ideal for server-to-server communication)
+  
+  Please check the [“Creating a service account”](https://github.com/googleapis/google-api-python-client/blob/d0110cf4f7aaa93d6f56fc028cd6a1e3d8dd300a/docs/oauth-server.md#creating-a-service-account) paragraph of the Google Python library to download your Google Service Account key file.
+
+- Tap `config.json` parameters:
+  - `credentials_file`: the path to a valid Google credentials file (Either an OAuth client secrets file or a Service Account key file)
+  - `spreadsheet_id`: unique identifier for each spreadsheet in Google Drive
+  - `start_date`: absolute minimum start date to check file modified
 
 ## Quick Start
 
@@ -103,16 +108,13 @@ The [**Google Sheets Setup & Authentication**](https://drive.google.com/open?id=
     - [singer-tools](https://github.com/singer-io/singer-tools)
     - [target-stitch](https://github.com/singer-io/target-stitch)
 
-3. Create your tap's `config.json` file. Include the client_id, client_secret, refresh_token, site_urls (website URL properties in a comma delimited list; do not include the domain-level property in the list), start_date (UTC format), and user_agent (tap name with the api user email address).
+3. Create your tap's `config.json` file. Include the `credentials_file` path to your google secrets file as described in the [Authentication](#authentication) paragraph.
 
     ```json
     {
-        "client_id": "YOUR_CLIENT_ID",
-        "client_secret": "YOUR_CLIENT_SECRET",
-        "refresh_token": "YOUR_REFRESH_TOKEN",
+        "credentials_file": "PATH_TO_YOUR_GOOGLE_CREDENTIALS_FILE",
         "spreadsheet_id": "YOUR_GOOGLE_SPREADSHEET_ID",
-        "start_date": "2019-01-01T00:00:00Z",
-        "user_agent": "tap-google-sheets <api_user_email@example.com>"
+        "start_date": "2019-01-01T00:00:00Z"
     }
     ```
     
