@@ -66,8 +66,8 @@ def write_bookmark(state, stream, value):
 
 def drop_date_on_time(schema, record):
     for field, field_schema in schema['properties'].items():
-        if field_schema.get('format') == 'time':
-            # `time` fields come back from Google like `X days, H:M:S`
+        if field_schema.get('format') == 'time' and 'days,' in record[field]:
+            # `time` fields can come back from Google like `X days, H:M:S`
             old_time = record[field]
             new_time = old_time.split(',')[1].strip()
             record[field] = new_time
