@@ -192,14 +192,15 @@ def get_sheet_schema_columns(sheet):
             }
             columns.append(column)
 
-            field_schema = {
-                'anyOf': [
-                    col_properties,
-                    {'type': ['null', 'string']}
-                ]
-            }
+            if column_gs_type in {'numberType.DATE_TIME', 'numberType.DATE', 'numberType.TIME'}:
+                col_properties = {
+                        'anyOf': [
+                            col_properties,
+                            {'type': ['null', 'string']}
+                        ]
+                    }
 
-            sheet_json_schema['properties'][column_name] = field_schema
+            sheet_json_schema['properties'][column_name] = col_properties
 
         prior_header = column_name
         i = i + 1
