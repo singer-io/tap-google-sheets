@@ -192,7 +192,7 @@ def get_sheet_schema_columns(sheet):
             }
             columns.append(column)
 
-            if column_gs_type in {'numberType.DATE_TIME', 'numberType.DATE', 'numberType.TIME'}:
+            if column_gs_type in {'numberType.DATE_TIME', 'numberType.DATE', 'numberType.TIME', 'numberType'}:
                 col_properties = {
                         'anyOf': [
                             col_properties,
