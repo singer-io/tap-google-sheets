@@ -194,11 +194,11 @@ def get_sheet_schema_columns(sheet):
 
             if column_gs_type in {'numberType.DATE_TIME', 'numberType.DATE', 'numberType.TIME', 'numberType'}:
                 col_properties = {
-                        'anyOf': [
-                            col_properties,
-                            {'type': ['null', 'string']}
-                        ]
-                    }
+                    'anyOf': [
+                        col_properties,
+                        {'type': ['null', 'string']}
+                    ]
+                }
 
             sheet_json_schema['properties'][column_name] = col_properties
 
