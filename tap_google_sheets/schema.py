@@ -152,20 +152,7 @@ def get_sheet_schema_columns(sheet):
                 else:
                     # Interesting - order in the anyOf makes a difference.
                     # Number w/ multipleOf must be listed last, otherwise errors occur.
-                    col_properties =  {
-                        'anyOf': [
-                            {
-                                'type': 'null'
-                            },
-                            {
-                                'type': 'number',
-                                'multipleOf': 1e-15
-                            },
-                            {
-                                'type': 'string'
-                            }
-                        ]
-                    }
+                    col_properties = {'type': 'number', 'multipleOf': 1e-15}
                     column_gs_type = 'numberType'
             # Catch-all to deal with other types and set to string
             # column_effective_value_type: formulaValue, errorValue, or other
@@ -204,6 +191,14 @@ def get_sheet_schema_columns(sheet):
                 'columnSkipped': column_is_skipped
             }
             columns.append(column)
+
+            if column_gs_type in {'numberType.DATE_TIME', 'numberType.DATE', 'numberType.TIME', 'numberType'}:
+                col_properties = {
+                    'anyOf': [
+                        col_properties,
+                        {'type': ['null', 'string']}
+                    ]
+                }
 
             sheet_json_schema['properties'][column_name] = col_properties
 
