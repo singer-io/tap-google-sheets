@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="content-type" content="text/html;charset=utf-8">
+  <title>__init__.py</title>
+  <link rel="stylesheet" href="pycco.css">
+</head>
+<body>
+<div id='container'>
+  <div id="background"></div>
+  <div class='section'>
+    <div class='docs'><h1>__init__.py</h1></div>
+  </div>
+  <div class='clearall'>
+  <div class='section' id='section-0'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-0'>#</a>
+      </div>
+      <p>This project syncs data from the v4 Google Sheets API.</p>
+<h1>Discovery Mode</h1>
+<p>There are a few static streams (<code>"file_metadata"</code>, <code>"spreadsheet_metadata"</code>, <code>"sheet_metadata"</code>,
+<code>"sheets_loaded"</code>) and any number of dynamic streams. There&rsquo;s one dynamic stream per sheet in the
+one Google Sheets Doc.</p>
+<h1>Sync Mode</h1>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">import</span> <span class="nn">argparse</span> <span class="c1"># unused import</span>
+<span class="kn">import</span> <span class="nn">singer</span>
+<span class="kn">from</span> <span class="nn">singer</span> <span class="kn">import</span> <span class="n">metadata</span><span class="p">,</span> <span class="n">utils</span>
+<span class="kn">from</span> <span class="nn">tap_google_sheets.client</span> <span class="kn">import</span> <span class="n">GoogleClient</span>
+<span class="kn">from</span> <span class="nn">tap_google_sheets.discover</span> <span class="kn">import</span> <span class="n">discover</span>
+<span class="kn">from</span> <span class="nn">tap_google_sheets.sync</span> <span class="kn">import</span> <span class="n">sync</span>
+
+<span class="n">LOGGER</span> <span class="o">=</span> <span class="n">singer</span><span class="o">.</span><span class="n">get_logger</span><span class="p">()</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-1'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-1'>#</a>
+      </div>
+      <h1>Configuration</h1>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-2'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-2'>#</a>
+      </div>
+      <p>This is a typical OAuth2 tap. So in a config file we expect the following keys.</p>
+<ul>
+<li>
+<p>OAuth Related:</p>
+<ul>
+<li><code>client_id</code></li>
+<li><code>client_secret</code></li>
+<li><code>refresh_token</code></li>
+</ul>
+</li>
+<li>
+<p>Tap related:</p>
+<ul>
+<li><code>spreadsheet_id</code></li>
+<li><code>start_date</code></li>
+<li><code>user_agent</code></li>
+</ul>
+</li>
+</ul>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre><span class="n">REQUIRED_CONFIG_KEYS</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s1">&#39;client_id&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;client_secret&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;refresh_token&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;spreadsheet_id&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;start_date&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;user_agent&#39;</span>
+<span class="p">]</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-3'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-3'>#</a>
+      </div>
+      <h1>Discovery Mode</h1>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-4'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-4'>#</a>
+      </div>
+      <p>Creates a Singer Catalog and writes it to STDOUT</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre><span class="k">def</span> <span class="nf">do_discover</span><span class="p">(</span><span class="n">client</span><span class="p">,</span> <span class="n">spreadsheet_id</span><span class="p">):</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-5'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-5'>#</a>
+      </div>
+      <p>Inputs:</p>
+<ul>
+<li><code>client</code></li>
+<li>An instance of the GoogleClient class</li>
+<li><code>spreadsheet_id</code></li>
+<li>The id of the Google Sheet</li>
+</ul>
+<p>Returns:</p>
+<ul>
+<li>None</li>
+</ul>
+<p>Side Effects:</p>
+<ul>
+<li>Writes to STDOUT</li>
+</ul>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    <span class="n">LOGGER</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Starting discover&#39;</span><span class="p">)</span>
+    <span class="n">catalog</span> <span class="o">=</span> <span class="n">discover</span><span class="p">(</span><span class="n">client</span><span class="p">,</span> <span class="n">spreadsheet_id</span><span class="p">)</span>
+    <span class="n">json</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">catalog</span><span class="o">.</span><span class="n">to_dict</span><span class="p">(),</span> <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+    <span class="n">LOGGER</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Finished discover&#39;</span><span class="p">)</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-6'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-6'>#</a>
+      </div>
+      <h1>Entrypoint</h1>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-7'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-7'>#</a>
+      </div>
+      <p>Read a config, then run discovery mode or sync mode</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre><span class="nd">@singer</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">handle_top_exception</span><span class="p">(</span><span class="n">LOGGER</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">main</span><span class="p">():</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-8'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-8'>#</a>
+      </div>
+      <p>Inputs:</p>
+<ul>
+<li>None</li>
+</ul>
+<p>Returns:</p>
+<ul>
+<li>None</li>
+</ul>
+<p>Side Effects:</p>
+<ul>
+<li>Writes to STDOUT</li>
+</ul>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    <span class="n">parsed_args</span> <span class="o">=</span> <span class="n">singer</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">parse_args</span><span class="p">(</span><span class="n">REQUIRED_CONFIG_KEYS</span><span class="p">)</span>
+
+    <span class="k">with</span> <span class="n">GoogleClient</span><span class="p">(</span><span class="n">parsed_args</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;access_token&#39;</span><span class="p">],</span>
+                      <span class="n">parsed_args</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;user_agent&#39;</span><span class="p">])</span> <span class="k">as</span> <span class="n">client</span><span class="p">:</span>
+
+        <span class="n">state</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">if</span> <span class="n">parsed_args</span><span class="o">.</span><span class="n">state</span><span class="p">:</span>
+            <span class="n">state</span> <span class="o">=</span> <span class="n">parsed_args</span><span class="o">.</span><span class="n">state</span>
+
+        <span class="n">config</span> <span class="o">=</span> <span class="n">parsed_args</span><span class="o">.</span><span class="n">config</span>
+        <span class="n">spreadsheet_id</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;spreadsheet_id&#39;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">parsed_args</span><span class="o">.</span><span class="n">discover</span><span class="p">:</span>
+            <span class="n">do_discover</span><span class="p">(</span><span class="n">client</span><span class="p">,</span> <span class="n">spreadsheet_id</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">parsed_args</span><span class="o">.</span><span class="n">catalog</span><span class="p">:</span>
+            <span class="n">sync</span><span class="p">(</span><span class="n">client</span><span class="o">=</span><span class="n">client</span><span class="p">,</span>
+                 <span class="n">config</span><span class="o">=</span><span class="n">config</span><span class="p">,</span>
+                 <span class="n">catalog</span><span class="o">=</span><span class="n">parsed_args</span><span class="o">.</span><span class="n">catalog</span><span class="p">,</span>
+                 <span class="n">state</span><span class="o">=</span><span class="n">state</span><span class="p">)</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-9'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-9'>#</a>
+      </div>
+      <p>Unused</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre><span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="n">main</span><span class="p">()</span>
+
+</pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+</div>
+</body>

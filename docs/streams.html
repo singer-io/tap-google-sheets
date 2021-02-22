@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="content-type" content="text/html;charset=utf-8">
+  <title>streams.py</title>
+  <link rel="stylesheet" href="pycco.css">
+</head>
+<body>
+<div id='container'>
+  <div id="background"></div>
+  <div class='section'>
+    <div class='docs'><h1>streams.py</h1></div>
+  </div>
+  <div class='clearall'>
+  <div class='section' id='section-0'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-0'>#</a>
+      </div>
+      <p><code>streams.py:STREAMS</code> is an <code>OrderedDict</code>. Only because we want to loop over it in the same order
+every time.</p>
+<p>It&rsquo;s still the same global variable found in taps of this style. It maps stream names to a
+dictionary describing the stream.</p>
+<p>Some notable things we learn in this file:</p>
+<ul>
+<li>
+<p><code>api</code> is either <code>"files"</code> or <code>"sheets"</code></p>
+</li>
+<li>
+<p>We saw this used in <code>client.py:GoogleClient.request()</code> to switch the base url of the request</p>
+</li>
+<li>
+<p><code>"file_metadata"</code> is the only incremental stream</p>
+</li>
+<li>
+<p>Full table streams include:</p>
+</li>
+<li><code>"spreadsheet_metadata"</code></li>
+<li><code>"sheet_metadata"</code></li>
+<li>
+<p><code>"sheets_loaded"</code></p>
+</li>
+<li>
+<p><code>"sheets_loaded"</code> is the only stream with a <code>"data_key"</code></p>
+</li>
+<li>We typically see <code>data_key</code> be the name of the key to get data out of &ldquo;envelope&rdquo; responses</li>
+</ul>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">OrderedDict</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-1'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-1'>#</a>
+      </div>
+      <p>streams: API URL endpoints to be called
+properties:
+  <root node>: Plural stream name for the endpoint
+  path: API endpoint relative path, when added to the base URL, creates the full path,
+      default = stream_name
+  key_properties: Primary key fields for identifying an endpoint record.
+  replication_method: INCREMENTAL or FULL_TABLE
+  replication_keys: bookmark_field(s), typically a date-time, used for filtering the results
+      and setting the state
+  params: Query, sort, and other endpoint specific parameters; default = {}
+  data_key: JSON element containing the results list for the endpoint;
+      default = root (no data_key)</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-2'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-2'>#</a>
+      </div>
+      <p>file_metadata: Queries Google Drive API to get file information and see if file has been modified
+   Provides audit info about who and when last changed the file.</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre><span class="n">FILE_METADATA</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;api&quot;</span><span class="p">:</span> <span class="s2">&quot;files&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;path&quot;</span><span class="p">:</span> <span class="s2">&quot;files/</span><span class="si">{spreadsheet_id}</span><span class="s2">&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;key_properties&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">],</span>
+    <span class="s2">&quot;replication_method&quot;</span><span class="p">:</span> <span class="s2">&quot;INCREMENTAL&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;replication_keys&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;modifiedTime&quot;</span><span class="p">],</span>
+    <span class="s2">&quot;params&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&quot;fields&quot;</span><span class="p">:</span> <span class="s2">&quot;id,name,createdTime,modifiedTime,version,teamDriveId,driveId,lastModifyingUser&quot;</span>
+    <span class="p">}</span>
+<span class="p">}</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-3'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-3'>#</a>
+      </div>
+      <p>spreadsheet_metadata: Queries spreadsheet to get basic information on spreadhsheet and sheets</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre><span class="n">SPREADSHEET_METADATA</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;api&quot;</span><span class="p">:</span> <span class="s2">&quot;sheets&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;path&quot;</span><span class="p">:</span> <span class="s2">&quot;spreadsheets/</span><span class="si">{spreadsheet_id}</span><span class="s2">&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;key_properties&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;spreadsheetId&quot;</span><span class="p">],</span>
+    <span class="s2">&quot;replication_method&quot;</span><span class="p">:</span> <span class="s2">&quot;FULL_TABLE&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;params&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&quot;includeGridData&quot;</span><span class="p">:</span> <span class="s2">&quot;false&quot;</span>
+    <span class="p">}</span>
+<span class="p">}</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-4'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-4'>#</a>
+      </div>
+      <p>sheet_metadata: Get Header Row and 1st data row (Rows 1 &amp; 2) from a Sheet on Spreadsheet.
+This endpoint includes detailed metadata about each cell in the header and first data row
+  incl. data type, formatting, etc.</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre><span class="n">SHEET_METADATA</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;api&quot;</span><span class="p">:</span> <span class="s2">&quot;sheets&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;path&quot;</span><span class="p">:</span> <span class="s2">&quot;spreadsheets/</span><span class="si">{spreadsheet_id}</span><span class="s2">&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;key_properties&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;sheetId&quot;</span><span class="p">],</span>
+    <span class="s2">&quot;replication_method&quot;</span><span class="p">:</span> <span class="s2">&quot;FULL_TABLE&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;params&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&quot;includeGridData&quot;</span><span class="p">:</span> <span class="s2">&quot;true&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;ranges&quot;</span><span class="p">:</span> <span class="s2">&quot;&#39;</span><span class="si">{sheet_title}</span><span class="s2">&#39;!1:2&quot;</span>
+    <span class="p">}</span>
+<span class="p">}</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-5'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-5'>#</a>
+      </div>
+      <p>sheets_loaded: Queries a batch of Rows for each Sheet in the Spreadsheet.
+Each query uses the <code>values</code> endpoint, to get data-only, w/out the formatting/type metadata.</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre><span class="n">SHEETS_LOADED</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;api&quot;</span><span class="p">:</span> <span class="s2">&quot;sheets&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;path&quot;</span><span class="p">:</span> <span class="s2">&quot;spreadsheets/</span><span class="si">{spreadsheet_id}</span><span class="s2">/values/&#39;</span><span class="si">{sheet_title}</span><span class="s2">&#39;!</span><span class="si">{range_rows}</span><span class="s2">&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;data_key&quot;</span><span class="p">:</span> <span class="s2">&quot;values&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;key_properties&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;spreadsheetId&quot;</span><span class="p">,</span> <span class="s2">&quot;sheetId&quot;</span><span class="p">,</span> <span class="s2">&quot;loadDate&quot;</span><span class="p">],</span>
+    <span class="s2">&quot;replication_method&quot;</span><span class="p">:</span> <span class="s2">&quot;FULL_TABLE&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;params&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&quot;dateTimeRenderOption&quot;</span><span class="p">:</span> <span class="s2">&quot;SERIAL_NUMBER&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;valueRenderOption&quot;</span><span class="p">:</span> <span class="s2">&quot;UNFORMATTED_VALUE&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;majorDimension&quot;</span><span class="p">:</span> <span class="s2">&quot;ROWS&quot;</span>
+    <span class="p">}</span>
+<span class="p">}</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-6'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-6'>#</a>
+      </div>
+      <p>Ensure streams are ordered sequentially, logically.</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre><span class="n">STREAMS</span> <span class="o">=</span> <span class="n">OrderedDict</span><span class="p">()</span>
+<span class="n">STREAMS</span><span class="p">[</span><span class="s1">&#39;file_metadata&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">FILE_METADATA</span>
+<span class="n">STREAMS</span><span class="p">[</span><span class="s1">&#39;spreadsheet_metadata&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">SPREADSHEET_METADATA</span>
+<span class="n">STREAMS</span><span class="p">[</span><span class="s1">&#39;sheet_metadata&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">SHEET_METADATA</span>
+<span class="n">STREAMS</span><span class="p">[</span><span class="s1">&#39;sheets_loaded&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">SHEETS_LOADED</span>
+
+</pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+</div>
+</body>

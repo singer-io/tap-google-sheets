@@ -1,0 +1,949 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="content-type" content="text/html;charset=utf-8">
+  <title>schema.py</title>
+  <link rel="stylesheet" href="pycco.css">
+</head>
+<body>
+<div id='container'>
+  <div id="background"></div>
+  <div class='section'>
+    <div class='docs'><h1>schema.py</h1></div>
+  </div>
+  <div class='clearall'>
+  <div class='section' id='section-0'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-0'>#</a>
+      </div>
+      
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">import</span> <span class="nn">urllib.parse</span>
+<span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">OrderedDict</span>
+<span class="kn">import</span> <span class="nn">singer</span>
+<span class="kn">from</span> <span class="nn">singer</span> <span class="kn">import</span> <span class="n">metadata</span>
+<span class="kn">from</span> <span class="nn">tap_google_sheets.streams</span> <span class="kn">import</span> <span class="n">STREAMS</span>
+
+<span class="n">LOGGER</span> <span class="o">=</span> <span class="n">singer</span><span class="o">.</span><span class="n">get_logger</span><span class="p">()</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-1'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-1'>#</a>
+      </div>
+      <p>Convert column index to column letter</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre><span class="k">def</span> <span class="nf">colnum_string</span><span class="p">(</span><span class="n">num</span><span class="p">):</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-2'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-2'>#</a>
+      </div>
+      
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    <span class="n">string</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+    <span class="k">while</span> <span class="n">num</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">num</span><span class="p">,</span> <span class="n">remainder</span> <span class="o">=</span> <span class="nb">divmod</span><span class="p">(</span><span class="n">num</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">26</span><span class="p">)</span>
+        <span class="n">string</span> <span class="o">=</span> <span class="nb">chr</span><span class="p">(</span><span class="mi">65</span> <span class="o">+</span> <span class="n">remainder</span><span class="p">)</span> <span class="o">+</span> <span class="n">string</span>
+    <span class="k">return</span> <span class="n">string</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-3'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-3'>#</a>
+      </div>
+      <hr />
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-4'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-4'>#</a>
+      </div>
+      <p>The goal of this function is to get the JSON schema of the sheet you pass in. Our return values here
+are <code>sheet_json_schema</code> and <code>columns</code>, an <code>OrderedDict</code> and a list respectively.</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-5'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-5'>#</a>
+      </div>
+      <p>This function is massive and we will discuss it in the following parts:</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-6'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-6'>#</a>
+      </div>
+      <ul>
+<li>Part 1</li>
+<li>Part 2<ul>
+<li>Part 2A</li>
+<li>Part 2B<ul>
+<li>Part 3</li>
+<li>Part 4</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-7'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-7'>#</a>
+      </div>
+      <p>Part 1 is just setting up constants and variables. We can skim through this part.</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-8'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-8'>#</a>
+      </div>
+      <p>Part 2 is split into two parts because it&rsquo;s a loop over the column and there&rsquo;s two ways to handle a
+column.</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-9'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-9'>#</a>
+      </div>
+      <p>We&rsquo;ll consider 2A to be the &ldquo;skip this column&rdquo; case.</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-10'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-10'>#</a>
+      </div>
+      <p>We&rsquo;ll consider 2B as the &ldquo;not skipped&rdquo; case. In which we determine a field&rsquo;s type (Part 3) and then
+use the type to decide the JSON Schema (Part 4).</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-11'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-11'>#</a>
+      </div>
+      <hr />
+<p>Create sheet_metadata_json with columns from sheet</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre><span class="k">def</span> <span class="nf">get_sheet_schema_columns</span><span class="p">(</span><span class="n">sheet</span><span class="p">):</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-12'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-12'>#</a>
+      </div>
+      <p>The input to this function is shaped like</p>
+<pre><code class="language-JSON">{
+  &quot;data&quot; : [
+    {
+      &quot;rowData&quot;: [
+        {&quot;values&quot;: &lt;thing 1&gt;},
+        {&quot;values&quot;: &lt;thing 2&gt;}
+      ]
+    }
+  ]
+}
+</code></pre>
+<p>Return Values</p>
+<ul>
+<li>
+<p>columns</p>
+<ul>
+<li>A <code>column</code> that goes into <code>columns</code> is a dictionary with keys <code>"columnIndex"</code>,
+<code>"columnLetter"</code>, <code>"columnName"</code>, <code>"columnType"</code>, and <code>"columnSkipped"</code>.</li>
+</ul>
+</li>
+<li>
+<p>sheet_json_schema</p>
+<ul>
+<li>A <code>col_properties</code> that goes into <code>sheet_json_schema['properties'][column_name]</code> is the JSON
+schema of <code>column_name</code>.</li>
+</ul>
+</li>
+</ul>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    <span class="n">sheet_title</span> <span class="o">=</span> <span class="n">sheet</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;properties&#39;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;title&#39;</span><span class="p">)</span>
+    <span class="n">sheet_json_schema</span> <span class="o">=</span> <span class="n">OrderedDict</span><span class="p">()</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="nb">iter</span><span class="p">(</span><span class="n">sheet</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;data&#39;</span><span class="p">,</span> <span class="p">[])),</span> <span class="p">{})</span>
+    <span class="n">row_data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;rowData&#39;</span><span class="p">,</span> <span class="p">[])</span>
+    <span class="k">if</span> <span class="n">row_data</span> <span class="o">==</span> <span class="p">[]:</span>
+        <span class="n">LOGGER</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;SKIPPING Empty Sheet: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">sheet_title</span><span class="p">))</span>
+        <span class="k">return</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-13'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-13'>#</a>
+      </div>
+      <p>So this function starts by unpacking it into two lists, <code>headers</code> and <code>first_values</code>, which is
+&ldquo;thing 1&rdquo; and &ldquo;thing 2&rdquo; respectively.</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    <span class="n">headers</span> <span class="o">=</span> <span class="n">row_data</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;values&#39;</span><span class="p">,</span> <span class="p">[])</span>
+    <span class="n">first_values</span> <span class="o">=</span> <span class="n">row_data</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;values&#39;</span><span class="p">,</span> <span class="p">[])</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-14'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-14'>#</a>
+      </div>
+      <p>All of the objects in <code>headers</code> and <code>first_values</code> have the following shape:</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-15'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-15'>#</a>
+      </div>
+      <pre><code class="language-JSON">{
+    &quot;userEnteredValue&quot;: {&quot;stringValue&quot;: &quot;time1&quot;},
+    &quot;effectiveValue&quot;: {&quot;stringValue&quot;: &quot;time1&quot;},
+    &quot;formattedValue&quot;: &quot;time1&quot;,
+    &quot;userEnteredFormat&quot;: {...},
+    &quot;effectiveFormat&quot;: {}
+}
+</code></pre>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-16'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-16'>#</a>
+      </div>
+      <p>The base Sheet schema</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    <span class="n">sheet_json_schema</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;object&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;additionalProperties&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="s1">&#39;properties&#39;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s1">&#39;__sdc_spreadsheet_id&#39;</span><span class="p">:</span> <span class="p">{</span>
+                <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;null&#39;</span><span class="p">,</span> <span class="s1">&#39;string&#39;</span><span class="p">]</span>
+            <span class="p">},</span>
+            <span class="s1">&#39;__sdc_sheet_id&#39;</span><span class="p">:</span> <span class="p">{</span>
+                <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;null&#39;</span><span class="p">,</span> <span class="s1">&#39;integer&#39;</span><span class="p">]</span>
+            <span class="p">},</span>
+            <span class="s1">&#39;__sdc_row&#39;</span><span class="p">:</span> <span class="p">{</span>
+                <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;null&#39;</span><span class="p">,</span> <span class="s1">&#39;integer&#39;</span><span class="p">]</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+
+    <span class="n">header_list</span> <span class="o">=</span> <span class="p">[]</span> <span class="c1"># used for checking uniqueness</span>
+    <span class="n">columns</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">prior_header</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">skipped</span> <span class="o">=</span> <span class="mi">0</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-17'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-17'>#</a>
+      </div>
+      <p>We loop over the columns in the <code>headers</code> list and accummulate an object in each return
+variable.</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    <span class="k">for</span> <span class="n">header</span> <span class="ow">in</span> <span class="n">headers</span><span class="p">:</span>
+        <span class="n">column_index</span> <span class="o">=</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span>
+        <span class="n">column_letter</span> <span class="o">=</span> <span class="n">colnum_string</span><span class="p">(</span><span class="n">column_index</span><span class="p">)</span>
+        <span class="n">header_value</span> <span class="o">=</span> <span class="n">header</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;formattedValue&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">header_value</span><span class="p">:</span> <span class="c1"># NOT skipped</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-18'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-18'>#</a>
+      </div>
+      <p>Assuming the column we are looking at does not get skipped, we have to figure out the
+schema.</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>            <span class="n">column_is_skipped</span> <span class="o">=</span> <span class="kc">False</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-19'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-19'>#</a>
+      </div>
+      <p>First we reset the counter for consecutive skipped columns.</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>            <span class="n">skipped</span> <span class="o">=</span> <span class="mi">0</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-20'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-20'>#</a>
+      </div>
+      <p>Then we let the name of this column be the value of <code>formattedValue</code> from the <code>header</code>
+object we are looking at. This seems to be the value rendered in Google Sheets in the
+cell.</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>            <span class="n">column_name</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">header_value</span><span class="p">)</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-21'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-21'>#</a>
+      </div>
+      <p>We assert that this column name is unique or else we raise a &ldquo;Duplicate Header Error&rdquo;.</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>            <span class="k">if</span> <span class="n">column_name</span> <span class="ow">in</span> <span class="n">header_list</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s1">&#39;DUPLICATE HEADER ERROR: SHEET: </span><span class="si">{}</span><span class="s1">, COL: </span><span class="si">{}</span><span class="s1">, CELL: </span><span class="si">{}</span><span class="s1">1&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                    <span class="n">sheet_title</span><span class="p">,</span> <span class="n">column_name</span><span class="p">,</span> <span class="n">column_letter</span><span class="p">))</span>
+            <span class="n">header_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">column_name</span><span class="p">)</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-22'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-22'>#</a>
+      </div>
+      <p>We attempt to grab the value in the second row of the sheet (the first row of data)
+associated with this column. Remember this row we are looking at is stored in
+<code>first_values</code>. Note again that <code>headers</code> and <code>first_values</code> have the same shape.</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>            <span class="n">first_value</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">first_value</span> <span class="o">=</span> <span class="n">first_values</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+            <span class="k">except</span> <span class="ne">IndexError</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+                <span class="n">LOGGER</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;NO VALUE IN 2ND ROW FOR HEADER. SHEET: </span><span class="si">{}</span><span class="s1">, COL: </span><span class="si">{}</span><span class="s1">, CELL: </span><span class="si">{}</span><span class="s1">2. </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                    <span class="n">sheet_title</span><span class="p">,</span> <span class="n">column_name</span><span class="p">,</span> <span class="n">column_letter</span><span class="p">,</span> <span class="n">err</span><span class="p">))</span>
+                <span class="n">first_value</span> <span class="o">=</span> <span class="p">{}</span>
+                <span class="n">first_values</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">first_value</span><span class="p">)</span>
+                <span class="k">pass</span>
+
+            <span class="n">column_effective_value</span> <span class="o">=</span> <span class="n">first_value</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;effectiveValue&#39;</span><span class="p">,</span> <span class="p">{})</span>
+
+            <span class="n">col_val</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="k">if</span> <span class="n">column_effective_value</span> <span class="o">==</span> <span class="p">{}:</span>
+                <span class="n">column_effective_value_type</span> <span class="o">=</span> <span class="s1">&#39;stringValue&#39;</span>
+                <span class="n">LOGGER</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;WARNING: NO VALUE IN 2ND ROW FOR HEADER. SHEET: </span><span class="si">{}</span><span class="s1">, COL: </span><span class="si">{}</span><span class="s1">, CELL: </span><span class="si">{}</span><span class="s1">2.&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                    <span class="n">sheet_title</span><span class="p">,</span> <span class="n">column_name</span><span class="p">,</span> <span class="n">column_letter</span><span class="p">))</span>
+                <span class="n">LOGGER</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;   Setting column datatype to STRING&#39;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-23'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-23'>#</a>
+      </div>
+      <p>The tap calls the value of <code>"effectiveValue"</code> the <code>column_effective_value</code>. This
+dictionary can be empty or it can have a <code>key1</code> that looks like <code>"numberValue"</code>,
+<code>"stringValue"</code>, or <code>"boolValue"</code>. If the dictionary is empty, we force <code>key1</code> to
+be <code>"stringValue"</code>.</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>                <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">val</span> <span class="ow">in</span> <span class="n">column_effective_value</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                    <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;numberValue&#39;</span><span class="p">,</span> <span class="s1">&#39;stringValue&#39;</span><span class="p">,</span> <span class="s1">&#39;boolValue&#39;</span><span class="p">):</span>
+                        <span class="n">column_effective_value_type</span> <span class="o">=</span> <span class="n">key</span>
+                        <span class="n">col_val</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">val</span><span class="p">)</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-24'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-24'>#</a>
+      </div>
+      <p>Sometimes <code>key1</code> also looks like <code>"errorType"</code> or <code>"formulaType"</code>, but in
+these cases, we raise a &ldquo;Data Type Error&rdquo; error immediately.</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>                    <span class="k">elif</span> <span class="n">key</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;errorType&#39;</span><span class="p">,</span> <span class="s1">&#39;formulaType&#39;</span><span class="p">):</span>
+                        <span class="n">col_val</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">val</span><span class="p">)</span>
+                        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s1">&#39;DATA TYPE ERROR 2ND ROW VALUE: SHEET: </span><span class="si">{}</span><span class="s1">, COL: </span><span class="si">{}</span><span class="s1">, CELL: </span><span class="si">{}</span><span class="s1">2, TYPE: </span><span class="si">{}</span><span class="s1">, VALUE: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                            <span class="n">sheet_title</span><span class="p">,</span> <span class="n">column_name</span><span class="p">,</span> <span class="n">column_letter</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">col_val</span><span class="p">))</span>
+
+            <span class="n">column_number_format</span> <span class="o">=</span> <span class="n">first_values</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;effectiveFormat&#39;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
+                <span class="s1">&#39;numberFormat&#39;</span><span class="p">,</span> <span class="p">{})</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-25'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-25'>#</a>
+      </div>
+      <p>column_number_format_type = UNSPECIFIED, TEXT, NUMBER, PERCENT, CURRENCY, DATE</p>
+<ul>
+<li>TIME, DATE_TIME, SCIENTIFIC</li>
+<li>https://developers.google.com/sheets/api/reference/rest/v4/spreadsheets/cells#NumberFormatType</li>
+</ul>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>            <span class="n">column_number_format_type</span> <span class="o">=</span> <span class="n">column_number_format</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;type&#39;</span><span class="p">)</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-26'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-26'>#</a>
+      </div>
+      <p>the giant if-elif-else block: All it does is set a variable <code>col_properties</code> and
+<code>column_gs_type</code> based on the values of <code>column_effective_value_type</code> and
+<code>column_number_format_type</code>.</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>            <span class="n">column_format</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="k">if</span> <span class="n">column_effective_value</span> <span class="o">==</span> <span class="p">{}:</span>
+                <span class="n">col_properties</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;null&#39;</span><span class="p">,</span> <span class="s1">&#39;string&#39;</span><span class="p">]}</span>
+                <span class="n">column_gs_type</span> <span class="o">=</span> <span class="s1">&#39;stringValue&#39;</span>
+                <span class="n">LOGGER</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;WARNING: 2ND ROW VALUE IS BLANK: SHEET: </span><span class="si">{}</span><span class="s1">, COL: </span><span class="si">{}</span><span class="s1">, CELL: </span><span class="si">{}</span><span class="s1">2&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                        <span class="n">sheet_title</span><span class="p">,</span> <span class="n">column_name</span><span class="p">,</span> <span class="n">column_letter</span><span class="p">))</span>
+                <span class="n">LOGGER</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;   Setting column datatype to STRING&#39;</span><span class="p">)</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-27'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-27'>#</a>
+      </div>
+      <p>column_effective_value_type = numberValue, stringValue, boolValue</p>
+<ul>
+<li>INVALID: errorType, formulaType</li>
+<li>https://developers.google.com/sheets/api/reference/rest/v4/spreadsheets/other#ExtendedValue</li>
+</ul>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>            <span class="k">elif</span> <span class="n">column_effective_value_type</span> <span class="o">==</span> <span class="s1">&#39;stringValue&#39;</span><span class="p">:</span>
+                <span class="n">col_properties</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;null&#39;</span><span class="p">,</span> <span class="s1">&#39;string&#39;</span><span class="p">]}</span>
+                <span class="n">column_gs_type</span> <span class="o">=</span> <span class="s1">&#39;stringValue&#39;</span>
+            <span class="k">elif</span> <span class="n">column_effective_value_type</span> <span class="o">==</span> <span class="s1">&#39;boolValue&#39;</span><span class="p">:</span>
+                <span class="n">col_properties</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;null&#39;</span><span class="p">,</span> <span class="s1">&#39;boolean&#39;</span><span class="p">,</span> <span class="s1">&#39;string&#39;</span><span class="p">]}</span>
+                <span class="n">column_gs_type</span> <span class="o">=</span> <span class="s1">&#39;boolValue&#39;</span>
+            <span class="k">elif</span> <span class="n">column_effective_value_type</span> <span class="o">==</span> <span class="s1">&#39;numberValue&#39;</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">column_number_format_type</span> <span class="o">==</span> <span class="s1">&#39;DATE_TIME&#39;</span><span class="p">:</span>
+                    <span class="n">col_properties</span> <span class="o">=</span> <span class="p">{</span>
+                        <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;null&#39;</span><span class="p">,</span> <span class="s1">&#39;string&#39;</span><span class="p">],</span>
+                        <span class="s1">&#39;format&#39;</span><span class="p">:</span> <span class="s1">&#39;date-time&#39;</span>
+                    <span class="p">}</span>
+                    <span class="n">column_gs_type</span> <span class="o">=</span> <span class="s1">&#39;numberType.DATE_TIME&#39;</span>
+                <span class="k">elif</span> <span class="n">column_number_format_type</span> <span class="o">==</span> <span class="s1">&#39;DATE&#39;</span><span class="p">:</span>
+                    <span class="n">col_properties</span> <span class="o">=</span> <span class="p">{</span>
+                        <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;null&#39;</span><span class="p">,</span> <span class="s1">&#39;string&#39;</span><span class="p">],</span>
+                        <span class="s1">&#39;format&#39;</span><span class="p">:</span> <span class="s1">&#39;date&#39;</span>
+                    <span class="p">}</span>
+                    <span class="n">column_gs_type</span> <span class="o">=</span> <span class="s1">&#39;numberType.DATE&#39;</span>
+                <span class="k">elif</span> <span class="n">column_number_format_type</span> <span class="o">==</span> <span class="s1">&#39;TIME&#39;</span><span class="p">:</span>
+                    <span class="n">col_properties</span> <span class="o">=</span> <span class="p">{</span>
+                        <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;null&#39;</span><span class="p">,</span> <span class="s1">&#39;string&#39;</span><span class="p">],</span>
+                        <span class="s1">&#39;format&#39;</span><span class="p">:</span> <span class="s1">&#39;time&#39;</span>
+                    <span class="p">}</span>
+                    <span class="n">column_gs_type</span> <span class="o">=</span> <span class="s1">&#39;numberType.TIME&#39;</span>
+                <span class="k">elif</span> <span class="n">column_number_format_type</span> <span class="o">==</span> <span class="s1">&#39;TEXT&#39;</span><span class="p">:</span>
+                    <span class="n">col_properties</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;null&#39;</span><span class="p">,</span> <span class="s1">&#39;string&#39;</span><span class="p">]}</span>
+                    <span class="n">column_gs_type</span> <span class="o">=</span> <span class="s1">&#39;stringValue&#39;</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">col_properties</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;number&#39;</span><span class="p">,</span> <span class="s1">&#39;multipleOf&#39;</span><span class="p">:</span> <span class="mf">1e-15</span><span class="p">}</span>
+                    <span class="n">column_gs_type</span> <span class="o">=</span> <span class="s1">&#39;numberType&#39;</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">col_properties</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;null&#39;</span><span class="p">,</span> <span class="s1">&#39;string&#39;</span><span class="p">]}</span>
+                <span class="n">column_gs_type</span> <span class="o">=</span> <span class="s1">&#39;unsupportedValue&#39;</span>
+                <span class="n">LOGGER</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;WARNING: UNSUPPORTED 2ND ROW VALUE: SHEET: </span><span class="si">{}</span><span class="s1">, COL: </span><span class="si">{}</span><span class="s1">, CELL: </span><span class="si">{}</span><span class="s1">2, TYPE: </span><span class="si">{}</span><span class="s1">, VALUE: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                        <span class="n">sheet_title</span><span class="p">,</span> <span class="n">column_name</span><span class="p">,</span> <span class="n">column_letter</span><span class="p">,</span> <span class="n">column_effective_value_type</span><span class="p">,</span> <span class="n">col_val</span><span class="p">))</span>
+                <span class="n">LOGGER</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Converting to string.&#39;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span> <span class="c1"># skipped</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-28'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-28'>#</a>
+      </div>
+      <p>We note that we are skipping this column. It still gets added to the schema though as
+a string field. The only other notable thing about skipped columns is the we create
+the field name for it, and it looks like <code>"__sdc_skip_col_XY"</code>, where the <code>XY</code> goes
+from <code>"00"</code>, <code>"01"</code>, to <code>"99"</code>.</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>            <span class="n">column_is_skipped</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="n">skipped</span> <span class="o">=</span> <span class="n">skipped</span> <span class="o">+</span> <span class="mi">1</span>
+            <span class="n">column_index_str</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">column_index</span><span class="p">)</span><span class="o">.</span><span class="n">zfill</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+            <span class="n">column_name</span> <span class="o">=</span> <span class="s1">&#39;__sdc_skip_col_</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">column_index_str</span><span class="p">)</span>
+            <span class="n">col_properties</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;null&#39;</span><span class="p">,</span> <span class="s1">&#39;string&#39;</span><span class="p">]}</span>
+            <span class="n">column_gs_type</span> <span class="o">=</span> <span class="s1">&#39;stringValue&#39;</span>
+            <span class="n">LOGGER</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;WARNING: SKIPPED COLUMN; NO COLUMN HEADER. SHEET: </span><span class="si">{}</span><span class="s1">, COL: </span><span class="si">{}</span><span class="s1">, CELL: </span><span class="si">{}</span><span class="s1">1&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                <span class="n">sheet_title</span><span class="p">,</span> <span class="n">column_name</span><span class="p">,</span> <span class="n">column_letter</span><span class="p">))</span>
+            <span class="n">LOGGER</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;  This column will be skipped during data loading.&#39;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">skipped</span> <span class="o">&gt;=</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="n">sheet_json_schema</span><span class="p">[</span><span class="s1">&#39;properties&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">prior_header</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+            <span class="n">LOGGER</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;TWO CONSECUTIVE SKIPPED COLUMNS. STOPPING SCAN AT: SHEET: </span><span class="si">{}</span><span class="s1">, COL: </span><span class="si">{}</span><span class="s1">, CELL </span><span class="si">{}</span><span class="s1">1&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                <span class="n">sheet_title</span><span class="p">,</span> <span class="n">column_name</span><span class="p">,</span> <span class="n">column_letter</span><span class="p">))</span>
+            <span class="k">break</span>
+
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">column</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="n">column</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s1">&#39;columnIndex&#39;</span><span class="p">:</span> <span class="n">column_index</span><span class="p">,</span>
+                <span class="s1">&#39;columnLetter&#39;</span><span class="p">:</span> <span class="n">column_letter</span><span class="p">,</span>
+                <span class="s1">&#39;columnName&#39;</span><span class="p">:</span> <span class="n">column_name</span><span class="p">,</span>
+                <span class="s1">&#39;columnType&#39;</span><span class="p">:</span> <span class="n">column_gs_type</span><span class="p">,</span>
+                <span class="s1">&#39;columnSkipped&#39;</span><span class="p">:</span> <span class="n">column_is_skipped</span>
+            <span class="p">}</span>
+            <span class="n">columns</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">column</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">column_gs_type</span> <span class="ow">in</span> <span class="p">{</span><span class="s1">&#39;numberType.DATE_TIME&#39;</span><span class="p">,</span> <span class="s1">&#39;numberType.DATE&#39;</span><span class="p">,</span> <span class="s1">&#39;numberType.TIME&#39;</span><span class="p">,</span> <span class="s1">&#39;numberType&#39;</span><span class="p">}:</span>
+                <span class="n">col_properties</span> <span class="o">=</span> <span class="p">{</span>
+                    <span class="s1">&#39;anyOf&#39;</span><span class="p">:</span> <span class="p">[</span>
+                        <span class="n">col_properties</span><span class="p">,</span>
+                        <span class="p">{</span><span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;null&#39;</span><span class="p">,</span> <span class="s1">&#39;string&#39;</span><span class="p">]}</span>
+                    <span class="p">]</span>
+                <span class="p">}</span>
+
+            <span class="n">sheet_json_schema</span><span class="p">[</span><span class="s1">&#39;properties&#39;</span><span class="p">][</span><span class="n">column_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">col_properties</span>
+
+        <span class="n">prior_header</span> <span class="o">=</span> <span class="n">column_name</span>
+        <span class="n">i</span> <span class="o">=</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span>
+
+    <span class="k">return</span> <span class="n">sheet_json_schema</span><span class="p">,</span> <span class="n">columns</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-29'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-29'>#</a>
+      </div>
+      <p>The point of this function seems to be (1) make a request to get a sheet (2) return the schema
+generated for this sheet by <code>schema.py:get_sheet_schema_columns</code>.</p>
+<p><code>get_sheet_metadata()</code> sets up a lot of variables to ultimately make a request to</p>
+<pre><code class="language-Text">https://sheets.googleapis.com/v4/spreadsheets/my-spreadsheet-id?includeGridData=true&amp;ranges='my-sheet-title'!1:2
+</code></pre>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-30'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-30'>#</a>
+      </div>
+      <p>Let&rsquo;s dissect the query params here a bit.</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-31'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-31'>#</a>
+      </div>
+      <p><code>includeGridData</code> is false by default and setting this to true lets us get &ldquo;Grid data&rdquo;. If you
+compare the same request but with that value flipped, then you&rsquo;ll notice the <code>includeGridData=false</code>
+gives you a relatively small response with no data in it. It seems like just a bunch of metadata.</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-32'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-32'>#</a>
+      </div>
+      <p><code>ranges</code> controls the rows returned.</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre><span class="k">def</span> <span class="nf">get_sheet_metadata</span><span class="p">(</span><span class="n">sheet</span><span class="p">,</span> <span class="n">spreadsheet_id</span><span class="p">,</span> <span class="n">client</span><span class="p">):</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-33'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-33'>#</a>
+      </div>
+      <p>Get Header Row and 1st data row (Rows 1 &amp; 2) from a Sheet on Spreadsheet w/ sheet_metadata query</p>
+<ul>
+<li>endpoint: spreadsheets/{spreadsheet_id}</li>
+<li>params: includeGridData = true, ranges = &lsquo;{sheet_title}&rsquo;!1:2
+This endpoint includes detailed metadata about each cell - incl. data type, formatting, etc.</li>
+</ul>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    <span class="n">sheet_id</span> <span class="o">=</span> <span class="n">sheet</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;properties&#39;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;sheetId&#39;</span><span class="p">)</span>
+    <span class="n">sheet_title</span> <span class="o">=</span> <span class="n">sheet</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;properties&#39;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;title&#39;</span><span class="p">)</span>
+    <span class="n">LOGGER</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;sheet_id = </span><span class="si">{}</span><span class="s1">, sheet_title = </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">sheet_id</span><span class="p">,</span> <span class="n">sheet_title</span><span class="p">))</span>
+
+    <span class="n">stream_name</span> <span class="o">=</span> <span class="s1">&#39;sheet_metadata&#39;</span>
+    <span class="n">stream_metadata</span> <span class="o">=</span> <span class="n">STREAMS</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">stream_name</span><span class="p">)</span>
+    <span class="n">api</span> <span class="o">=</span> <span class="n">stream_metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;api&#39;</span><span class="p">,</span> <span class="s1">&#39;sheets&#39;</span><span class="p">)</span>
+    <span class="n">params</span> <span class="o">=</span> <span class="n">stream_metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;params&#39;</span><span class="p">,</span> <span class="p">{})</span>
+    <span class="n">sheet_title_encoded</span> <span class="o">=</span> <span class="n">urllib</span><span class="o">.</span><span class="n">parse</span><span class="o">.</span><span class="n">quote_plus</span><span class="p">(</span><span class="n">sheet_title</span><span class="p">)</span>
+    <span class="n">sheet_title_escaped</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">escape</span><span class="p">(</span><span class="n">sheet_title</span><span class="p">)</span>
+    <span class="n">querystring</span> <span class="o">=</span> <span class="s1">&#39;&amp;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+        <span class="p">[</span><span class="s1">&#39;</span><span class="si">%s</span><span class="s1">=</span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span> <span class="k">for</span> <span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span> <span class="ow">in</span> <span class="n">params</span><span class="o">.</span><span class="n">items</span><span class="p">()]</span>
+    <span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">{sheet_title}</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">sheet_title_encoded</span><span class="p">)</span>
+    <span class="n">path</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">{}</span><span class="s1">?</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+        <span class="n">stream_metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;path&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">{spreadsheet_id}</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">spreadsheet_id</span><span class="p">),</span>
+        <span class="n">querystring</span>
+    <span class="p">)</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-34'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-34'>#</a>
+      </div>
+      <p>See the Footnotes for this response shape</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    <span class="n">sheet_md_results</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">path</span><span class="o">=</span><span class="n">path</span><span class="p">,</span> <span class="n">api</span><span class="o">=</span><span class="n">api</span><span class="p">,</span> <span class="n">endpoint</span><span class="o">=</span><span class="n">sheet_title_escaped</span><span class="p">)</span>
+    <span class="n">sheet_metadata</span> <span class="o">=</span> <span class="n">sheet_md_results</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;sheets&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+
+
+    <span class="k">try</span><span class="p">:</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-35'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-35'>#</a>
+      </div>
+      <p>Create sheet_json_schema (for discovery/catalog) and columns (for sheet_metadata results)</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>        <span class="n">sheet_json_schema</span><span class="p">,</span> <span class="n">columns</span> <span class="o">=</span> <span class="n">get_sheet_schema_columns</span><span class="p">(</span><span class="n">sheet_metadata</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+        <span class="n">LOGGER</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">err</span><span class="p">))</span>
+        <span class="n">LOGGER</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s1">&#39;SKIPPING Malformed sheet: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">sheet_title</span><span class="p">))</span>
+        <span class="n">sheet_json_schema</span><span class="p">,</span> <span class="n">columns</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span>
+
+    <span class="k">return</span> <span class="n">sheet_json_schema</span><span class="p">,</span> <span class="n">columns</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-36'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-36'>#</a>
+      </div>
+      
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre><span class="k">def</span> <span class="nf">get_abs_path</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">realpath</span><span class="p">(</span><span class="vm">__file__</span><span class="p">)),</span> <span class="n">path</span><span class="p">)</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-37'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-37'>#</a>
+      </div>
+      <p>We initialize our return variables, <code>schemas</code> and <code>field_metadata</code> to empty dictionaries.</p>
+<p>We loop over each stream in <code>streams.py:STREAMS</code>. We load the static JSON file into memory - all
+four streams currently have some static schema. We store this on our return variable <code>schemas</code>
+under the stream name.</p>
+<p>We then call <code>singer.metadata.get_standard_metadata()</code> passing in whatever metadata we do have
+(key properties, valid replication keys, the replication method). The return value here is
+stored on our return variable <code>field_metadata</code> under the stream name.</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre><span class="k">def</span> <span class="nf">get_schemas</span><span class="p">(</span><span class="n">client</span><span class="p">,</span> <span class="n">spreadsheet_id</span><span class="p">):</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-38'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-38'>#</a>
+      </div>
+      
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    <span class="n">schemas</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">field_metadata</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="k">for</span> <span class="n">stream_name</span><span class="p">,</span> <span class="n">stream_metadata</span> <span class="ow">in</span> <span class="n">STREAMS</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">schema_path</span> <span class="o">=</span> <span class="n">get_abs_path</span><span class="p">(</span><span class="s1">&#39;schemas/</span><span class="si">{}</span><span class="s1">.json&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">stream_name</span><span class="p">))</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">schema_path</span><span class="p">)</span> <span class="k">as</span> <span class="n">file</span><span class="p">:</span>
+            <span class="n">schema</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">file</span><span class="p">)</span>
+        <span class="n">schemas</span><span class="p">[</span><span class="n">stream_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">schema</span>
+        <span class="n">mdata</span> <span class="o">=</span> <span class="n">metadata</span><span class="o">.</span><span class="n">new</span><span class="p">()</span>
+
+        <span class="n">mdata</span> <span class="o">=</span> <span class="n">metadata</span><span class="o">.</span><span class="n">get_standard_metadata</span><span class="p">(</span>
+            <span class="n">schema</span><span class="o">=</span><span class="n">schema</span><span class="p">,</span>
+            <span class="n">key_properties</span><span class="o">=</span><span class="n">stream_metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;key_properties&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
+            <span class="n">valid_replication_keys</span><span class="o">=</span><span class="n">stream_metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;replication_keys&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
+            <span class="n">replication_method</span><span class="o">=</span><span class="n">stream_metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;replication_method&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="n">field_metadata</span><span class="p">[</span><span class="n">stream_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">mdata</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-39'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-39'>#</a>
+      </div>
+      <p>If we are handling the <code>"spreadsheet_metadata"</code> stream, we do some extra work to build the
+dynamic schemas of each Sheet we want to sync.. Otherwise, that&rsquo;s it.</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>        <span class="k">if</span> <span class="n">stream_name</span> <span class="o">==</span> <span class="s1">&#39;spreadsheet_metadata&#39;</span><span class="p">:</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-40'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-40'>#</a>
+      </div>
+      <p>We ultimately end up making a <code>GET</code> to</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-41'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-41'>#</a>
+      </div>
+      <pre><code class="language-Text">https://sheets.googleapis.com/v4/spreadsheets/my-spreadsheet-id?includeGridData=false
+</code></pre>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-42'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-42'>#</a>
+      </div>
+      <p>Notice this is <code>base_url + path + query_string</code>. There&rsquo;s code here to figure out and
+properly format <code>path</code> and <code>query_string</code>. I&rsquo;m not sure why we don&rsquo;t let <code>requests</code>
+handle this.</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-43'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-43'>#</a>
+      </div>
+      <p>We assume this request is successful and we store the <code>OrderedDict</code> return value as
+<code>spreadsheet_md_results</code>.</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>            <span class="n">api</span> <span class="o">=</span> <span class="n">stream_metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;api&#39;</span><span class="p">,</span> <span class="s1">&#39;sheets&#39;</span><span class="p">)</span>
+            <span class="n">params</span> <span class="o">=</span> <span class="n">stream_metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;params&#39;</span><span class="p">,</span> <span class="p">{})</span>
+            <span class="n">querystring</span> <span class="o">=</span> <span class="s1">&#39;&amp;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s1">&#39;</span><span class="si">%s</span><span class="s1">=</span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span> <span class="k">for</span> <span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span> <span class="ow">in</span> <span class="n">params</span><span class="o">.</span><span class="n">items</span><span class="p">()])</span>
+            <span class="n">path</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">{}</span><span class="s1">?</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                <span class="n">stream_metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;path&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">{spreadsheet_id}</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">spreadsheet_id</span><span class="p">),</span>
+                <span class="n">querystring</span>
+            <span class="p">)</span>
+
+            <span class="n">spreadsheet_md_results</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
+                <span class="n">path</span><span class="o">=</span><span class="n">path</span><span class="p">,</span>
+                <span class="n">params</span><span class="o">=</span><span class="n">querystring</span><span class="p">,</span>
+                <span class="n">api</span><span class="o">=</span><span class="n">api</span><span class="p">,</span>
+                <span class="n">endpoint</span><span class="o">=</span><span class="n">stream_name</span>
+            <span class="p">)</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-44'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-44'>#</a>
+      </div>
+      <p>The response here is one of those &ldquo;envelope&rdquo; kinds. The data we care about is under
+the <code>"sheets"</code> key.</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>            <span class="n">sheets</span> <span class="o">=</span> <span class="n">spreadsheet_md_results</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;sheets&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">sheets</span><span class="p">:</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-45'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-45'>#</a>
+      </div>
+      <p>Looping over this array, we call <code>schema.py:get_sheet_metadata</code>. This gets the
+JSON schema of each sheet found in this Google Doc. We use the sheet&rsquo;s title as
+the stream name here.</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>                <span class="k">for</span> <span class="n">sheet</span> <span class="ow">in</span> <span class="n">sheets</span><span class="p">:</span>
+                    <span class="n">sheet_json_schema</span><span class="p">,</span> <span class="n">columns</span> <span class="o">=</span> <span class="n">get_sheet_metadata</span><span class="p">(</span><span class="n">sheet</span><span class="p">,</span> <span class="n">spreadsheet_id</span><span class="p">,</span> <span class="n">client</span><span class="p">)</span>
+
+                    <span class="k">if</span> <span class="n">sheet_json_schema</span> <span class="ow">and</span> <span class="n">columns</span><span class="p">:</span>
+                        <span class="n">sheet_title</span> <span class="o">=</span> <span class="n">sheet</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;properties&#39;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;title&#39;</span><span class="p">)</span>
+                        <span class="n">schemas</span><span class="p">[</span><span class="n">sheet_title</span><span class="p">]</span> <span class="o">=</span> <span class="n">sheet_json_schema</span>
+                        <span class="n">sheet_mdata</span> <span class="o">=</span> <span class="n">metadata</span><span class="o">.</span><span class="n">new</span><span class="p">()</span>
+                        <span class="n">sheet_mdata</span> <span class="o">=</span> <span class="n">metadata</span><span class="o">.</span><span class="n">get_standard_metadata</span><span class="p">(</span>
+                            <span class="n">schema</span><span class="o">=</span><span class="n">sheet_json_schema</span><span class="p">,</span>
+                            <span class="n">key_properties</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;__sdc_row&#39;</span><span class="p">],</span>
+                            <span class="n">valid_replication_keys</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                            <span class="n">replication_method</span><span class="o">=</span><span class="s1">&#39;FULL_TABLE&#39;</span>
+                        <span class="p">)</span>
+                        <span class="n">field_metadata</span><span class="p">[</span><span class="n">sheet_title</span><span class="p">]</span> <span class="o">=</span> <span class="n">sheet_mdata</span>
+
+    <span class="k">return</span> <span class="n">schemas</span><span class="p">,</span> <span class="n">field_metadata</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-46'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-46'>#</a>
+      </div>
+      <h1>Footnotes</h1>
+<p>The shape of response is like, but note the tap stores this in the recursive <code>OrderedDict</code> structure</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-47'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-47'>#</a>
+      </div>
+      <pre><code class="language-JSON">{
+    &quot;spreadsheetid&quot;: &quot;my-id&quot;,
+    &quot;properties&quot;: {...},
+    &quot;sheets&quot;: [
+        {
+            &quot;properties&quot;: {},
+            &quot;data&quot;: [
+                {
+                    &quot;rowData&quot;: [
+                        {
+                            &quot;values&quot;: [
+                                {
+                                    &quot;userEnteredValue&quot;: {&quot;stringValue&quot;: &quot;time1&quot;},
+                                    &quot;effectiveValue&quot;: {&quot;stringValue&quot;: &quot;time1&quot;},
+                                    &quot;formattedValue&quot;: &quot;time1&quot;,
+                                    &quot;userEnteredFormat&quot;: {...},
+                                    &quot;effectiveFormat&quot;: {}
+                                },
+                                ...
+                            ],
+                        },
+                        ...
+                    ]
+                }
+            ]
+        },
+    ]
+}
+</code></pre>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+</div>
+</body>

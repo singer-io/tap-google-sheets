@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="content-type" content="text/html;charset=utf-8">
+  <title>discover.py</title>
+  <link rel="stylesheet" href="pycco.css">
+</head>
+<body>
+<div id='container'>
+  <div id="background"></div>
+  <div class='section'>
+    <div class='docs'><h1>discover.py</h1></div>
+  </div>
+  <div class='clearall'>
+  <div class='section' id='section-0'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-0'>#</a>
+      </div>
+      
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">singer.catalog</span> <span class="kn">import</span> <span class="n">Catalog</span><span class="p">,</span> <span class="n">CatalogEntry</span><span class="p">,</span> <span class="n">Schema</span>
+<span class="kn">from</span> <span class="nn">tap_google_sheets.schema</span> <span class="kn">import</span> <span class="n">get_schemas</span><span class="p">,</span> <span class="n">STREAMS</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-1'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-1'>#</a>
+      </div>
+      <p>Construct a Catalog Entry for each stream</p>
+<p>Inputs:</p>
+<ul>
+<li>client: A <code>GoogleClient</code> object</li>
+<li>spreadsheet_id: the ID of a Google Sheet Doc</li>
+</ul>
+<p>Returns:</p>
+<ul>
+<li>A singer.Catalog object</li>
+</ul>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre><span class="k">def</span> <span class="nf">discover</span><span class="p">(</span><span class="n">client</span><span class="p">,</span> <span class="n">spreadsheet_id</span><span class="p">):</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-2'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-2'>#</a>
+      </div>
+      <p>It&rsquo;s typical for taps in this style to call <code>schema.py:get_schemas()</code> to get <code>schemas</code> and
+<code>field_metadata</code>.</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-3'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-3'>#</a>
+      </div>
+      <p>Here <code>schemas</code> is a dictionary of stream name to JSON schema and <code>field_metadata</code> is a dictionary
+of stream name to another dictionary of stuff. In this tap, it seems that <code>discover.py:discover()</code>
+only cares about sometimes getting <code>table-key-properties</code> from <code>field_metadata</code>.</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-4'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-4'>#</a>
+      </div>
+      <ul>
+<li>This could be a point of confusion because <code>table-key-properties</code> is a stream / table level
+metadata, which you may or may not expect to be returned and stored in <code>field_metadata</code>.</li>
+</ul>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    <span class="n">schemas</span><span class="p">,</span> <span class="n">field_metadata</span> <span class="o">=</span> <span class="n">get_schemas</span><span class="p">(</span><span class="n">client</span><span class="p">,</span> <span class="n">spreadsheet_id</span><span class="p">)</span>
+    <span class="n">catalog</span> <span class="o">=</span> <span class="n">Catalog</span><span class="p">([])</span>
+
+    <span class="k">for</span> <span class="n">stream_name</span><span class="p">,</span> <span class="n">schema_dict</span> <span class="ow">in</span> <span class="n">schemas</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">schema</span> <span class="o">=</span> <span class="n">Schema</span><span class="o">.</span><span class="n">from_dict</span><span class="p">(</span><span class="n">schema_dict</span><span class="p">)</span>
+        <span class="n">mdata</span> <span class="o">=</span> <span class="n">field_metadata</span><span class="p">[</span><span class="n">stream_name</span><span class="p">]</span>
+        <span class="n">key_properties</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">for</span> <span class="n">mdt</span> <span class="ow">in</span> <span class="n">mdata</span><span class="p">:</span>
+            <span class="n">table_key_properties</span> <span class="o">=</span> <span class="n">mdt</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;metadata&#39;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;table-key-properties&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">table_key_properties</span><span class="p">:</span>
+                <span class="n">key_properties</span> <span class="o">=</span> <span class="n">table_key_properties</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-5'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-5'>#</a>
+      </div>
+      <p>Once you have the <code>stream_name</code>, value of <code>table-key-properties</code>, the schema, and the
+metadata for the some stream, we pass all of that to the <code>singer.CatalogEntry</code> constructor
+and append that to the <code>singer.Catalog</code> object initialized at the start of
+<code>discover.py:discover()</code>.</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>        <span class="n">catalog</span><span class="o">.</span><span class="n">streams</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">CatalogEntry</span><span class="p">(</span>
+            <span class="n">stream</span><span class="o">=</span><span class="n">stream_name</span><span class="p">,</span>
+            <span class="n">tap_stream_id</span><span class="o">=</span><span class="n">stream_name</span><span class="p">,</span>
+            <span class="n">key_properties</span><span class="o">=</span><span class="n">STREAMS</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">stream_name</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;key_properties&#39;</span><span class="p">,</span> <span class="n">key_properties</span><span class="p">),</span>
+            <span class="n">schema</span><span class="o">=</span><span class="n">schema</span><span class="p">,</span>
+            <span class="n">metadata</span><span class="o">=</span><span class="n">mdata</span>
+        <span class="p">))</span>
+
+    <span class="k">return</span> <span class="n">catalog</span>
+
+</pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+</div>
+</body>

@@ -1,0 +1,1680 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="content-type" content="text/html;charset=utf-8">
+  <title>sync.py</title>
+  <link rel="stylesheet" href="pycco.css">
+</head>
+<body>
+<div id='container'>
+  <div id="background"></div>
+  <div class='section'>
+    <div class='docs'><h1>sync.py</h1></div>
+  </div>
+  <div class='clearall'>
+  <div class='section' id='section-0'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-0'>#</a>
+      </div>
+      <p>This module contains the logic to sync data from the API.</p>
+<hr />
+<p>Syncable streams: The tap seems to care about syncing the streams in this order.</p>
+<ol>
+<li><code>file_metadata</code></li>
+<li><code>spreadsheet_metadata</code></li>
+<li><em>N</em> Sheets</li>
+<li><code>sheet_metadata</code></li>
+<li><code>sheets_loaded</code></li>
+<li><code>sheets_loaded</code></li>
+</ol>
+<hr />
+<p>The flow through this module is:</p>
+<ol>
+<li>Entrypoint: <code>sync()</code></li>
+<li>Sync <code>file_metadata</code><ol>
+<li><code>get_data()</code></li>
+<li><code>transform_file_metadata()</code></li>
+<li>Maybe exit the sync</li>
+<li><code>sync_stream()</code></li>
+</ol>
+</li>
+<li>Sync <code>spreadsheet_metadata</code><ol>
+<li><code>get_data()</code></li>
+<li><code>transform_spreadsheet_metadata()</code></li>
+<li><code>sync_stream()</code></li>
+</ol>
+</li>
+<li>Sync all of the Sheets. Here&rsquo;s the process for a single Sheet<ol>
+<li><code>get_sheet_metadata()</code></li>
+<li><code>transform_sheet_metadata()</code></li>
+<li><code>get_data()</code></li>
+<li><code>transform_sheet_data()</code></li>
+<li><code>process_records()</code></li>
+</ol>
+</li>
+<li>Sync <code>sheet_metadata</code><ol>
+<li><code>sync_stream()</code></li>
+</ol>
+</li>
+<li>Sync <code>sheets_loaded</code><ol>
+<li><code>sync_stream()</code></li>
+</ol>
+</li>
+<li>Sync <code>sheets_loaded</code><ol>
+<li><code>sync_stream()</code></li>
+</ol>
+</li>
+</ol>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">import</span> <span class="nn">math</span>
+<span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">import</span> <span class="nn">urllib.parse</span>
+<span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">datetime</span><span class="p">,</span> <span class="n">timedelta</span>
+<span class="kn">import</span> <span class="nn">pytz</span>
+<span class="kn">import</span> <span class="nn">singer</span>
+<span class="kn">from</span> <span class="nn">singer</span> <span class="kn">import</span> <span class="n">metrics</span><span class="p">,</span> <span class="n">metadata</span><span class="p">,</span> <span class="n">Transformer</span><span class="p">,</span> <span class="n">utils</span>
+<span class="kn">from</span> <span class="nn">singer.utils</span> <span class="kn">import</span> <span class="n">strptime_to_utc</span><span class="p">,</span> <span class="n">strftime</span>
+<span class="kn">from</span> <span class="nn">singer.messages</span> <span class="kn">import</span> <span class="n">RecordMessage</span>
+<span class="kn">from</span> <span class="nn">tap_google_sheets.streams</span> <span class="kn">import</span> <span class="n">STREAMS</span>
+<span class="kn">from</span> <span class="nn">tap_google_sheets.schema</span> <span class="kn">import</span> <span class="n">get_sheet_metadata</span>
+
+<span class="n">LOGGER</span> <span class="o">=</span> <span class="n">singer</span><span class="o">.</span><span class="n">get_logger</span><span class="p">()</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-1'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-1'>#</a>
+      </div>
+      <hr />
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-2'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-2'>#</a>
+      </div>
+      <h1>Helper Functions</h1>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-3'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-3'>#</a>
+      </div>
+      <hr />
+<p>Log that we write a schema via singer.write_schema</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre><span class="k">def</span> <span class="nf">write_schema</span><span class="p">(</span><span class="n">catalog</span><span class="p">,</span> <span class="n">stream_name</span><span class="p">):</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-4'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-4'>#</a>
+      </div>
+      
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    <span class="n">stream</span> <span class="o">=</span> <span class="n">catalog</span><span class="o">.</span><span class="n">get_stream</span><span class="p">(</span><span class="n">stream_name</span><span class="p">)</span>
+    <span class="n">schema</span> <span class="o">=</span> <span class="n">stream</span><span class="o">.</span><span class="n">schema</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">singer</span><span class="o">.</span><span class="n">write_schema</span><span class="p">(</span><span class="n">stream_name</span><span class="p">,</span> <span class="n">schema</span><span class="p">,</span> <span class="n">stream</span><span class="o">.</span><span class="n">key_properties</span><span class="p">)</span>
+        <span class="n">LOGGER</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Writing schema for: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">stream_name</span><span class="p">))</span>
+    <span class="k">except</span> <span class="ne">OSError</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-5'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-5'>#</a>
+      </div>
+      <p>QUESTION: When do we encounter an OSError?</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>        <span class="n">LOGGER</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;OS Error writing schema for: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">stream_name</span><span class="p">))</span>
+        <span class="k">raise</span> <span class="n">err</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-6'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-6'>#</a>
+      </div>
+      <p>Write a RecordMessage, with the given version if it was passed in</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre><span class="k">def</span> <span class="nf">write_record</span><span class="p">(</span><span class="n">stream_name</span><span class="p">,</span> <span class="n">record</span><span class="p">,</span> <span class="n">time_extracted</span><span class="p">,</span> <span class="n">version</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-7'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-7'>#</a>
+      </div>
+      
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    <span class="k">try</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">version</span><span class="p">:</span>
+            <span class="n">singer</span><span class="o">.</span><span class="n">messages</span><span class="o">.</span><span class="n">write_message</span><span class="p">(</span>
+                <span class="n">RecordMessage</span><span class="p">(</span>
+                    <span class="n">stream</span><span class="o">=</span><span class="n">stream_name</span><span class="p">,</span>
+                    <span class="n">record</span><span class="o">=</span><span class="n">record</span><span class="p">,</span>
+                    <span class="n">version</span><span class="o">=</span><span class="n">version</span><span class="p">,</span>
+                    <span class="n">time_extracted</span><span class="o">=</span><span class="n">time_extracted</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">singer</span><span class="o">.</span><span class="n">messages</span><span class="o">.</span><span class="n">write_record</span><span class="p">(</span>
+                <span class="n">stream_name</span><span class="o">=</span><span class="n">stream_name</span><span class="p">,</span>
+                <span class="n">record</span><span class="o">=</span><span class="n">record</span><span class="p">,</span>
+                <span class="n">time_extracted</span><span class="o">=</span><span class="n">time_extracted</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">OSError</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-8'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-8'>#</a>
+      </div>
+      <p>QUESTION: When do we encounter an OSError?</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>        <span class="n">LOGGER</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;OS Error writing record for: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">stream_name</span><span class="p">))</span>
+        <span class="n">LOGGER</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;record: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">record</span><span class="p">))</span>
+        <span class="k">raise</span> <span class="n">err</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-9'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-9'>#</a>
+      </div>
+      <p>Safe get a bookmark from <code>state</code>.</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre><span class="k">def</span> <span class="nf">get_bookmark</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">stream</span><span class="p">,</span> <span class="n">default</span><span class="p">):</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-10'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-10'>#</a>
+      </div>
+      <p>Hides an error though if <code>state</code> turns out to be <code>None</code></p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    <span class="k">if</span> <span class="p">(</span><span class="n">state</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="s1">&#39;bookmarks&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">state</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">default</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-11'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-11'>#</a>
+      </div>
+      <p>This is also short enough for one line, is this supposed to be more readable?</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    <span class="k">return</span> <span class="p">(</span>
+        <span class="n">state</span>
+        <span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;bookmarks&#39;</span><span class="p">,</span> <span class="p">{})</span>
+        <span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">stream</span><span class="p">,</span> <span class="n">default</span><span class="p">)</span>
+    <span class="p">)</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-12'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-12'>#</a>
+      </div>
+      <p>Updates and write state</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre><span class="k">def</span> <span class="nf">write_bookmark</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">stream</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-13'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-13'>#</a>
+      </div>
+      
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    <span class="k">if</span> <span class="s1">&#39;bookmarks&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">state</span><span class="p">:</span>
+        <span class="n">state</span><span class="p">[</span><span class="s1">&#39;bookmarks&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">state</span><span class="p">[</span><span class="s1">&#39;bookmarks&#39;</span><span class="p">][</span><span class="n">stream</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+    <span class="n">LOGGER</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Write state for stream: </span><span class="si">{}</span><span class="s1">, value: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">stream</span><span class="p">,</span> <span class="n">value</span><span class="p">))</span>
+    <span class="n">singer</span><span class="o">.</span><span class="n">write_state</span><span class="p">(</span><span class="n">state</span><span class="p">)</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-14'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-14'>#</a>
+      </div>
+      <p>Upserts or deletes the &lsquo;currently_syncing&rsquo; stream</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre><span class="k">def</span> <span class="nf">update_currently_syncing</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">stream_name</span><span class="p">):</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-15'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-15'>#</a>
+      </div>
+      <p>Why do we care if <code>stream_name</code> is passed in to delete <code>currently_syncing</code>?</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    <span class="k">if</span> <span class="p">(</span><span class="n">stream_name</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="s1">&#39;currently_syncing&#39;</span> <span class="ow">in</span> <span class="n">state</span><span class="p">):</span>
+        <span class="k">del</span> <span class="n">state</span><span class="p">[</span><span class="s1">&#39;currently_syncing&#39;</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">singer</span><span class="o">.</span><span class="n">set_currently_syncing</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">stream_name</span><span class="p">)</span>
+    <span class="n">singer</span><span class="o">.</span><span class="n">write_state</span><span class="p">(</span><span class="n">state</span><span class="p">)</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-16'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-16'>#</a>
+      </div>
+      <p>Get a list of selected, top-level fields for <code>stream_name</code></p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre><span class="k">def</span> <span class="nf">get_selected_fields</span><span class="p">(</span><span class="n">catalog</span><span class="p">,</span> <span class="n">stream_name</span><span class="p">):</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-17'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-17'>#</a>
+      </div>
+      
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    <span class="n">stream</span> <span class="o">=</span> <span class="n">catalog</span><span class="o">.</span><span class="n">get_stream</span><span class="p">(</span><span class="n">stream_name</span><span class="p">)</span>
+    <span class="n">mdata</span> <span class="o">=</span> <span class="n">metadata</span><span class="o">.</span><span class="n">to_map</span><span class="p">(</span><span class="n">stream</span><span class="o">.</span><span class="n">metadata</span><span class="p">)</span>
+    <span class="n">mdata_list</span> <span class="o">=</span> <span class="n">singer</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">to_list</span><span class="p">(</span><span class="n">mdata</span><span class="p">)</span>
+    <span class="n">selected_fields</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="n">mdata_list</span><span class="p">:</span>
+        <span class="n">field</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">field</span> <span class="o">=</span> <span class="n">entry</span><span class="p">[</span><span class="s1">&#39;breadcrumb&#39;</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;metadata&#39;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;selected&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">):</span>
+                <span class="n">selected_fields</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">field</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">IndexError</span><span class="p">:</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-18'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-18'>#</a>
+      </div>
+      <p>Swallow the error for the Stream level metadata</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>            <span class="k">pass</span>
+    <span class="k">return</span> <span class="n">selected_fields</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-19'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-19'>#</a>
+      </div>
+      <p>Construct the request we want to make, make the request, and return the Response</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre><span class="k">def</span> <span class="nf">get_data</span><span class="p">(</span><span class="n">stream_name</span><span class="p">,</span> <span class="n">endpoint_config</span><span class="p">,</span> <span class="n">client</span><span class="p">,</span> <span class="n">spreadsheet_id</span><span class="p">,</span> <span class="n">range_rows</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-20'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-20'>#</a>
+      </div>
+      
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-21'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-21'>#</a>
+      </div>
+      <h3>Build the query</h3>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    <span class="n">stream_name_escaped</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">escape</span><span class="p">(</span><span class="n">stream_name</span><span class="p">)</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-22'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-22'>#</a>
+      </div>
+      <p>Encode stream_name to fix issues with special characters in <code>stream_name</code>
+QUESTION: If there&rsquo;s special characters here how do databases handle it?</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    <span class="n">stream_name_encoded</span> <span class="o">=</span> <span class="n">urllib</span><span class="o">.</span><span class="n">parse</span><span class="o">.</span><span class="n">quote_plus</span><span class="p">(</span><span class="n">stream_name</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">range_rows</span><span class="p">:</span>
+        <span class="n">range_rows</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-23'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-23'>#</a>
+      </div>
+      <p>QUESTION: Why is this not a <code>string.format()</code> with keywords?</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    <span class="n">path</span> <span class="o">=</span> <span class="n">endpoint_config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;path&#39;</span><span class="p">,</span> <span class="n">stream_name</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span>
+        <span class="s1">&#39;</span><span class="si">{spreadsheet_id}</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">spreadsheet_id</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">{sheet_title}</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">stream_name_encoded</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span>
+            <span class="s1">&#39;</span><span class="si">{range_rows}</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">range_rows</span><span class="p">)</span>
+    <span class="n">params</span> <span class="o">=</span> <span class="n">endpoint_config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;params&#39;</span><span class="p">,</span> <span class="p">{})</span>
+    <span class="n">api</span> <span class="o">=</span> <span class="n">endpoint_config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;api&#39;</span><span class="p">,</span> <span class="s1">&#39;sheets&#39;</span><span class="p">)</span>
+    <span class="n">querystring</span> <span class="o">=</span> <span class="s1">&#39;&amp;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s1">&#39;</span><span class="si">%s</span><span class="s1">=</span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span> <span class="k">for</span> <span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span> <span class="ow">in</span> <span class="n">params</span><span class="o">.</span><span class="n">items</span><span class="p">()])</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span>
+        <span class="s1">&#39;</span><span class="si">{sheet_title}</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">stream_name_encoded</span><span class="p">)</span>
+    <span class="n">LOGGER</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;URL: </span><span class="si">{}</span><span class="s1">/</span><span class="si">{}</span><span class="s1">?</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">client</span><span class="o">.</span><span class="n">base_url</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">querystring</span><span class="p">))</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">time_extracted</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">now</span><span class="p">()</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-24'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-24'>#</a>
+      </div>
+      <h3>Make the query</h3>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    <span class="n">data</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
+        <span class="n">path</span><span class="o">=</span><span class="n">path</span><span class="p">,</span>
+        <span class="n">api</span><span class="o">=</span><span class="n">api</span><span class="p">,</span>
+        <span class="n">params</span><span class="o">=</span><span class="n">querystring</span><span class="p">,</span>
+        <span class="n">endpoint</span><span class="o">=</span><span class="n">stream_name_escaped</span><span class="p">)</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-25'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-25'>#</a>
+      </div>
+      <h3>Return the Response.json()</h3>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    <span class="k">return</span> <span class="n">data</span><span class="p">,</span> <span class="n">time_extracted</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-26'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-26'>#</a>
+      </div>
+      <hr />
+<h1>Transform Functions</h1>
+<p>There&rsquo;s this line of code that happens in these that is a bit confusing:</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-27'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-27'>#</a>
+      </div>
+      <pre><code class="language-python">json.loads(json.dumps(some_object))
+</code></pre>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-28'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-28'>#</a>
+      </div>
+      <p>I don&rsquo;t see the use here. We turn Python into a JSON string and back again.
+The only thing I could see in the repl is that integer keys get stringified.</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-29'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-29'>#</a>
+      </div>
+      <p>In general, the transform functions just look like &ldquo;maybe pop some
+stuff&rdquo;, &ldquo;maybe add some stuff&rdquo;, and return the input in a list</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-30'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-30'>#</a>
+      </div>
+      <hr />
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-31'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-31'>#</a>
+      </div>
+      <p>remove nodes from lastModifyingUser, format as array</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre><span class="k">def</span> <span class="nf">transform_file_metadata</span><span class="p">(</span><span class="n">file_metadata</span><span class="p">):</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-32'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-32'>#</a>
+      </div>
+      
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    <span class="n">file_metadata_tf</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">file_metadata</span><span class="p">))</span>
+
+    <span class="k">if</span> <span class="n">file_metadata_tf</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;lastModifyingUser&#39;</span><span class="p">):</span>
+        <span class="n">file_metadata_tf</span><span class="p">[</span><span class="s1">&#39;lastModifyingUser&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;photoLink&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="n">file_metadata_tf</span><span class="p">[</span><span class="s1">&#39;lastModifyingUser&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;me&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="n">file_metadata_tf</span><span class="p">[</span><span class="s1">&#39;lastModifyingUser&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;permissionId&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+
+    <span class="n">file_metadata_arr</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">file_metadata_arr</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">file_metadata_tf</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">file_metadata_arr</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-33'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-33'>#</a>
+      </div>
+      <p>remove defaultFormat and sheets nodes, format as array</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre><span class="k">def</span> <span class="nf">transform_spreadsheet_metadata</span><span class="p">(</span><span class="n">spreadsheet_metadata</span><span class="p">):</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-34'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-34'>#</a>
+      </div>
+      
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    <span class="n">spreadsheet_metadata_tf</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">spreadsheet_metadata</span><span class="p">))</span>
+
+    <span class="k">if</span> <span class="n">spreadsheet_metadata_tf</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;properties&#39;</span><span class="p">):</span>
+        <span class="n">spreadsheet_metadata_tf</span><span class="p">[</span><span class="s1">&#39;properties&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;defaultFormat&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="n">spreadsheet_metadata_tf</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;sheets&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+
+    <span class="n">spreadsheet_metadata_arr</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">spreadsheet_metadata_arr</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">spreadsheet_metadata_tf</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">spreadsheet_metadata_arr</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-35'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-35'>#</a>
+      </div>
+      <p>add spreadsheetId, sheetUrl, and columns metadata</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre><span class="k">def</span> <span class="nf">transform_sheet_metadata</span><span class="p">(</span><span class="n">spreadsheet_id</span><span class="p">,</span> <span class="n">sheet</span><span class="p">,</span> <span class="n">columns</span><span class="p">):</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-36'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-36'>#</a>
+      </div>
+      
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    <span class="n">sheet_metadata</span> <span class="o">=</span> <span class="n">sheet</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;properties&#39;</span><span class="p">)</span>
+    <span class="n">sheet_metadata_tf</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">sheet_metadata</span><span class="p">))</span>
+    <span class="n">sheet_id</span> <span class="o">=</span> <span class="n">sheet_metadata_tf</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;sheetId&#39;</span><span class="p">)</span>
+    <span class="n">sheet_url</span> <span class="o">=</span> <span class="s1">&#39;https://docs.google.com/spreadsheets/d/</span><span class="si">{}</span><span class="s1">/edit#gid=</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">spreadsheet_id</span><span class="p">,</span> <span class="n">sheet_id</span><span class="p">)</span>
+    <span class="n">sheet_metadata_tf</span><span class="p">[</span><span class="s1">&#39;spreadsheetId&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">spreadsheet_id</span>
+    <span class="n">sheet_metadata_tf</span><span class="p">[</span><span class="s1">&#39;sheetUrl&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">sheet_url</span>
+    <span class="n">sheet_metadata_tf</span><span class="p">[</span><span class="s1">&#39;columns&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">columns</span>
+    <span class="k">return</span> <span class="n">sheet_metadata_tf</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-37'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-37'>#</a>
+      </div>
+      <p>Convert Excel Date Serial Number (excel_date_sn) to datetime string timezone_str: defaults to</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre><span class="k">def</span> <span class="nf">excel_to_dttm_str</span><span class="p">(</span><span class="n">excel_date_sn</span><span class="p">,</span> <span class="n">timezone_str</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-38'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-38'>#</a>
+      </div>
+      <p>UTC (which we assume is the timezone for ALL datetimes)</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    <span class="k">if</span> <span class="ow">not</span> <span class="n">timezone_str</span><span class="p">:</span>
+        <span class="n">timezone_str</span> <span class="o">=</span> <span class="s1">&#39;UTC&#39;</span>
+    <span class="n">tzn</span> <span class="o">=</span> <span class="n">pytz</span><span class="o">.</span><span class="n">timezone</span><span class="p">(</span><span class="n">timezone_str</span><span class="p">)</span>
+    <span class="n">epoch_dttm</span> <span class="o">=</span> <span class="n">datetime</span><span class="p">(</span><span class="mi">1970</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+
+    <span class="n">sec_per_day</span> <span class="o">=</span> <span class="mi">86400</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-39'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-39'>#</a>
+      </div>
+      <p>1970-01-01T00:00:00Z, Lotus Notes Serial Number for Epoch Start Date</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    <span class="n">excel_epoch</span> <span class="o">=</span> <span class="mi">25569</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-40'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-40'>#</a>
+      </div>
+      <p>Seconds since Epoch, times the seconds per day =&gt; days since Epoch?</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    <span class="n">epoch_sec</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">floor</span><span class="p">((</span><span class="n">excel_date_sn</span> <span class="o">-</span> <span class="n">excel_epoch</span><span class="p">)</span> <span class="o">*</span> <span class="n">sec_per_day</span><span class="p">)</span>
+
+    <span class="n">excel_dttm</span> <span class="o">=</span> <span class="n">epoch_dttm</span> <span class="o">+</span> <span class="n">timedelta</span><span class="p">(</span><span class="n">seconds</span><span class="o">=</span><span class="n">epoch_sec</span><span class="p">)</span>
+    <span class="n">utc_dttm</span> <span class="o">=</span> <span class="n">tzn</span><span class="o">.</span><span class="n">localize</span><span class="p">(</span><span class="n">excel_dttm</span><span class="p">)</span><span class="o">.</span><span class="n">astimezone</span><span class="p">(</span><span class="n">pytz</span><span class="o">.</span><span class="n">utc</span><span class="p">)</span>
+    <span class="n">utc_dttm_str</span> <span class="o">=</span> <span class="n">singer</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="n">utc_dttm</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">utc_dttm_str</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-41'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-41'>#</a>
+      </div>
+      <hr />
+<h3>WARNING This next function is confusing</h3>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-42'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-42'>#</a>
+      </div>
+      <p>In general, the point of the function is to transform the field based on the data type that the
+API tells us. It loops over every row and then every column in the row.</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-43'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-43'>#</a>
+      </div>
+      <p>For the <code>TIME</code> fields, there&rsquo;s no reason it should work. And for some cases, the value returned is
+just wrong.</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-44'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-44'>#</a>
+      </div>
+      <p>You can look at the code for <code>timedelta</code> and you would see that this constructor wants to
+normalize the input of 6 units into 3 (you can create the object with <code>years</code>, <code>months</code>, <code>days</code>,
+<code>hours</code>, <code>minutes</code>, and <code>seconds</code>. But it will convert values into just <code>days</code>, <code>hours</code>, and
+<code>seconds</code>).</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-45'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-45'>#</a>
+      </div>
+      <p><em>Disclaimer I don&rsquo;t have the exact units, but the spirit of
+the idea is here.</em></p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-46'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-46'>#</a>
+      </div>
+      <p>When we pass in <code>seconds</code> here as the value we get from the API times the number of seconds in a
+day, how <code>timedelta</code> does its normalization gives us an incorrect value. It takes the input to
+<code>seconds</code> and passes that to <code>divmod()</code> which returns a 2-ple as the result. The first element is
+our input integer divided by the number of seconds in a day. The second element is our input mod
+the number of seconds in a day. Then these results are added to the rest of the normalization and
+we get the correct time value back out. It&rsquo;s easy to imagine that since we don&rsquo;t pass in a <code>days</code>
+argument, our <code>divmod</code>&lsquo;s days output is just added to zero. The <code>__str__()</code> for <code>timedelta</code> must
+be something like <code>"{my_days} days, {time_since_midnight(my_seconds)}"</code>, which is essentially what
+we get after this transform function.</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-47'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-47'>#</a>
+      </div>
+      <hr />
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-48'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-48'>#</a>
+      </div>
+      <p>add spreadsheet_id, sheet_id, and row, convert dates/times Convert from array of values to</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre><span class="k">def</span> <span class="nf">transform_sheet_data</span><span class="p">(</span><span class="n">spreadsheet_id</span><span class="p">,</span> <span class="n">sheet_id</span><span class="p">,</span> <span class="n">sheet_title</span><span class="p">,</span> <span class="n">from_row</span><span class="p">,</span> <span class="n">columns</span><span class="p">,</span> <span class="n">sheet_data_rows</span><span class="p">):</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-49'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-49'>#</a>
+      </div>
+      <p>JSON with column names as keys</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    <span class="n">sheet_data_tf</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">row_num</span> <span class="o">=</span> <span class="n">from_row</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-50'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-50'>#</a>
+      </div>
+      <p>Create sorted list of columns based on columnIndex</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    <span class="n">cols</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">columns</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">i</span><span class="p">:</span> <span class="n">i</span><span class="p">[</span><span class="s1">&#39;columnIndex&#39;</span><span class="p">])</span>
+
+    <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">sheet_data_rows</span><span class="p">:</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-51'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-51'>#</a>
+      </div>
+      <p>If empty row, SKIP</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>        <span class="k">if</span> <span class="n">row</span> <span class="o">==</span> <span class="p">[]:</span>
+            <span class="n">LOGGER</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;EMPTY ROW: </span><span class="si">{}</span><span class="s1">, SKIPPING&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">row_num</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">sheet_data_row_tf</span> <span class="o">=</span> <span class="p">{}</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-52'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-52'>#</a>
+      </div>
+      <p>Add spreadsheet_id, sheet_id, and row</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>            <span class="n">sheet_data_row_tf</span><span class="p">[</span><span class="s1">&#39;__sdc_spreadsheet_id&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">spreadsheet_id</span>
+            <span class="n">sheet_data_row_tf</span><span class="p">[</span><span class="s1">&#39;__sdc_sheet_id&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">sheet_id</span>
+            <span class="n">sheet_data_row_tf</span><span class="p">[</span><span class="s1">&#39;__sdc_row&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">row_num</span>
+            <span class="n">col_num</span> <span class="o">=</span> <span class="mi">1</span>
+            <span class="k">for</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">row</span><span class="p">:</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-53'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-53'>#</a>
+      </div>
+      <p>Select column metadata based on column index</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>                <span class="n">col</span> <span class="o">=</span> <span class="n">cols</span><span class="p">[</span><span class="n">col_num</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span>
+                <span class="n">col_skipped</span> <span class="o">=</span> <span class="n">col</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;columnSkipped&#39;</span><span class="p">)</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">col_skipped</span><span class="p">:</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-54'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-54'>#</a>
+      </div>
+      <p>Get column metadata</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>                    <span class="n">col_name</span> <span class="o">=</span> <span class="n">col</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;columnName&#39;</span><span class="p">)</span>
+                    <span class="n">col_type</span> <span class="o">=</span> <span class="n">col</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;columnType&#39;</span><span class="p">)</span>
+                    <span class="n">col_letter</span> <span class="o">=</span> <span class="n">col</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;columnLetter&#39;</span><span class="p">)</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-55'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-55'>#</a>
+      </div>
+      <p>NULL values</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>                    <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">value</span> <span class="o">==</span> <span class="s1">&#39;&#39;</span><span class="p">:</span>
+                        <span class="n">col_val</span> <span class="o">=</span> <span class="kc">None</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-56'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-56'>#</a>
+      </div>
+      <p>Convert dates/times from Lotus Notes Serial Numbers
+DATE-TIME</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>                    <span class="k">elif</span> <span class="n">col_type</span> <span class="o">==</span> <span class="s1">&#39;numberType.DATE_TIME&#39;</span><span class="p">:</span>
+                        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">)):</span>
+                            <span class="n">col_val</span> <span class="o">=</span> <span class="n">excel_to_dttm_str</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+                        <span class="k">else</span><span class="p">:</span>
+                            <span class="n">col_val</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+                            <span class="n">LOGGER</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;WARNING: POSSIBLE DATA TYPE ERROR; SHEET: </span><span class="si">{}</span><span class="s1">, COL: </span><span class="si">{}</span><span class="s1">, CELL: </span><span class="si">{}{}</span><span class="s1">, TYPE: </span><span class="si">{}</span><span class="s1">, VALUE: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                                <span class="n">sheet_title</span><span class="p">,</span> <span class="n">col_name</span><span class="p">,</span> <span class="n">col_letter</span><span class="p">,</span> <span class="n">row_num</span><span class="p">,</span> <span class="n">col_type</span><span class="p">,</span> <span class="n">value</span><span class="p">))</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-57'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-57'>#</a>
+      </div>
+      <p>DATE</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>                    <span class="k">elif</span> <span class="n">col_type</span> <span class="o">==</span> <span class="s1">&#39;numberType.DATE&#39;</span><span class="p">:</span>
+                        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">)):</span>
+                            <span class="n">col_val</span> <span class="o">=</span> <span class="n">excel_to_dttm_str</span><span class="p">(</span><span class="n">value</span><span class="p">)[:</span><span class="mi">10</span><span class="p">]</span>
+                        <span class="k">else</span><span class="p">:</span>
+                            <span class="n">col_val</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+                            <span class="n">LOGGER</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;WARNING: POSSIBLE DATA TYPE ERROR; SHEET: </span><span class="si">{}</span><span class="s1">, COL: </span><span class="si">{}</span><span class="s1">, CELL: </span><span class="si">{}{}</span><span class="s1">, TYPE: </span><span class="si">{}</span><span class="s1">, VALUE: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                                <span class="n">sheet_title</span><span class="p">,</span> <span class="n">col_name</span><span class="p">,</span> <span class="n">col_letter</span><span class="p">,</span> <span class="n">row_num</span><span class="p">,</span> <span class="n">col_type</span><span class="p">,</span> <span class="n">value</span><span class="p">))</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-58'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-58'>#</a>
+      </div>
+      <p>TIME ONLY (NO DATE)</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>                    <span class="k">elif</span> <span class="n">col_type</span> <span class="o">==</span> <span class="s1">&#39;numberType.TIME&#39;</span><span class="p">:</span>
+
+                        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">)):</span>
+                            <span class="k">try</span><span class="p">:</span>
+                                <span class="n">total_secs</span> <span class="o">=</span> <span class="n">value</span> <span class="o">*</span> <span class="mi">86400</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-59'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-59'>#</a>
+      </div>
+      <p>Create string formatted like HH:MM:SS</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>                                <span class="n">col_val</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">timedelta</span><span class="p">(</span><span class="n">seconds</span><span class="o">=</span><span class="n">total_secs</span><span class="p">))</span>
+                            <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+                                <span class="n">col_val</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+                                <span class="n">LOGGER</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;WARNING: POSSIBLE DATA TYPE ERROR; SHEET: </span><span class="si">{}</span><span class="s1">, COL: </span><span class="si">{}</span><span class="s1">, CELL: </span><span class="si">{}{}</span><span class="s1">, TYPE: </span><span class="si">{}</span><span class="s1">, VALUE: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                                    <span class="n">sheet_title</span><span class="p">,</span> <span class="n">col_name</span><span class="p">,</span> <span class="n">col_letter</span><span class="p">,</span> <span class="n">row_num</span><span class="p">,</span> <span class="n">col_type</span><span class="p">,</span> <span class="n">value</span><span class="p">))</span>
+                        <span class="k">else</span><span class="p">:</span>
+                            <span class="n">col_val</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">value</span><span class="p">)</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-60'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-60'>#</a>
+      </div>
+      <p>NUMBER (INTEGER AND FLOAT)</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>                    <span class="k">elif</span> <span class="n">col_type</span> <span class="o">==</span> <span class="s1">&#39;numberType&#39;</span><span class="p">:</span>
+                        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+                            <span class="n">col_val</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+                        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">float</span><span class="p">):</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-61'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-61'>#</a>
+      </div>
+      <p>Determine float decimal digits</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>                            <span class="n">decimal_digits</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">value</span><span class="p">)[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="p">)</span>
+                            <span class="k">if</span> <span class="n">decimal_digits</span> <span class="o">&gt;</span> <span class="mi">15</span><span class="p">:</span>
+                                <span class="k">try</span><span class="p">:</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-62'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-62'>#</a>
+      </div>
+      <p>ROUND to multipleOf: 1e-15</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>                                    <span class="n">col_val</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="mi">15</span><span class="p">))</span>
+                                <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+                                    <span class="n">col_val</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+                                    <span class="n">LOGGER</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;WARNING: POSSIBLE DATA TYPE ERROR; SHEET: </span><span class="si">{}</span><span class="s1">, COL: </span><span class="si">{}</span><span class="s1">, CELL: </span><span class="si">{}{}</span><span class="s1">, TYPE: </span><span class="si">{}</span><span class="s1">, VALUE: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                                        <span class="n">sheet_title</span><span class="p">,</span> <span class="n">col_name</span><span class="p">,</span> <span class="n">col_letter</span><span class="p">,</span> <span class="n">row_num</span><span class="p">,</span> <span class="n">col_type</span><span class="p">,</span> <span class="n">value</span><span class="p">))</span>
+                            <span class="k">else</span><span class="p">:</span> <span class="c1"># decimal_digits &lt;= 15, no rounding</span>
+                                <span class="k">try</span><span class="p">:</span>
+                                    <span class="n">col_val</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+                                <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+                                    <span class="n">col_val</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+                                    <span class="n">LOGGER</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;WARNING: POSSIBLE DATA TYPE ERROR: SHEET: </span><span class="si">{}</span><span class="s1">, COL: </span><span class="si">{}</span><span class="s1">, CELL: </span><span class="si">{}{}</span><span class="s1">, TYPE: </span><span class="si">{}</span><span class="s1">, VALUE: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                                        <span class="n">sheet_title</span><span class="p">,</span> <span class="n">col_name</span><span class="p">,</span> <span class="n">col_letter</span><span class="p">,</span> <span class="n">row_num</span><span class="p">,</span> <span class="n">col_type</span><span class="p">,</span> <span class="n">value</span><span class="p">))</span>
+                        <span class="k">else</span><span class="p">:</span>
+                            <span class="n">col_val</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+                            <span class="n">LOGGER</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;WARNING: POSSIBLE DATA TYPE ERROR: SHEET: </span><span class="si">{}</span><span class="s1">, COL: </span><span class="si">{}</span><span class="s1">, CELL: </span><span class="si">{}{}</span><span class="s1">, TYPE: </span><span class="si">{}</span><span class="s1">, VALUE: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                                   <span class="n">sheet_title</span><span class="p">,</span> <span class="n">col_name</span><span class="p">,</span> <span class="n">col_letter</span><span class="p">,</span> <span class="n">row_num</span><span class="p">,</span> <span class="n">col_type</span><span class="p">,</span> <span class="n">value</span><span class="p">))</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-63'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-63'>#</a>
+      </div>
+      <p>STRING</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>                    <span class="k">elif</span> <span class="n">col_type</span> <span class="o">==</span> <span class="s1">&#39;stringValue&#39;</span><span class="p">:</span>
+                        <span class="n">col_val</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">value</span><span class="p">)</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-64'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-64'>#</a>
+      </div>
+      <p>BOOLEAN</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>                    <span class="k">elif</span> <span class="n">col_type</span> <span class="o">==</span> <span class="s1">&#39;boolValue&#39;</span><span class="p">:</span>
+                        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">bool</span><span class="p">):</span>
+                            <span class="n">col_val</span> <span class="o">=</span> <span class="n">value</span>
+                        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+                            <span class="k">if</span> <span class="n">value</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;true&#39;</span><span class="p">,</span> <span class="s1">&#39;t&#39;</span><span class="p">,</span> <span class="s1">&#39;yes&#39;</span><span class="p">,</span> <span class="s1">&#39;y&#39;</span><span class="p">):</span>
+                                <span class="n">col_val</span> <span class="o">=</span> <span class="kc">True</span>
+                            <span class="k">elif</span> <span class="n">value</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;false&#39;</span><span class="p">,</span> <span class="s1">&#39;f&#39;</span><span class="p">,</span> <span class="s1">&#39;no&#39;</span><span class="p">,</span> <span class="s1">&#39;n&#39;</span><span class="p">):</span>
+                                <span class="n">col_val</span> <span class="o">=</span> <span class="kc">False</span>
+                            <span class="k">else</span><span class="p">:</span>
+                                <span class="n">col_val</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+                                <span class="n">LOGGER</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;WARNING: POSSIBLE DATA TYPE ERROR; SHEET: </span><span class="si">{}</span><span class="s1">, COL: </span><span class="si">{}</span><span class="s1">, CELL: </span><span class="si">{}{}</span><span class="s1">, TYPE: </span><span class="si">{}</span><span class="s1">, VALUE: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                                    <span class="n">sheet_title</span><span class="p">,</span> <span class="n">col_name</span><span class="p">,</span> <span class="n">col_letter</span><span class="p">,</span> <span class="n">row</span><span class="p">,</span> <span class="n">col_type</span><span class="p">,</span> <span class="n">value</span><span class="p">))</span>
+                        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+                            <span class="k">if</span> <span class="n">value</span> <span class="ow">in</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">):</span>
+                                <span class="n">col_val</span> <span class="o">=</span> <span class="kc">True</span>
+                            <span class="k">elif</span> <span class="n">value</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                                <span class="n">col_val</span> <span class="o">=</span> <span class="kc">False</span>
+                            <span class="k">else</span><span class="p">:</span>
+                                <span class="n">col_val</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+                                <span class="n">LOGGER</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;WARNING: POSSIBLE DATA TYPE ERROR; SHEET: </span><span class="si">{}</span><span class="s1">, COL: </span><span class="si">{}</span><span class="s1">, CELL: </span><span class="si">{}{}</span><span class="s1">, TYPE: </span><span class="si">{}</span><span class="s1">, VALUE: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                                    <span class="n">sheet_title</span><span class="p">,</span> <span class="n">col_name</span><span class="p">,</span> <span class="n">col_letter</span><span class="p">,</span> <span class="n">row</span><span class="p">,</span> <span class="n">col_type</span><span class="p">,</span> <span class="n">value</span><span class="p">))</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-65'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-65'>#</a>
+      </div>
+      <p>OTHER: Convert everything else to a string</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">col_val</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+                        <span class="n">LOGGER</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;WARNING: POSSIBLE DATA TYPE ERROR; SHEET: </span><span class="si">{}</span><span class="s1">, COL: </span><span class="si">{}</span><span class="s1">, CELL: </span><span class="si">{}{}</span><span class="s1">, TYPE: </span><span class="si">{}</span><span class="s1">, VALUE: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                            <span class="n">sheet_title</span><span class="p">,</span> <span class="n">col_name</span><span class="p">,</span> <span class="n">col_letter</span><span class="p">,</span> <span class="n">row</span><span class="p">,</span> <span class="n">col_type</span><span class="p">,</span> <span class="n">value</span><span class="p">))</span>
+                    <span class="n">sheet_data_row_tf</span><span class="p">[</span><span class="n">col_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">col_val</span>
+                <span class="n">col_num</span> <span class="o">=</span> <span class="n">col_num</span> <span class="o">+</span> <span class="mi">1</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-66'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-66'>#</a>
+      </div>
+      <p>APPEND non-empty row</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>            <span class="n">sheet_data_tf</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">sheet_data_row_tf</span><span class="p">)</span>
+        <span class="n">row_num</span> <span class="o">=</span> <span class="n">row_num</span> <span class="o">+</span> <span class="mi">1</span>
+    <span class="k">return</span> <span class="n">sheet_data_tf</span><span class="p">,</span> <span class="n">row_num</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-67'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-67'>#</a>
+      </div>
+      <hr />
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-68'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-68'>#</a>
+      </div>
+      <h1>Main Functions</h1>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-69'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-69'>#</a>
+      </div>
+      <hr />
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-70'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-70'>#</a>
+      </div>
+      <p>Transform/validate batch of records w/ schema and sent to target</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre><span class="k">def</span> <span class="nf">process_records</span><span class="p">(</span><span class="n">catalog</span><span class="p">,</span> <span class="n">stream_name</span><span class="p">,</span> <span class="n">records</span><span class="p">,</span> <span class="n">time_extracted</span><span class="p">,</span> <span class="n">version</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-71'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-71'>#</a>
+      </div>
+      
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    <span class="n">stream</span> <span class="o">=</span> <span class="n">catalog</span><span class="o">.</span><span class="n">get_stream</span><span class="p">(</span><span class="n">stream_name</span><span class="p">)</span>
+    <span class="n">schema</span> <span class="o">=</span> <span class="n">stream</span><span class="o">.</span><span class="n">schema</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()</span>
+    <span class="n">stream_metadata</span> <span class="o">=</span> <span class="n">metadata</span><span class="o">.</span><span class="n">to_map</span><span class="p">(</span><span class="n">stream</span><span class="o">.</span><span class="n">metadata</span><span class="p">)</span>
+    <span class="k">with</span> <span class="n">metrics</span><span class="o">.</span><span class="n">record_counter</span><span class="p">(</span><span class="n">stream_name</span><span class="p">)</span> <span class="k">as</span> <span class="n">counter</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">record</span> <span class="ow">in</span> <span class="n">records</span><span class="p">:</span>
+            <span class="k">with</span> <span class="n">Transformer</span><span class="p">()</span> <span class="k">as</span> <span class="n">transformer</span><span class="p">:</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">transformed_record</span> <span class="o">=</span> <span class="n">transformer</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">record</span><span class="p">,</span> <span class="n">schema</span><span class="p">,</span> <span class="n">stream_metadata</span><span class="p">)</span>
+                <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+                    <span class="n">LOGGER</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">err</span><span class="p">))</span>
+                    <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="n">err</span><span class="p">)</span>
+                <span class="n">write_record</span><span class="p">(</span>
+                    <span class="n">stream_name</span><span class="o">=</span><span class="n">stream_name</span><span class="p">,</span>
+                    <span class="n">record</span><span class="o">=</span><span class="n">transformed_record</span><span class="p">,</span>
+                    <span class="n">time_extracted</span><span class="o">=</span><span class="n">time_extracted</span><span class="p">,</span>
+                    <span class="n">version</span><span class="o">=</span><span class="n">version</span><span class="p">)</span>
+                <span class="n">counter</span><span class="o">.</span><span class="n">increment</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">counter</span><span class="o">.</span><span class="n">value</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-72'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-72'>#</a>
+      </div>
+      <p>This is just a pass-through to <code>process_records()</code></p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre><span class="k">def</span> <span class="nf">sync_stream</span><span class="p">(</span><span class="n">stream_name</span><span class="p">,</span> <span class="n">selected_streams</span><span class="p">,</span> <span class="n">catalog</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">records</span><span class="p">,</span> <span class="n">time_extracted</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-73'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-73'>#</a>
+      </div>
+      
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    <span class="k">if</span> <span class="n">stream_name</span> <span class="ow">in</span> <span class="n">selected_streams</span><span class="p">:</span>
+        <span class="n">LOGGER</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;STARTED Syncing </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">stream_name</span><span class="p">))</span>
+        <span class="n">update_currently_syncing</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">stream_name</span><span class="p">)</span>
+        <span class="n">selected_fields</span> <span class="o">=</span> <span class="n">get_selected_fields</span><span class="p">(</span><span class="n">catalog</span><span class="p">,</span> <span class="n">stream_name</span><span class="p">)</span>
+        <span class="n">LOGGER</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Stream: </span><span class="si">{}</span><span class="s1">, selected_fields: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">stream_name</span><span class="p">,</span> <span class="n">selected_fields</span><span class="p">))</span>
+        <span class="n">write_schema</span><span class="p">(</span><span class="n">catalog</span><span class="p">,</span> <span class="n">stream_name</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">time_extracted</span><span class="p">:</span>
+            <span class="n">time_extracted</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">now</span><span class="p">()</span>
+        <span class="n">record_count</span> <span class="o">=</span> <span class="n">process_records</span><span class="p">(</span>
+            <span class="n">catalog</span><span class="o">=</span><span class="n">catalog</span><span class="p">,</span>
+            <span class="n">stream_name</span><span class="o">=</span><span class="n">stream_name</span><span class="p">,</span>
+            <span class="n">records</span><span class="o">=</span><span class="n">records</span><span class="p">,</span>
+            <span class="n">time_extracted</span><span class="o">=</span><span class="n">time_extracted</span><span class="p">)</span>
+        <span class="n">LOGGER</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;FINISHED Syncing </span><span class="si">{}</span><span class="s1">, Total Records: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">stream_name</span><span class="p">,</span> <span class="n">record_count</span><span class="p">))</span>
+        <span class="n">update_currently_syncing</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-74'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-74'>#</a>
+      </div>
+      <p>See top of file for notes</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre><span class="k">def</span> <span class="nf">sync</span><span class="p">(</span><span class="n">client</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">catalog</span><span class="p">,</span> <span class="n">state</span><span class="p">):</span>
+    <span class="n">start_date</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;start_date&#39;</span><span class="p">)</span>
+    <span class="n">spreadsheet_id</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;spreadsheet_id&#39;</span><span class="p">)</span>
+
+    <span class="n">last_stream</span> <span class="o">=</span> <span class="n">singer</span><span class="o">.</span><span class="n">get_currently_syncing</span><span class="p">(</span><span class="n">state</span><span class="p">)</span>
+    <span class="n">LOGGER</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;last/currently syncing stream: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">last_stream</span><span class="p">))</span>
+
+    <span class="n">selected_streams</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">stream</span> <span class="ow">in</span> <span class="n">catalog</span><span class="o">.</span><span class="n">get_selected_streams</span><span class="p">(</span><span class="n">state</span><span class="p">):</span>
+        <span class="n">selected_streams</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">stream</span><span class="o">.</span><span class="n">stream</span><span class="p">)</span>
+    <span class="n">LOGGER</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;selected_streams: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">selected_streams</span><span class="p">))</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">selected_streams</span><span class="p">:</span>
+        <span class="k">return</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-75'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-75'>#</a>
+      </div>
+      <h2>FILE_METADATA</h2>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    <span class="n">file_metadata</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">stream_name</span> <span class="o">=</span> <span class="s1">&#39;file_metadata&#39;</span>
+    <span class="n">file_metadata_config</span> <span class="o">=</span> <span class="n">STREAMS</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">stream_name</span><span class="p">)</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-76'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-76'>#</a>
+      </div>
+      <p>GET file_metadata</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    <span class="n">LOGGER</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;GET file_meatadata&#39;</span><span class="p">)</span>
+    <span class="n">file_metadata</span><span class="p">,</span> <span class="n">time_extracted</span> <span class="o">=</span> <span class="n">get_data</span><span class="p">(</span><span class="n">stream_name</span><span class="o">=</span><span class="n">stream_name</span><span class="p">,</span>
+                                             <span class="n">endpoint_config</span><span class="o">=</span><span class="n">file_metadata_config</span><span class="p">,</span>
+                                             <span class="n">client</span><span class="o">=</span><span class="n">client</span><span class="p">,</span>
+                                             <span class="n">spreadsheet_id</span><span class="o">=</span><span class="n">spreadsheet_id</span><span class="p">)</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-77'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-77'>#</a>
+      </div>
+      <p>Transform file_metadata</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    <span class="n">LOGGER</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Transform file_meatadata&#39;</span><span class="p">)</span>
+    <span class="n">file_metadata_tf</span> <span class="o">=</span> <span class="n">transform_file_metadata</span><span class="p">(</span><span class="n">file_metadata</span><span class="p">)</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-78'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-78'>#</a>
+      </div>
+      <p>Check if file has changed, if not exit</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    <span class="n">last_datetime</span> <span class="o">=</span> <span class="n">strptime_to_utc</span><span class="p">(</span><span class="n">get_bookmark</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">stream_name</span><span class="p">,</span> <span class="n">start_date</span><span class="p">))</span>
+    <span class="n">this_datetime</span> <span class="o">=</span> <span class="n">strptime_to_utc</span><span class="p">(</span><span class="n">file_metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;modifiedTime&#39;</span><span class="p">))</span>
+    <span class="n">LOGGER</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;last_datetime = </span><span class="si">{}</span><span class="s1">, this_datetime = </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">last_datetime</span><span class="p">,</span> <span class="n">this_datetime</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">this_datetime</span> <span class="o">&lt;=</span> <span class="n">last_datetime</span><span class="p">:</span>
+        <span class="n">LOGGER</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;this_datetime &lt;= last_datetime, FILE NOT CHANGED. EXITING.&#39;</span><span class="p">)</span>
+        <span class="n">write_bookmark</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="s1">&#39;file_metadata&#39;</span><span class="p">,</span> <span class="n">strftime</span><span class="p">(</span><span class="n">this_datetime</span><span class="p">))</span>
+        <span class="k">return</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-79'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-79'>#</a>
+      </div>
+      <p>Write file_metadata records if selected</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    <span class="n">sync_stream</span><span class="p">(</span><span class="n">stream_name</span><span class="p">,</span> <span class="n">selected_streams</span><span class="p">,</span> <span class="n">catalog</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">file_metadata_tf</span><span class="p">,</span> <span class="n">time_extracted</span><span class="p">)</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-80'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-80'>#</a>
+      </div>
+      <h2>SPREADSHEET_METADATA</h2>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    <span class="n">spreadsheet_metadata</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">stream_name</span> <span class="o">=</span> <span class="s1">&#39;spreadsheet_metadata&#39;</span>
+    <span class="n">spreadsheet_metadata_config</span> <span class="o">=</span> <span class="n">STREAMS</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">stream_name</span><span class="p">)</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-81'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-81'>#</a>
+      </div>
+      <p>GET spreadsheet_metadata</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    <span class="n">LOGGER</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;GET spreadsheet_meatadata&#39;</span><span class="p">)</span>
+    <span class="n">spreadsheet_metadata</span><span class="p">,</span> <span class="n">ss_time_extracted</span> <span class="o">=</span> <span class="n">get_data</span><span class="p">(</span>
+        <span class="n">stream_name</span><span class="o">=</span><span class="n">stream_name</span><span class="p">,</span>
+        <span class="n">endpoint_config</span><span class="o">=</span><span class="n">spreadsheet_metadata_config</span><span class="p">,</span>
+        <span class="n">client</span><span class="o">=</span><span class="n">client</span><span class="p">,</span>
+        <span class="n">spreadsheet_id</span><span class="o">=</span><span class="n">spreadsheet_id</span><span class="p">)</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-82'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-82'>#</a>
+      </div>
+      <p>Transform spreadsheet_metadata</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    <span class="n">LOGGER</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Transform spreadsheet_meatadata&#39;</span><span class="p">)</span>
+    <span class="n">spreadsheet_metadata_tf</span> <span class="o">=</span> <span class="n">transform_spreadsheet_metadata</span><span class="p">(</span><span class="n">spreadsheet_metadata</span><span class="p">)</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-83'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-83'>#</a>
+      </div>
+      <p>Write spreadsheet_metadata records if selected</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    <span class="n">sync_stream</span><span class="p">(</span><span class="n">stream_name</span><span class="p">,</span> <span class="n">selected_streams</span><span class="p">,</span> <span class="n">catalog</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">spreadsheet_metadata_tf</span><span class="p">,</span> \
+        <span class="n">ss_time_extracted</span><span class="p">)</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-84'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-84'>#</a>
+      </div>
+      <h2>SHEET_METADATA and SHEET_DATA</h2>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    <span class="n">sheets</span> <span class="o">=</span> <span class="n">spreadsheet_metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;sheets&#39;</span><span class="p">)</span>
+    <span class="n">sheet_metadata</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">sheets_loaded</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">sheets_loaded_config</span> <span class="o">=</span> <span class="n">STREAMS</span><span class="p">[</span><span class="s1">&#39;sheets_loaded&#39;</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">sheets</span><span class="p">:</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-85'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-85'>#</a>
+      </div>
+      <p>Loop thru sheets (worksheet tabs) in spreadsheet</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>        <span class="k">for</span> <span class="n">sheet</span> <span class="ow">in</span> <span class="n">sheets</span><span class="p">:</span>
+            <span class="n">sheet_title</span> <span class="o">=</span> <span class="n">sheet</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;properties&#39;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;title&#39;</span><span class="p">)</span>
+            <span class="n">sheet_id</span> <span class="o">=</span> <span class="n">sheet</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;properties&#39;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;sheetId&#39;</span><span class="p">)</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-86'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-86'>#</a>
+      </div>
+      <h3>Sheet_Metadata</h3>
+<p>GET sheet_metadata and columns</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>            <span class="n">sheet_schema</span><span class="p">,</span> <span class="n">columns</span> <span class="o">=</span> <span class="n">get_sheet_metadata</span><span class="p">(</span><span class="n">sheet</span><span class="p">,</span> <span class="n">spreadsheet_id</span><span class="p">,</span> <span class="n">client</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">sheet_schema</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">columns</span><span class="p">:</span>
+                <span class="n">LOGGER</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;SKIPPING Empty Sheet: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">sheet_title</span><span class="p">))</span>
+            <span class="k">else</span><span class="p">:</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-87'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-87'>#</a>
+      </div>
+      <p>Transform sheet_metadata</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>                <span class="n">sheet_metadata_tf</span> <span class="o">=</span> <span class="n">transform_sheet_metadata</span><span class="p">(</span><span class="n">spreadsheet_id</span><span class="p">,</span> <span class="n">sheet</span><span class="p">,</span> <span class="n">columns</span><span class="p">)</span>
+                <span class="n">sheet_metadata</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">sheet_metadata_tf</span><span class="p">)</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-88'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-88'>#</a>
+      </div>
+      <h3>SHEET_DATA</h3>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>                <span class="k">if</span> <span class="n">sheet_title</span> <span class="ow">in</span> <span class="n">selected_streams</span><span class="p">:</span>
+                    <span class="n">LOGGER</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;STARTED Syncing Sheet </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">sheet_title</span><span class="p">))</span>
+                    <span class="n">update_currently_syncing</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">sheet_title</span><span class="p">)</span>
+                    <span class="n">selected_fields</span> <span class="o">=</span> <span class="n">get_selected_fields</span><span class="p">(</span><span class="n">catalog</span><span class="p">,</span> <span class="n">sheet_title</span><span class="p">)</span>
+                    <span class="n">LOGGER</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Stream: </span><span class="si">{}</span><span class="s1">, selected_fields: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">sheet_title</span><span class="p">,</span> <span class="n">selected_fields</span><span class="p">))</span>
+                    <span class="n">write_schema</span><span class="p">(</span><span class="n">catalog</span><span class="p">,</span> <span class="n">sheet_title</span><span class="p">)</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-89'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-89'>#</a>
+      </div>
+      <p>Emit a Singer ACTIVATE_VERSION message before initial sync (but not subsequent syncs)
+everytime after each sheet sync is complete.
+This forces hard deletes on the data downstream if fewer records are sent.
+https://github.com/singer-io/singer-python/blob/master/singer/messages.py#L137</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>                    <span class="n">last_integer</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">get_bookmark</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">sheet_title</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
+                    <span class="n">activate_version</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">*</span> <span class="mi">1000</span><span class="p">)</span>
+                    <span class="n">activate_version_message</span> <span class="o">=</span> <span class="n">singer</span><span class="o">.</span><span class="n">ActivateVersionMessage</span><span class="p">(</span>
+                            <span class="n">stream</span><span class="o">=</span><span class="n">sheet_title</span><span class="p">,</span>
+                            <span class="n">version</span><span class="o">=</span><span class="n">activate_version</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">last_integer</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-90'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-90'>#</a>
+      </div>
+      <p>initial load, send activate_version before AND after data sync</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>                        <span class="n">singer</span><span class="o">.</span><span class="n">write_message</span><span class="p">(</span><span class="n">activate_version_message</span><span class="p">)</span>
+                        <span class="n">LOGGER</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;INITIAL SYNC, Stream: </span><span class="si">{}</span><span class="s1">, Activate Version: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">sheet_title</span><span class="p">,</span> <span class="n">activate_version</span><span class="p">))</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-91'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-91'>#</a>
+      </div>
+      <p>Determine max range of columns and rows for &ldquo;paging&rdquo; through the data</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>                    <span class="n">sheet_last_col_index</span> <span class="o">=</span> <span class="mi">1</span>
+                    <span class="n">sheet_last_col_letter</span> <span class="o">=</span> <span class="s1">&#39;A&#39;</span>
+                    <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">columns</span><span class="p">:</span>
+                        <span class="n">col_index</span> <span class="o">=</span> <span class="n">col</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;columnIndex&#39;</span><span class="p">)</span>
+                        <span class="n">col_letter</span> <span class="o">=</span> <span class="n">col</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;columnLetter&#39;</span><span class="p">)</span>
+                        <span class="k">if</span> <span class="n">col_index</span> <span class="o">&gt;</span> <span class="n">sheet_last_col_index</span><span class="p">:</span>
+                            <span class="n">sheet_last_col_index</span> <span class="o">=</span> <span class="n">col_index</span>
+                            <span class="n">sheet_last_col_letter</span> <span class="o">=</span> <span class="n">col_letter</span>
+                    <span class="n">sheet_max_row</span> <span class="o">=</span> <span class="n">sheet</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;properties&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;gridProperties&#39;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;rowCount&#39;</span><span class="p">)</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-92'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-92'>#</a>
+      </div>
+      <p>Initialize paging for 1st batch</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>                    <span class="n">is_last_row</span> <span class="o">=</span> <span class="kc">False</span>
+                    <span class="n">batch_rows</span> <span class="o">=</span> <span class="mi">200</span>
+                    <span class="n">from_row</span> <span class="o">=</span> <span class="mi">2</span>
+                    <span class="k">if</span> <span class="n">sheet_max_row</span> <span class="o">&lt;</span> <span class="n">batch_rows</span><span class="p">:</span>
+                        <span class="n">to_row</span> <span class="o">=</span> <span class="n">sheet_max_row</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">to_row</span> <span class="o">=</span> <span class="n">batch_rows</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-93'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-93'>#</a>
+      </div>
+      <p>Loop thru batches (each having 200 rows of data)</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>                    <span class="k">while</span> <span class="ow">not</span> <span class="n">is_last_row</span> <span class="ow">and</span> <span class="n">from_row</span> <span class="o">&lt;</span> <span class="n">sheet_max_row</span> <span class="ow">and</span> <span class="n">to_row</span> <span class="o">&lt;=</span> <span class="n">sheet_max_row</span><span class="p">:</span>
+                        <span class="n">range_rows</span> <span class="o">=</span> <span class="s1">&#39;A</span><span class="si">{}</span><span class="s1">:</span><span class="si">{}{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">from_row</span><span class="p">,</span> <span class="n">sheet_last_col_letter</span><span class="p">,</span> <span class="n">to_row</span><span class="p">)</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-94'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-94'>#</a>
+      </div>
+      <p>GET sheet_data for a worksheet tab</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>                        <span class="n">sheet_data</span><span class="p">,</span> <span class="n">time_extracted</span> <span class="o">=</span> <span class="n">get_data</span><span class="p">(</span>
+                            <span class="n">stream_name</span><span class="o">=</span><span class="n">sheet_title</span><span class="p">,</span>
+                            <span class="n">endpoint_config</span><span class="o">=</span><span class="n">sheets_loaded_config</span><span class="p">,</span>
+                            <span class="n">client</span><span class="o">=</span><span class="n">client</span><span class="p">,</span>
+                            <span class="n">spreadsheet_id</span><span class="o">=</span><span class="n">spreadsheet_id</span><span class="p">,</span>
+                            <span class="n">range_rows</span><span class="o">=</span><span class="n">range_rows</span><span class="p">)</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-95'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-95'>#</a>
+      </div>
+      <p>Data is returned as a list of arrays, an array of values for each row</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>                        <span class="n">sheet_data_rows</span> <span class="o">=</span> <span class="n">sheet_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;values&#39;</span><span class="p">,</span> <span class="p">[])</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-96'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-96'>#</a>
+      </div>
+      <p>Transform batch of rows to JSON with keys for each column</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>                        <span class="n">sheet_data_tf</span><span class="p">,</span> <span class="n">row_num</span> <span class="o">=</span> <span class="n">transform_sheet_data</span><span class="p">(</span>
+                            <span class="n">spreadsheet_id</span><span class="o">=</span><span class="n">spreadsheet_id</span><span class="p">,</span>
+                            <span class="n">sheet_id</span><span class="o">=</span><span class="n">sheet_id</span><span class="p">,</span>
+                            <span class="n">sheet_title</span><span class="o">=</span><span class="n">sheet_title</span><span class="p">,</span>
+                            <span class="n">from_row</span><span class="o">=</span><span class="n">from_row</span><span class="p">,</span>
+                            <span class="n">columns</span><span class="o">=</span><span class="n">columns</span><span class="p">,</span>
+                            <span class="n">sheet_data_rows</span><span class="o">=</span><span class="n">sheet_data_rows</span><span class="p">)</span>
+                        <span class="k">if</span> <span class="n">row_num</span> <span class="o">&lt;</span> <span class="n">to_row</span><span class="p">:</span>
+                            <span class="n">is_last_row</span> <span class="o">=</span> <span class="kc">True</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-97'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-97'>#</a>
+      </div>
+      <p>Process records, send batch of records to target</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>                        <span class="n">record_count</span> <span class="o">=</span> <span class="n">process_records</span><span class="p">(</span>
+                            <span class="n">catalog</span><span class="o">=</span><span class="n">catalog</span><span class="p">,</span>
+                            <span class="n">stream_name</span><span class="o">=</span><span class="n">sheet_title</span><span class="p">,</span>
+                            <span class="n">records</span><span class="o">=</span><span class="n">sheet_data_tf</span><span class="p">,</span>
+                            <span class="n">time_extracted</span><span class="o">=</span><span class="n">ss_time_extracted</span><span class="p">,</span>
+                            <span class="n">version</span><span class="o">=</span><span class="n">activate_version</span><span class="p">)</span>
+                        <span class="n">LOGGER</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Sheet: </span><span class="si">{}</span><span class="s1">, records processed: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                            <span class="n">sheet_title</span><span class="p">,</span> <span class="n">record_count</span><span class="p">))</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-98'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-98'>#</a>
+      </div>
+      <p>Update paging from/to_row for next batch</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>                        <span class="n">from_row</span> <span class="o">=</span> <span class="n">to_row</span> <span class="o">+</span> <span class="mi">1</span>
+                        <span class="k">if</span> <span class="n">to_row</span> <span class="o">+</span> <span class="n">batch_rows</span> <span class="o">&gt;</span> <span class="n">sheet_max_row</span><span class="p">:</span>
+                            <span class="n">to_row</span> <span class="o">=</span> <span class="n">sheet_max_row</span>
+                        <span class="k">else</span><span class="p">:</span>
+                            <span class="n">to_row</span> <span class="o">=</span> <span class="n">to_row</span> <span class="o">+</span> <span class="n">batch_rows</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-99'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-99'>#</a>
+      </div>
+      <p>End of Stream: Send Activate Version and update State</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>                    <span class="n">singer</span><span class="o">.</span><span class="n">write_message</span><span class="p">(</span><span class="n">activate_version_message</span><span class="p">)</span>
+                    <span class="n">write_bookmark</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">sheet_title</span><span class="p">,</span> <span class="n">activate_version</span><span class="p">)</span>
+                    <span class="n">LOGGER</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;COMPLETE SYNC, Stream: </span><span class="si">{}</span><span class="s1">, Activate Version: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">sheet_title</span><span class="p">,</span> <span class="n">activate_version</span><span class="p">))</span>
+                    <span class="n">LOGGER</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;FINISHED Syncing Sheet </span><span class="si">{}</span><span class="s1">, Total Rows: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                        <span class="n">sheet_title</span><span class="p">,</span> <span class="n">row_num</span> <span class="o">-</span> <span class="mi">2</span><span class="p">))</span> <span class="c1"># subtract 1 for header row</span>
+                    <span class="n">update_currently_syncing</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-100'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-100'>#</a>
+      </div>
+      <p>SHEETS_LOADED
+Add sheet to sheets_loaded</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>                    <span class="n">sheet_loaded</span> <span class="o">=</span> <span class="p">{}</span>
+                    <span class="n">sheet_loaded</span><span class="p">[</span><span class="s1">&#39;spreadsheetId&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">spreadsheet_id</span>
+                    <span class="n">sheet_loaded</span><span class="p">[</span><span class="s1">&#39;sheetId&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">sheet_id</span>
+                    <span class="n">sheet_loaded</span><span class="p">[</span><span class="s1">&#39;title&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">sheet_title</span>
+                    <span class="n">sheet_loaded</span><span class="p">[</span><span class="s1">&#39;loadDate&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">strftime</span><span class="p">(</span><span class="n">utils</span><span class="o">.</span><span class="n">now</span><span class="p">())</span>
+                    <span class="n">sheet_loaded</span><span class="p">[</span><span class="s1">&#39;lastRowNumber&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">row_num</span>
+                    <span class="n">sheets_loaded</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">sheet_loaded</span><span class="p">)</span>
+
+    <span class="n">stream_name</span> <span class="o">=</span> <span class="s1">&#39;sheet_metadata&#39;</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-101'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-101'>#</a>
+      </div>
+      <p>Write sheet_metadata records if selected</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    <span class="n">sync_stream</span><span class="p">(</span><span class="n">stream_name</span><span class="p">,</span> <span class="n">selected_streams</span><span class="p">,</span> <span class="n">catalog</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">sheet_metadata</span><span class="p">)</span>
+
+    <span class="n">stream_name</span> <span class="o">=</span> <span class="s1">&#39;sheets_loaded&#39;</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-102'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-102'>#</a>
+      </div>
+      <p>Write sheet_metadata records if selected</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    <span class="n">sync_stream</span><span class="p">(</span><span class="n">stream_name</span><span class="p">,</span> <span class="n">selected_streams</span><span class="p">,</span> <span class="n">catalog</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">sheets_loaded</span><span class="p">)</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-103'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-103'>#</a>
+      </div>
+      <p>Update file_metadata bookmark</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    <span class="n">write_bookmark</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="s1">&#39;file_metadata&#39;</span><span class="p">,</span> <span class="n">strftime</span><span class="p">(</span><span class="n">this_datetime</span><span class="p">))</span>
+
+    <span class="k">return</span>
+
+</pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+</div>
+</body>
