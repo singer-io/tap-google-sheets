@@ -186,12 +186,6 @@ class GoogleClient: # pylint: disable=too-many-instance-attributes
         LOGGER.info('Authorized, token expires = {}'.format(self.__expires))
 
 
-    def request(self, *args, **kwargs):
-        try:
-            return self._request(*args, **kwargs)
-        except Server429Error as e:
-            raise Server429Error("Rate limit hit too many times") from e
-
     # Rate Limit: https://developers.google.com/sheets/api/limits
     #   100 request per 100 seconds per User
     @backoff.on_exception(backoff.expo,
@@ -199,7 +193,7 @@ class GoogleClient: # pylint: disable=too-many-instance-attributes
                           max_tries=7,
                           factor=3)
     @utils.ratelimit(100, 100)
-    def _request(self, method, path=None, url=None, api=None, **kwargs):
+    def request(self, method, path=None, url=None, api=None, **kwargs):
         self.get_access_token()
         self.base_url = 'https://sheets.googleapis.com/v4'
         if api == 'files':
@@ -236,7 +230,7 @@ class GoogleClient: # pylint: disable=too-many-instance-attributes
         #Use retry functionality in backoff to wait and retry if
         #response code equals 429 because rate limit has been exceeded
         if response.status_code == 429:
-            raise Server429Error("Hit rate limit, retrying")
+            raise Server429Error()
 
         if response.status_code != 200:
             raise_for_error(response)
