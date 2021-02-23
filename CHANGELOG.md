@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.1.1
+  * Added better error messages for 429 errors
+
 ## 1.1.0
   * Allow Google `numberTypes` and date-time types to fall back to a string schema [#25](https://github.com/singer-io/tap-google-sheets/pull/25)
 
