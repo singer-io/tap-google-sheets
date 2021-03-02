@@ -17,12 +17,6 @@ jobs:
             pip install pylint
             pylint tap_google_sheets -d C,R,W
       - run:
-          name: 'Unit Tests'
-          command: |
-            source ~/.virtualenvs/tap-google-sheets/bin/activate
-            pip install nose
-            nosetests
-      - run:
           name: 'JSON Validator'
           command: |
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
