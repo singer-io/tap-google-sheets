@@ -1,10 +1,8 @@
-"""
-Test tap combined
-"""
-
 import unittest
 import os
-from .test_configuration import config
+from datetime import datetime as dt
+from datetime import timedelta
+
 from tap_tester import menagerie
 import tap_tester.runner as runner
 import tap_tester.connections as connections
@@ -12,60 +10,72 @@ from tap_tester.scenario import SCENARIOS
 
 
 class TapCombinedTest(unittest.TestCase):
-    """ Test the tap combined """
+    START_DATE_FORMAT = "%Y-%m-%dT00:00:00Z"
 
-    def name(self):
-        return config['test_name']
+    @staticmethod
+    def name():
+        return "tap_google_sheets_combined_test"
 
-    def tap_name(self):
-        """The name of the tap"""
-        return config['tap_name']
+    @staticmethod
+    def tap_name():
+        return "tap-google-sheets"
 
-    def get_type(self):
-        """the expected url route ending"""
-        return config['type']
+    @staticmethod
+    def get_type():
+        return "platform.google-sheets"
 
     def expected_check_streams(self):
-        return set(config['streams'].keys())
+        return set(self.expected_pks().keys())
 
     def expected_sync_streams(self):
-        return set(config['streams'].keys())
+        return set(self.expected_pks().keys())
 
-    def expected_pks(self):
-        return config['streams']
+    @staticmethod
+    def expected_pks():
+        return {
+            "file_metadata": {"id"},
+            "sheet_metadata": {"sheetId"},
+            "sheets_loaded": {"spreadsheetId", "sheetId", "loadDate"},
+            "spreadsheet_metadata": {"spreadsheetId"},
+            "Test-1": {"__sdc_row"},
+            "Test 2": {"__sdc_row"},
+            "SKU COGS": {"__sdc_row"},
+            "Item Master": {"__sdc_row"},
+            "Retail Price": {"__sdc_row"},
+            "Retail Price NEW": {"__sdc_row"},
+            "Forecast Scenarios": {"__sdc_row"},
+            "Promo Type": {"__sdc_row"},
+            "Shipping Method": {"__sdc_row"}
+        }
+
 
     def get_properties(self):
-        """Configuration properties required for the tap."""
-        properties_dict = {}
-        props = config['properties']
-        for prop in props:
-            properties_dict[prop] = os.getenv(props[prop])
-        
-        return properties_dict
+        return_value = {
+            'start_date': dt.strftime(dt.utcnow() - timedelta(days=3), self.START_DATE_FORMAT),
+            'spreadsheet_id': os.getenv("TAP_GOOGLE_SHEETS_SPREADSHEET_ID")
+        }
 
-    def get_credentials(self):
-        """Authentication information for the test account. Username is expected as a property."""
-        credentials_dict = {}
-        creds = config['credentials']
-        for cred in creds:
-            credentials_dict[cred] = os.getenv(creds[cred])
+        return return_value
 
-        return credentials_dict
+    @staticmethod
+    def get_credentials():
+        return {
+            "client_id": os.getenv("TAP_GOOGLE_SHEETS_CLIENT_ID"),
+            "client_secret": os.getenv("TAP_GOOGLE_SHEETS_CLIENT_SECRET"),
+            "refresh_token": os.getenv("TAP_GOOGLE_SHEETS_REFRESH_TOKEN"),
+        }
 
     def setUp(self):
-        missing_envs = []
-        props = config['properties']
-        creds = config['credentials']
+        missing_envs = [x for x in [
+            "TAP_GOOGLE_SHEETS_SPREADSHEET_ID",
+            "TAP_GOOGLE_SHEETS_START_DATE",
+            "TAP_GOOGLE_SHEETS_CLIENT_ID",
+            "TAP_GOOGLE_SHEETS_CLIENT_SECRET",
+            "TAP_GOOGLE_SHEETS_REFRESH_TOKEN",
+        ] if os.getenv(x) is None]
 
-        for prop in props:
-            if os.getenv(props[prop]) == None:
-                missing_envs.append(prop)
-        for cred in creds:
-            if os.getenv(creds[cred]) == None:
-                missing_envs.append(cred)
-
-        if len(missing_envs) != 0:
-            raise Exception("set " + ", ".join(missing_envs))
+        if missing_envs:
+            raise Exception("Missing environment variables: {}".format(missing_envs))
 
     def test_run(self):
 
