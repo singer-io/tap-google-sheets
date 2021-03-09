@@ -51,7 +51,7 @@ class TapCombinedTest(unittest.TestCase):
 
     def get_properties(self):
         return_value = {
-            'start_date': dt.strftime(dt.utcnow() - timedelta(days=3), self.START_DATE_FORMAT),
+            'start_date': os.getenv("TAP_GOOGLE_SHEETS_START_DATE"),
             'spreadsheet_id': os.getenv("TAP_GOOGLE_SHEETS_SPREADSHEET_ID")
         }
 
