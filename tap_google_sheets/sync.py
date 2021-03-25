@@ -486,14 +486,17 @@ def sync(client, config, catalog, state):
 
                     # Initialize paging for 1st batch
                     is_last_row = False
-                    batch_rows = 200
+                    batch_rows = config.get('batch_rows', 200)
+                    if not isinstance(batch_rows, int):
+                        LOGGER.info('WARNING: batch_rows value in config {} is not an integer, using default value of 200'.format(batch_rows))
+                        batch_rows = 200
+                    if batch_rows < 1:
+                        LOGGER.info('WARNING: batch_rows value in config {} is not positive, using default value of 200'.format(batch_rows))
+                        batch_rows = 200
                     from_row = 2
-                    if sheet_max_row < batch_rows:
-                        to_row = sheet_max_row
-                    else:
-                        to_row = batch_rows
+                    to_row = min(sheet_max_row, batch_rows)
 
-                    # Loop thru batches (each having 200 rows of data)
+                    # Loop thru batches (each having config.batch_rows rows of data, 200 by default)
                     while not is_last_row and from_row < sheet_max_row and to_row <= sheet_max_row:
                         range_rows = 'A{}:{}{}'.format(from_row, sheet_last_col_letter, to_row)
 
