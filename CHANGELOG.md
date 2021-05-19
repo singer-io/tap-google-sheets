@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.1.2
+  * Increase python version to `3.8.10`
+
 ## 1.1.1
   * Added better error messages for 429 errors
 
