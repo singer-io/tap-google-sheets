@@ -3,7 +3,7 @@
 from setuptools import setup, find_packages
 
 setup(name='tap-google-sheets',
-      version='1.0.0',
+      version='1.1.2',
       description='Singer.io tap for extracting data from the Google Sheets v4 API',
       author='jeff.huth@bytecode.io',
       classifiers=['Programming Language :: Python :: 3 :: Only'],
@@ -13,6 +13,13 @@ setup(name='tap-google-sheets',
           'requests==2.22.0',
           'singer-python==5.9.0'
       ],
+      extras_require={
+          'dev': [
+              'ipdb==0.11',
+              'pylint',
+              'nose'
+          ]
+      },
       entry_points='''
           [console_scripts]
           tap-google-sheets=tap_google_sheets:main

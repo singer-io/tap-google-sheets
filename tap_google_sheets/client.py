@@ -230,7 +230,7 @@ class GoogleClient: # pylint: disable=too-many-instance-attributes
         #Use retry functionality in backoff to wait and retry if
         #response code equals 429 because rate limit has been exceeded
         if response.status_code == 429:
-            raise Server429Error()
+            raise Server429Error(response.json().get("error",{}).get("message", "Rate limit exceeded"))
 
         if response.status_code != 200:
             raise_for_error(response)
