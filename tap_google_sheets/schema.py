@@ -36,30 +36,30 @@ def get_sheet_schema_columns(sheet):
         # Empty sheet or empty first row, SKIP
         LOGGER.info('SKIPPING Empty Sheet: {}'.format(sheet_title))
         return None, None
-    else:
-        # spreadsheet is an OrderedDict, with orderd sheets and rows in the repsonse
-        headers = row_data[0].get('values', [])
-        first_values = row_data[1].get('values', [])
-        # Pad first row values with default if null
-        if len(first_values) < len(headers):
-            pad_default_effective_values(headers, first_values)
 
-        sheet_json_schema = {
-            'type': 'object',
-            'additionalProperties': False,
-            'properties': {
-                '__sdc_spreadsheet_id': {
-                    'type': ['null', 'string']
-                },
-                '__sdc_sheet_id': {
-                    'type': ['null', 'integer']
-                },
-                '__sdc_row': {
-                    'type': ['null', 'integer']
-                }
+    # spreadsheet is an OrderedDict, with orderd sheets and rows in the repsonse
+    headers = row_data[0].get('values', [])
+    first_values = row_data[1].get('values', [])
+    # Pad first row values with default if null
+    if len(first_values) < len(headers):
+        pad_default_effective_values(headers, first_values)
+
+    sheet_json_schema = {
+        'type': 'object',
+        'additionalProperties': False,
+        'properties': {
+            '__sdc_spreadsheet_id': {
+                'type': ['null', 'string']
+            },
+            '__sdc_sheet_id': {
+                'type': ['null', 'integer']
+            },
+            '__sdc_row': {
+                'type': ['null', 'integer']
             }
         }
     }
+
 
     header_list = [] # used for checking uniqueness
     columns = []
