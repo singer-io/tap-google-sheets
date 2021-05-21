@@ -60,7 +60,6 @@ def get_sheet_schema_columns(sheet):
         }
     }
 
-
     header_list = [] # used for checking uniqueness
     columns = []
     prior_header = None
