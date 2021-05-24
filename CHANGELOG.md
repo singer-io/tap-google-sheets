@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.1.3
+  * Add padding to columns without data and ignore hidden sheets [#35](https://github.com/singer-io/tap-google-sheets/pull/35)
+
 ## 1.1.2
   * Increase python version to `3.8.10`
 
