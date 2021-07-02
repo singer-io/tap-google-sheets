@@ -12,7 +12,6 @@ from tap_tester import connections, menagerie, runner
 
 
 # TODO Get base.py implemented
-
 # Change all references from fb to google-sheets
 
 # Use the google-sheets environment variables
@@ -27,7 +26,7 @@ from tap_tester import connections, menagerie, runner
 
 
 
-class FacebookBaseTest(unittest.TestCase):
+class GoogleSheetsBaseTest(unittest.TestCase):
     """
     Setup expectations for test sub classes.
     Metadata describing streams.
@@ -52,20 +51,18 @@ class FacebookBaseTest(unittest.TestCase):
     @staticmethod
     def tap_name():
         """The name of the tap"""
-        return "tap-facebook"
+        return "tap-google_sheets"
     # TODO
     @staticmethod
     def get_type():
         """the expected url route ending"""
-        return "platform.facebook"
+        return "platform.google_sheets"
     # TODO
     def get_properties(self, original: bool = True):
         """Configuration properties required for the tap."""
         return_value = {
-            'account_id': os.getenv('TAP_FACEBOOK_ACCOUNT_ID'),
-            'start_date' : '2015-03-15T00:00:00Z',
-            'end_date': '2015-03-16T00:00:00+00:00',
-            'insights_buffer_days': '1'
+            'start_date': os.getenv("TAP_GOOGLE_SHEETS_START_DATE"),
+            'spreadsheet_id': os.getenv("TAP_GOOGLE_SHEETS_SPREADSHEET_ID")
         }
         if original:
             return return_value
@@ -77,71 +74,49 @@ class FacebookBaseTest(unittest.TestCase):
     @staticmethod
     def get_credentials():
         """Authentication information for the test account"""
-        return {'access_token': os.getenv('TAP_FACEBOOK_ACCESS_TOKEN')}
+        return {
+            "client_id": os.getenv("TAP_GOOGLE_SHEETS_CLIENT_ID"),
+            "client_secret": os.getenv("TAP_GOOGLE_SHEETS_CLIENT_SECRET"),
+            "refresh_token": os.getenv("TAP_GOOGLE_SHEETS_REFRESH_TOKEN"),
+        }
 
     # TODO
     def expected_metadata(self):
         """The expected streams and metadata about the streams"""
+        default_sheet = {
+            self.PRIMARY_KEYS:{"__sdc_row"},
+            self.REPLICATION_METHOD: self.INCREMENTAL,
+            self.REPLICATION_KEYS: {"modified_at"}
+        }
         return {
-            "ads": {
-                self.PRIMARY_KEYS: {"id", "updated_time"},
-                self.REPLICATION_METHOD: self.INCREMENTAL,
-                self.REPLICATION_KEYS: {"updated_time"}
-            },
-            "adcreative": {
-                self.PRIMARY_KEYS: {"id"},
-                self.REPLICATION_METHOD: self.FULL_TABLE,
-            },
-            "adsets": {
-                self.PRIMARY_KEYS: {"id", "updated_time"},
-                self.REPLICATION_METHOD: self.INCREMENTAL,
-                self.REPLICATION_KEYS: {"updated_time"}
-            },
-            "campaigns": {
+        
+            "file_metadata": {
                 self.PRIMARY_KEYS: {"id", },
                 self.REPLICATION_METHOD: self.INCREMENTAL,
-                self.REPLICATION_KEYS: {"updated_time"}
+                self.REPLICATION_KEYS: {"modifiedTime"}
             },
-            "ads_insights": {
-                self.PRIMARY_KEYS: {"campaign_id", "adset_id", "ad_id", "date_start"},
-                self.REPLICATION_METHOD: self.INCREMENTAL,
-                self.REPLICATION_KEYS: {"date_start"}
-            },
-            "ads_insights_age_and_gender": {
-                self.PRIMARY_KEYS: {
-                    "campaign_id", "adset_id", "ad_id", "date_start", "age", "gender"
+            "sheet_metadata": {
+                self.PRIMARY_KEYS: {"sheetId", "spreadsheetId"},
+                self.REPLICATION_METHOD: self.FULL_TABLE,
                 },
-                self.REPLICATION_METHOD: self.INCREMENTAL,
-                self.REPLICATION_KEYS: {"date_start"}
+            "sheets_loaded":{
+                self.PRIMARY_KEYS:{"spreadsheetId", "sheetId", "loadDate"},
+                self.REPLICATION_METHOD: self.FULL_TABLE
             },
-            "ads_insights_country": {  # TODO | add country | https://stitchdata.atlassian.net/browse/SRCE-2555
-                self.PRIMARY_KEYS: {"campaign_id", "adset_id", "ad_id", "date_start"}, # , "country"},
-                self.REPLICATION_METHOD: self.INCREMENTAL,
-                self.REPLICATION_KEYS: {"date_start"}
-            },
-            "ads_insights_platform_and_device": {
-                self.PRIMARY_KEYS: {
-                    "campaign_id", "adset_id", "ad_id", "date_start",
-                    "publisher_platform", "platform_position", "impression_device"
-                },
-                self.REPLICATION_METHOD: self.INCREMENTAL,
-                self.REPLICATION_KEYS: {"date_start"}
-            },
-            "ads_insights_region": {
-                self.PRIMARY_KEYS: {"region", "campaign_id", "adset_id", "ad_id", "date_start"},
-                self.REPLICATION_METHOD: self.INCREMENTAL,
-                self.REPLICATION_KEYS: {"date_start"}
-            },
-            "ads_insights_dma": {
-                self.PRIMARY_KEYS: {"dma", "campaign_id", "adset_id", "ad_id", "date_start"},
-                self.REPLICATION_METHOD: self.INCREMENTAL,
-                self.REPLICATION_KEYS: {"date_start"}
-            },
-            # "leads": {
-            #     self.PRIMARY_KEYS: {"id"},
-            #     self.REPLICATION_METHOD: self.INCREMENTAL,
-            #     self.REPLICATION_KEYS: {"created_time"}
-            # },
+            "spreadsheet_metadata": {
+                self.PRIMARY_KEYS: {"spreadsheetId"},
+                self.REPLICATION_METHOD: self.FULL_TABLE,
+                    },
+            "Test-1": default_sheet,
+            "Test 2": default_sheet,
+            "SKU COGS":default_sheet,
+            "Item Master": default_sheet,
+            "Retail Price": default_sheet,
+            "Retail Price NEW":default_sheet,
+            "Forecast Scenarios": default_sheet,
+            "Promo Type": default_sheet,
+            "Shipping Method":default_sheet,
+            
         }
 
 
@@ -199,8 +174,13 @@ class FacebookBaseTest(unittest.TestCase):
                 in self.expected_metadata().items()}
 
     def setUp(self):
-        missing_envs = [x for x in [os.getenv('TAP_FACEBOOK_ACCESS_TOKEN'),
-                                    os.getenv('TAP_FACEBOOK_ACCOUNT_ID')] if x is None]
+        missing_envs = [x for x in [            
+            os.getenv("TAP_GOOGLE_SHEETS_START_DATE"),
+            os.getenv("TAP_GOOGLE_SHEETS_SPREADSHEET_ID"),
+            os.getenv("TAP_GOOGLE_SHEETS_CLIENT_ID"),
+            os.getenv("TAP_GOOGLE_SHEETS_CLIENT_SECRET"),
+            os.getenv("TAP_GOOGLE_SHEETS_REFRESH_TOKEN"),
+        ] if x is None]
         if len(missing_envs) != 0:
             raise Exception("set environment variables")
 

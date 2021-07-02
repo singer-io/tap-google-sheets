@@ -36,7 +36,7 @@ class TapCombinedTest(unittest.TestCase):
         return {
             "file_metadata": {"id"},
             "sheet_metadata": {"sheetId"},
-            "sheets_loaded": {"spreadsheetId", "sheetId", "loadDate"},
+            "sheets_loaded": {"spreadsheetId", "sheetId", "loadDate"}, # BUG TODO |loaddate is not a pk in docs 
             "spreadsheet_metadata": {"spreadsheetId"},
             "Test-1": {"__sdc_row"},
             "Test 2": {"__sdc_row"},
