@@ -30,6 +30,7 @@ class TapCombinedTest(unittest.TestCase):
     def expected_sync_streams(self):
         return set(self.expected_pks().keys())
 
+    # TODO copy this and use it to replace metadata in base.py
     @staticmethod
     def expected_pks():
         return {
