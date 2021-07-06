@@ -51,12 +51,12 @@ class GoogleSheetsBaseTest(unittest.TestCase):
     @staticmethod
     def tap_name():
         """The name of the tap"""
-        return "tap-google_sheets"
+        return "tap-google-sheets"
     # TODO
     @staticmethod
     def get_type():
         """the expected url route ending"""
-        return "platform.google_sheets"
+        return "platform.google-sheets"
     # TODO
     def get_properties(self, original: bool = True):
         """Configuration properties required for the tap."""
