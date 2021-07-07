@@ -161,15 +161,15 @@ class GoogleSheetsBaseTest(unittest.TestCase):
                 in self.expected_metadata().items()}
 
     def setUp(self):
-        missing_envs = [x for x in [            
-            os.getenv("TAP_GOOGLE_SHEETS_START_DATE"),
-            os.getenv("TAP_GOOGLE_SHEETS_SPREADSHEET_ID"),
-            os.getenv("TAP_GOOGLE_SHEETS_CLIENT_ID"),
-            os.getenv("TAP_GOOGLE_SHEETS_CLIENT_SECRET"),
-            os.getenv("TAP_GOOGLE_SHEETS_REFRESH_TOKEN"),
-        ] if x is None]
+        missing_envs = [x for x in [
+            "TAP_GOOGLE_SHEETS_START_DATE",
+            "TAP_GOOGLE_SHEETS_SPREADSHEET_ID",
+            "TAP_GOOGLE_SHEETS_CLIENT_ID",
+            "TAP_GOOGLE_SHEETS_CLIENT_SECRET",
+            "TAP_GOOGLE_SHEETS_REFRESH_TOKEN",
+        ] if os.getenv(x) is None]
         if len(missing_envs) != 0:
-            raise Exception("set environment variables")
+            raise Exception(f"missing variables: {missing_envs}")
 
 
     #########################
@@ -204,7 +204,7 @@ class GoogleSheetsBaseTest(unittest.TestCase):
         """
         Run a sync job and make sure it exited properly.
         Return a dictionary with keys of streams synced
-        and values of records synced for each stream
+        and values of record count for each stream.
         """
         # Run a sync job using orchestrator
         sync_job_name = runner.run_sync_mode(self, conn_id)
@@ -249,7 +249,9 @@ class GoogleSheetsBaseTest(unittest.TestCase):
             catalog_entry = menagerie.get_annotated_schema(conn_id, cat['stream_id'])
 
             # Verify all testable streams are selected
-            selected = catalog_entry.get('annotated-schema').get('selected')
+            top_level_md = [md_entry for md_entry in catalog_entry['metadata']
+                            if md_entry['breadcrumb'] == []]
+            selected = top_level_md[0]['metadata']['selected']
             print("Validating selection on {}: {}".format(cat['stream_name'], selected))
             if cat['stream_name'] not in expected_selected:
                 self.assertFalse(selected, msg="Stream selected, but not testable.")
@@ -258,6 +260,9 @@ class GoogleSheetsBaseTest(unittest.TestCase):
 
             if select_all_fields:
                 # Verify all fields within each selected stream are selected
+                # TODO implement this check using the field_level_md rather than annotated-schema
+                # field_level_md = [md_entry for md_entry in catalog_entry['metadata']
+                #                   if md_entry['breadcrumb'] != []]
                 for field, field_props in catalog_entry.get('annotated-schema').get('properties').items():
                     field_selected = field_props.get('selected')
                     print("\tValidating selection on {}.{}: {}".format(
@@ -267,6 +272,9 @@ class GoogleSheetsBaseTest(unittest.TestCase):
                 # Verify only automatic fields are selected
                 expected_automatic_fields = self.expected_automatic_fields().get(cat['stream_name'])
                 selected_fields = self.get_selected_fields_from_metadata(catalog_entry['metadata'])
+                # BUG TDL-14241 | Replication keys are not automatic
+                if cat['stream_name'] == "file_metadata":
+                    expected_automatic_fields.remove('modifiedTime')
                 self.assertEqual(expected_automatic_fields, selected_fields)
 
     @staticmethod
