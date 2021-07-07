@@ -85,22 +85,21 @@ class GoogleSheetsBaseTest(unittest.TestCase):
         """The expected streams and metadata about the streams"""
         default_sheet = {
             self.PRIMARY_KEYS:{"__sdc_row"},
-            self.REPLICATION_METHOD: self.INCREMENTAL,
-            self.REPLICATION_KEYS: {"modified_at"}
+            self.REPLICATION_METHOD: self.FULL_TABLE,  # DOCS_BUG TDL-14240 | DOCS say INC but it is FULL
+            # self.REPLICATION_KEYS: {"modified_at"}
         }
         return {
-        
             "file_metadata": {
                 self.PRIMARY_KEYS: {"id", },
                 self.REPLICATION_METHOD: self.INCREMENTAL,
                 self.REPLICATION_KEYS: {"modifiedTime"}
             },
             "sheet_metadata": {
-                self.PRIMARY_KEYS: {"sheetId", "spreadsheetId"},
+                self.PRIMARY_KEYS: {"sheetId"}, # "spreadsheetId"}, # BUG? | This is not in the real tap, "spreadsheetId"},
                 self.REPLICATION_METHOD: self.FULL_TABLE,
                 },
             "sheets_loaded":{
-                self.PRIMARY_KEYS:{"spreadsheetId", "sheetId", "loadDate"},
+                self.PRIMARY_KEYS:{"spreadsheetId", "sheetId", "loadDate"},  # DOCS_BUG  TDL-14240 | loadDate
                 self.REPLICATION_METHOD: self.FULL_TABLE
             },
             "spreadsheet_metadata": {
@@ -116,7 +115,6 @@ class GoogleSheetsBaseTest(unittest.TestCase):
             "Forecast Scenarios": default_sheet,
             "Promo Type": default_sheet,
             "Shipping Method":default_sheet,
-            
         }
 
 
@@ -150,21 +148,10 @@ class GoogleSheetsBaseTest(unittest.TestCase):
                 for table, properties
                 in self.expected_metadata().items()}
 
-    def expected_foreign_keys(self):
-        """
-        return a dictionary with key of table name
-        and value as a set of foreign key fields
-        """
-        return {table: properties.get(self.FOREIGN_KEYS, set())
-                for table, properties
-                in self.expected_metadata().items()}
-
-
     def expected_automatic_fields(self):
         auto_fields = {}
         for k, v in self.expected_metadata().items():
-            auto_fields[k] = v.get(self.PRIMARY_KEYS, set()) | v.get(self.REPLICATION_KEYS, set()) \
-                | v.get(self.FOREIGN_KEYS, set())
+            auto_fields[k] = v.get(self.PRIMARY_KEYS, set()).union(v.get(self.REPLICATION_KEYS, set()))
         return auto_fields
 
     def expected_replication_method(self):
