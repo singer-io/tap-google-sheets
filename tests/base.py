@@ -43,7 +43,7 @@ class GoogleSheetsBaseTest(unittest.TestCase):
     INCREMENTAL = "INCREMENTAL"
     FULL_TABLE = "FULL_TABLE"
     START_DATE_FORMAT = "%Y-%m-%dT00:00:00Z"
-    BOOKMARK_COMPARISON_FORMAT = "%Y-%m-%dT00:00:00+00:00"
+    BOOKMARK_COMPARISON_FORMAT =  "%Y-%m-%dT%H:%M:%S.%fZ"
     LOGGER = singer.get_logger()
 
     start_date = ""
@@ -61,7 +61,7 @@ class GoogleSheetsBaseTest(unittest.TestCase):
     def get_properties(self, original: bool = True):
         """Configuration properties required for the tap."""
         return_value = {
-            'start_date': os.getenv("TAP_GOOGLE_SHEETS_START_DATE"),
+            'start_date': os.getenv("TAP_GOOGLE_SHEETS_START_DATE"), 
             'spreadsheet_id': os.getenv("TAP_GOOGLE_SHEETS_SPREADSHEET_ID")
         }
         if original:
