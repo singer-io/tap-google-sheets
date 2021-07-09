@@ -39,7 +39,7 @@ class GoogleSheetsBaseTest(unittest.TestCase):
     PRIMARY_KEYS = "table-key-properties"
     FOREIGN_KEYS = "table-foreign-key-properties"
     REPLICATION_METHOD = "forced-replication-method"
-    API_LIMIT = "max-row-limit"
+    API_LIMIT = 200
     INCREMENTAL = "INCREMENTAL"
     FULL_TABLE = "FULL_TABLE"
     START_DATE_FORMAT = "%Y-%m-%dT00:00:00Z"
@@ -115,6 +115,7 @@ class GoogleSheetsBaseTest(unittest.TestCase):
             "Forecast Scenarios": default_sheet,
             "Promo Type": default_sheet,
             "Shipping Method":default_sheet,
+            "Pagination": default_sheet,
         }
 
 
@@ -251,7 +252,7 @@ class GoogleSheetsBaseTest(unittest.TestCase):
             # Verify all testable streams are selected
             top_level_md = [md_entry for md_entry in catalog_entry['metadata']
                             if md_entry['breadcrumb'] == []]
-            selected = top_level_md[0]['metadata']['selected']
+            selected = top_level_md[0]['metadata'].get('selected')
             print("Validating selection on {}: {}".format(cat['stream_name'], selected))
             if cat['stream_name'] not in expected_selected:
                 self.assertFalse(selected, msg="Stream selected, but not testable.")
@@ -342,7 +343,8 @@ class GoogleSheetsBaseTest(unittest.TestCase):
                 return dt.strftime(return_date, self.BOOKMARK_COMPARISON_FORMAT)
 
             except ValueError:
-                return Exception("Datetime object is not of the format: {}".format(self.START_DATE_FORMAT))
+                valid_formats = [self.BOOKMARK_COMPARISON_FORMAT, self.START_DATE_FORMAT]
+                return Exception(f"Datetime object is not in an expected format: {valid_formats}")
 
     ##########################################################################
     ### Tap Specific Methods
