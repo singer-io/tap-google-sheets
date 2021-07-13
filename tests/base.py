@@ -97,7 +97,7 @@ class GoogleSheetsBaseTest(unittest.TestCase):
             "sheet_metadata": {
                 self.PRIMARY_KEYS: {"sheetId"}, # "spreadsheetId"}, # BUG? | This is not in the real tap, "spreadsheetId"},
                 self.REPLICATION_METHOD: self.FULL_TABLE,
-                },
+            },
             "sheets_loaded":{
                 self.PRIMARY_KEYS:{"spreadsheetId", "sheetId", "loadDate"},  # DOCS_BUG  TDL-14240 | loadDate
                 self.REPLICATION_METHOD: self.FULL_TABLE
@@ -105,7 +105,7 @@ class GoogleSheetsBaseTest(unittest.TestCase):
             "spreadsheet_metadata": {
                 self.PRIMARY_KEYS: {"spreadsheetId"},
                 self.REPLICATION_METHOD: self.FULL_TABLE,
-                    },
+            },
             "Test-1": default_sheet,
             "Test 2": default_sheet,
             "SKU COGS":default_sheet,
@@ -117,7 +117,6 @@ class GoogleSheetsBaseTest(unittest.TestCase):
             "Shipping Method":default_sheet,
             "Pagination": default_sheet,
         }
-
 
     def expected_streams(self):
         """A set of expected stream names"""
@@ -349,3 +348,8 @@ class GoogleSheetsBaseTest(unittest.TestCase):
     ##########################################################################
     ### Tap Specific Methods
     ##########################################################################
+
+    def is_sheet(self, stream):
+        non_sheets_streams = {'sheet_metadata', 'file_metadata', 'sheets_loaded', 'spreadsheet_metadata'}
+        return stream in self.expected_streams().difference(non_sheets_streams)
+        

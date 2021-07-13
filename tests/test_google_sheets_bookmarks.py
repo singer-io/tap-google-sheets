@@ -27,8 +27,6 @@ class BookmarksTest(GoogleSheetsBaseTest):
          - TODO Verify that you get more than a page of data w/ ony automatic fields.
         """
 
-        # TODO test that we still get all data for sheets streams when file_metadata is not selected
-
         expected_streams = self.expected_streams() - {'file_metadata'} # we don't select this stream
 
         # instantiate connection

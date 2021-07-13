@@ -26,6 +26,8 @@ class DiscoveryTest(GoogleSheetsBaseTest):
         • verify the actual replication matches our expected replication method
         • verify that primary, replication keys are given the inclusion of automatic.
         • verify that all other fields have inclusion of available metadata.
+        TODO add the following
+        - Error message meets expectations during critical error when first row is empty
         """
         streams_to_test = self.expected_streams()
 
