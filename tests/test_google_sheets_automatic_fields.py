@@ -22,7 +22,6 @@ class AutomaticFields(GoogleSheetsBaseTest):
         replication of just the primary keys and replication keys (automatic fields).
          - Verify we can deselect all fields except when inclusion=automatic (SaaS Taps).
          - Verify that only the automatic fields are sent to the target.
-         - TODO Verify that you get more than a page of data w/ ony automatic fields.
         """
 
         expected_streams = self.expected_streams()

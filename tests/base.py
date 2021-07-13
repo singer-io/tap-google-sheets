@@ -11,21 +11,6 @@ import singer
 from tap_tester import connections, menagerie, runner
 
 
-# TODO Get base.py implemented
-# Change all references from fb to google-sheets
-
-# Use the google-sheets environment variables
-#     change the properties and credentials
-
-# Fix the metadata
-#   take the streams with pks from combined to get a start
-#   figure out which replication method is used by running  the existing test
-#   if any are incremental
-
-# Copy the facebook discovery
-
-
-
 class GoogleSheetsBaseTest(unittest.TestCase):
     """
     Setup expectations for test sub classes.
@@ -47,17 +32,17 @@ class GoogleSheetsBaseTest(unittest.TestCase):
     LOGGER = singer.get_logger()
 
     start_date = ""
-    # TODO
+
     @staticmethod
     def tap_name():
         """The name of the tap"""
         return "tap-google-sheets"
-    # TODO
+
     @staticmethod
     def get_type():
         """the expected url route ending"""
         return "platform.google-sheets"
-    # TODO
+
     def get_properties(self, original: bool = True):
         """Configuration properties required for the tap."""
         return_value = {
@@ -70,7 +55,6 @@ class GoogleSheetsBaseTest(unittest.TestCase):
         return_value["start_date"] = self.start_date
         return return_value
 
-    # TODO
     @staticmethod
     def get_credentials():
         """Authentication information for the test account"""
@@ -80,7 +64,6 @@ class GoogleSheetsBaseTest(unittest.TestCase):
             "refresh_token": os.getenv("TAP_GOOGLE_SHEETS_REFRESH_TOKEN"),
         }
 
-    # TODO
     def expected_metadata(self):
         """The expected streams and metadata about the streams"""
         default_sheet = {
@@ -116,6 +99,8 @@ class GoogleSheetsBaseTest(unittest.TestCase):
             "Promo Type": default_sheet,
             "Shipping Method":default_sheet,
             "Pagination": default_sheet,
+            "happysheet": default_sheet,
+            "sadsheet1": default_sheet,
         }
 
     def expected_streams(self):
@@ -260,11 +245,11 @@ class GoogleSheetsBaseTest(unittest.TestCase):
 
             if select_all_fields:
                 # Verify all fields within each selected stream are selected
-                # TODO implement this check using the field_level_md rather than annotated-schema
-                # field_level_md = [md_entry for md_entry in catalog_entry['metadata']
-                #                   if md_entry['breadcrumb'] != []]
-                for field, field_props in catalog_entry.get('annotated-schema').get('properties').items():
-                    field_selected = field_props.get('selected')
+                field_level_md = [md_entry for md_entry in catalog_entry['metadata']
+                                  if md_entry['breadcrumb'] != []]
+                for field_md in field_level_md:
+                    field = field_md['breadcrumb'][1]
+                    field_selected = field_md['metadata'].get('selected')
                     print("\tValidating selection on {}.{}: {}".format(
                         cat['stream_name'], field, field_selected))
                     self.assertTrue(field_selected, msg="Field not selected.")
@@ -352,4 +337,3 @@ class GoogleSheetsBaseTest(unittest.TestCase):
     def is_sheet(self, stream):
         non_sheets_streams = {'sheet_metadata', 'file_metadata', 'sheets_loaded', 'spreadsheet_metadata'}
         return stream in self.expected_streams().difference(non_sheets_streams)
-        
