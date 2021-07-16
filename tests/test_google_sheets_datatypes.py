@@ -7,8 +7,11 @@ from tap_tester import connections, runner
 from base import GoogleSheetsBaseTest
 
 
+#  BUG_TDL-14371 | https://jira.talendforge.org/browse/TDL-14371
+#                  there are md keys in the schema: selected and inclusion
+
 # expected mapping of google types to json schema
-google_datatypes_to_json_schema = {  #  BUG 3 | TODO there are md keys in the schema: selected and inclusion
+google_datatypes_to_json_schema = {
     'stringValue': {'inclusion': 'available',
                     'selected': True,
                     'type': ['null', 'string']},
@@ -45,8 +48,10 @@ class DatatypesTest(GoogleSheetsBaseTest):
         return "tap_tester_google_sheets_datatypes_test"
 
     def test_run(self):
-        tested_streams = {'happysheet', 'sheet_metadata'}
-        # TODO Put this back   # self.expected_streams().difference({'sadsheet'})
+        sadsheets = {stream for stream in self.expected_streams() if stream.startswith('sadsheet-')}
+        tested_streams = sadsheets.union({'happysheet', 'sheet_metadata'})
+
+        # TODO Put back all sadsheet-<datatype> and happysheet and sheet_metadata
 
         # instantiate connection
         conn_id = connections.ensure_connection(self)
@@ -76,7 +81,7 @@ class DatatypesTest(GoogleSheetsBaseTest):
                            for stream in self.expected_streams()
                            if self.is_sheet(stream)}
 
-        # grab sheet metadata from the replicated records for the sheet_metadata stream 
+        # grab sheet metadata from the replicated records for the sheet_metadata stream
         sheet_metadata_records = [message['data']
                                   for message in synced_records['sheet_metadata']['messages']
                                   if message.get('data')]
@@ -101,7 +106,7 @@ class DatatypesTest(GoogleSheetsBaseTest):
 
         # Verify the sheet metadata accounts for all columns in the schema
         self.assertSetEqual(schema_column_names, md_column_names)
-        
+
         # Verify that the sheet metadata column types are consistent with the sheet schema
         for column_name in schema_column_names:
             with self.subTest(column=column_name):
@@ -119,36 +124,31 @@ class DatatypesTest(GoogleSheetsBaseTest):
         # Verify that all data has been coerced to the expected column datatype
         record_data = [message['data'] for message in synced_records['happysheet']['messages'] if message.get('data')]
         data_map = {
-	    "Currency": Decimal, # TODO BUG Currency is being identified as a decimal type rather than string
+	    "Currency": Decimal, # BUG Currency is being identified as a decimal type rather than string https://jira.talendforge.org/browse/TDL-14360
 	    "Datetime": str,
             "Time": str,
             "Date": str,
 	    "String": str,
             "Number": Decimal,
-            "Boolean": bool, 
+            "Boolean": bool,
         }
+
+        # TODO setup data in a way that does not require the try catch
+        #      use the test case columns to determine if string fallback is necessary rather than leaving
+        #      an ambiguous assertion in this test
 
         for record in record_data:
             with self.subTest(record=record):
                 for col in data_map.keys():
                     with self.subTest(col=col):
                         try:
-                            if record.get(col): # TODO BUG Boolean values are not being sent when they are null, but other datatypes are, when JSON schema specifies them as nullable
+                            if record.get(col):
                                 self.assertTrue(isinstance(record[col], data_map[col]), msg=f'actual={type(record[col])}, expected={data_map[col]}')
                         # some datatypes can also be str
-                        except AssertionError as error: 
+                        except AssertionError as error:
                             print(f"{error} error caught, string assertion made instead")
                             self.assertTrue(isinstance(record[col], str), msg=f'actual={type(record[col])}, expected=string')
-                           
-                            
-                                
-                            
-                        
-                        
-                            
-                        
-                    
-	            
+
 
 
         ##########################################################################
@@ -156,32 +156,36 @@ class DatatypesTest(GoogleSheetsBaseTest):
         ##########################################################################
 
 
+        ##########################################################################
+        ### BUGs
+        ##########################################################################
+
+        # NB | Reproducing Bugs
+        #      In order to reproduce the following bugs, you must access the test data via the
+        #      google-sheets ui. Each sadsheet-<datatype> will have a valid first row entry to satisfy
+        #      discovery and force the column datatype. The remaining rows consist of a comment description
+        #      of the error case and the value that errors. ONLY 1 VALUE CAN BE TESTED AT A TIME. Just move
+        #      the desired value back into the datatype column and run the test to see the failures
+
+        # BUG | <ticket> | <stream>
+
+        #  BUG_TDL-14372 | https://jira.talendforge.org/browse/TDL-14372 | sadsheet-number
+        #                  Decimals only supported to e-15, values exceeding this result in critical errors
+
+        #  BUG_TDL-14374 | https://jira.talendforge.org/browse/TDL-14374 | sadsheet-number
+        #                  "Record does not pass schema validation: [<class 'decimal.DivisionImpossible'>]"
+        #                     largest number?	1.80E+308
+
+        # BUG_TDL-14389 | https://jira.talendforge.org/browse/TDL-14389  | sadsheet-number
+        #                 Integer is coming across as a decimal, (just the same thing as decimal)
 
 
-        # TODO Finish Review of Schema
-        #  BUG 1 | Integer is coming across as a decimal, (just the same thing as decimal)
-        #  BUG 2 | Decimals only supported to e-15, values exceeding this result in critical errors
-        
+        # BUG TDL-14386 | https://jira.talendforge.org/browse/TDL-14386 | sadshseet-date
+        #                 Date value out of range error is not handled, tap throws critical error
+        #                    minimum date	11/21/00-1
+        #                    big date (not max)	7/13/15589
 
-        # TODO BUG Date value out of range error is not handled, tap throws critical error
-        #          minimum date	11/21/00-1
-        #          big date (not max)	7/13/15589
-        # TODO BUG "Record does not pass schema validation: [<class 'decimal.DivisionImpossible'>]"
-        #           largest number?	1.80E+308
-        
+        # Other Bugs that do not correspond to specific sadsheet
 
-        # TODO BUG there are no activate version messages in the sheet_metadata, spreadsheet_metadata
-        #          or sheets_loaded streams, even though they are full table
-        
-        # TODO BUG? Should we only sample 1 row to determine datatype of a column???
-
-        # TODO BUG Tap is inconsistent in datatyping specific values 
-        #          We do not account for non-standard values while datatyping the row, like we do during a sync.
-        #           ie. 't' in a boolean column is synced as 'true', but a column whose first row has the value 't'
-        #               will be typed as a string, not a boolean
-       
-
-
-
-
-        
+        # BUG_TDL-14344 | https://jira.talendforge.org/browse/TDL-14344
+        #                 Tap is inconsistent in datatyping specific values for Boolean

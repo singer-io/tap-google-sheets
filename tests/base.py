@@ -46,7 +46,7 @@ class GoogleSheetsBaseTest(unittest.TestCase):
     def get_properties(self, original: bool = True):
         """Configuration properties required for the tap."""
         return_value = {
-            'start_date': os.getenv("TAP_GOOGLE_SHEETS_START_DATE"), 
+            'start_date': os.getenv("TAP_GOOGLE_SHEETS_START_DATE"),
             'spreadsheet_id': os.getenv("TAP_GOOGLE_SHEETS_SPREADSHEET_ID")
         }
         if original:
@@ -100,7 +100,13 @@ class GoogleSheetsBaseTest(unittest.TestCase):
             "Shipping Method":default_sheet,
             "Pagination": default_sheet,
             "happysheet": default_sheet,
-            "sadsheet1": default_sheet,
+            "sadsheet-pagination": default_sheet,
+            "sadsheet-number": default_sheet,
+            "sadsheet-datetime": default_sheet,
+            "sadsheet-date": default_sheet,
+            "sadsheet-currency": default_sheet,
+            "sadsheet-time": default_sheet,
+            "sadsheet-string": default_sheet,
         }
 
     def expected_streams(self):

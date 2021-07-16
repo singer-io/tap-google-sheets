@@ -20,14 +20,21 @@ class BookmarksTest(GoogleSheetsBaseTest):
 
     def test_run(self):
         """
+        TODO fix this docstring
         Ensure running the tap with all streams selected and all fields deselected results in the
         replication of just the primary keys and replication keys (automatic fields).
          - Verify we can deselect all fields except when inclusion=automatic (SaaS Taps).
          - Verify that only the automatic fields are sent to the target.
          - TODO Verify that you get more than a page of data w/ ony automatic fields.
         """
+        skipped_streams = {stream
+                           for stream in self.expected_streams
+                           if stream.startswith('sadsheet')}.union({
+                                   'file_metadata' # testing case without file_metadata selected, but still providing bookmark
+                           })
 
-        expected_streams = self.expected_streams() - {'file_metadata'} # we don't select this stream
+
+        expected_streams = self.expected_streams() - skipped_streams
 
         # instantiate connection
         conn_id = connections.ensure_connection(self)
@@ -49,7 +56,19 @@ class BookmarksTest(GoogleSheetsBaseTest):
 
         # Update state to be prior to the last file_metadata state for stream
         state = menagerie.get_state(conn_id)
-        # TODO BUG full table streams are saving bookmarks unnecessarily
+        # BUG full table streams are saving bookmarks unnecessarily https://jira.talendforge.org/browse/TDL-14343
+
+        # BUG there are no activate version messages in the sheet_metadata, spreadsheet_metadata
+        #          or sheets_loaded streams, even though they are full table https://jira.talendforge.org/browse/TDL-14346
+        # verify message actions are correct
+        for stream in expected_streams.difference({'sheet_metadata', 'spreadsheet_metadata', 'sheets_loaded'}):
+            with self.subTest(stream=stream):
+                sync1_messages = synced_records_1[stream]['messages']
+                sync1_message_actions = [message['action'] for message in synced_records_1[stream]['messages']]
+                self.assertEqual('activate_version', sync1_message_actions[0])
+                self.assertEqual('activate_version', sync1_message_actions[-1])
+                self.assertSetEqual({'upsert'}, set(sync1_message_actions[1:-1]))
+
 
         # run a sync again, this time we shouldn't get any records back
         sync_job_name = runner.run_sync_mode(self, conn_id)
@@ -66,7 +85,7 @@ class BookmarksTest(GoogleSheetsBaseTest):
             with self.subTest(stream=stream):
                 self.assertEqual(0, record_count_by_stream_2.get(stream, 0))
 
-        # roll back the state of the file_metadata stream to ensure taht we sync sheets
+        # roll back the state of the file_metadata stream to ensure that we sync sheets
         # based off of this state
         file_metadata_stream = 'file_metadata'
         file_metadata_bookmark = state['bookmarks'][file_metadata_stream]
@@ -76,6 +95,7 @@ class BookmarksTest(GoogleSheetsBaseTest):
 
         new_state = copy.deepcopy(state)
         new_state['bookmarks'][file_metadata_stream] = target_bookmark
+
         menagerie.set_state(conn_id, new_state)
 
         record_count_by_stream_3 = self.run_and_verify_sync(conn_id)

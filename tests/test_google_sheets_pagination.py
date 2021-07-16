@@ -5,8 +5,12 @@ from tap_tester import connections, runner
 
 from base import GoogleSheetsBaseTest
 
-# TODO We observed a BUG where the tap does not paginate properly on sheets where the last two rows in a batch
+
+# BUG_TDL-14376 | https://jira.talendforge.org/browse/TDL-14376
+#                 Expectation: Tap will pick up next page (200 rows) iff there is a non-null value on that page
+#  We observed a BUG where the tap does not paginate properly on sheets where the last two rows in a batch
 # are empty values. The tap does not capture anything on the subsequent pages when this happens.
+#  
 
 
 class PaginationTest(GoogleSheetsBaseTest):
@@ -30,7 +34,7 @@ class PaginationTest(GoogleSheetsBaseTest):
         found_catalogs = self.run_and_verify_check_mode(conn_id)
 
         # Select all applicable streams and all fields within those streams
-        testable_streams = {"Pagination"}
+        testable_streams = {"Pagination", "sadsheet-pagination"}
         test_catalogs = [catalog for catalog in found_catalogs if
                          catalog.get('tap_stream_id') in testable_streams]
         self.perform_and_verify_table_and_field_selection(conn_id, test_catalogs, select_all_fields=True)
@@ -39,7 +43,9 @@ class PaginationTest(GoogleSheetsBaseTest):
         record_count_by_stream = self.run_and_verify_sync(conn_id)
         synced_records = runner.get_records_from_target_output()
 
-        for stream in testable_streams:
+        for stream in testable_streams.difference({
+                'sadsheet-pagination',  # BUG TDL-14376
+        }):
             with self.subTest(stream=stream):
 
                 our_fake_pk = 'id'
