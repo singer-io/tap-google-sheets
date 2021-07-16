@@ -48,10 +48,8 @@ class DatatypesTest(GoogleSheetsBaseTest):
         return "tap_tester_google_sheets_datatypes_test"
 
     def test_run(self):
-        sadsheets = {stream for stream in self.expected_streams() if stream.startswith('sadsheet-')}
-        tested_streams = sadsheets.union({'happysheet', 'sheet_metadata'})
-
-        # TODO Put back all sadsheet-<datatype> and happysheet and sheet_metadata
+        sadsheets = {stream for stream in self.expected_sync_streams() if stream.startswith('sadsheet-')}
+        tested_streams = sadsheets.union({'happysheet', 'sheet_metadata'}) 
 
         # instantiate connection
         conn_id = connections.ensure_connection(self)

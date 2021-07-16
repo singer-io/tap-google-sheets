@@ -107,12 +107,25 @@ class GoogleSheetsBaseTest(unittest.TestCase):
             "sadsheet-currency": default_sheet,
             "sadsheet-time": default_sheet,
             "sadsheet-string": default_sheet,
+            'sadsheet-empty-row-2': default_sheet,
+            'sadsheet-headers-only': default_sheet,
+            'sadsheet-duplicate-headers-case': default_sheet,
+            
         }
 
     def expected_streams(self):
         """A set of expected stream names"""
         return set(self.expected_metadata().keys())
 
+    def expected_sync_streams(self):
+        remove_streams = {
+            'sadsheet-duplicate-headers-case', # BUG |https://jira.talendforge.org/browse/TDL-14398 comment out to reproduce headers case
+            'sadsheet-empty-row-2',
+            'sadsheet-headers-only'
+        }
+        sync_streams = self.expected_streams().difference(remove_streams)
+        return sync_streams
+    
     def child_streams(self):
         """
         Return a set of streams that are child streams
@@ -343,3 +356,8 @@ class GoogleSheetsBaseTest(unittest.TestCase):
     def is_sheet(self, stream):
         non_sheets_streams = {'sheet_metadata', 'file_metadata', 'sheets_loaded', 'spreadsheet_metadata'}
         return stream in self.expected_streams().difference(non_sheets_streams)
+
+    def undiscoverable_sheets(self):
+        undiscoverable_streams = {'sadsheet-duplicate-headers', 'sadsheet-empty-row-1', 'sadsheet-empty'}
+        return undiscoverable_streams
+    

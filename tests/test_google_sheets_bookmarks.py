@@ -28,7 +28,7 @@ class BookmarksTest(GoogleSheetsBaseTest):
          - TODO Verify that you get more than a page of data w/ ony automatic fields.
         """
         skipped_streams = {stream
-                           for stream in self.expected_streams
+                           for stream in self.expected_streams()
                            if stream.startswith('sadsheet')}.union({
                                    'file_metadata' # testing case without file_metadata selected, but still providing bookmark
                            })

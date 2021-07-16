@@ -9,13 +9,14 @@ class DiscoveryTest(GoogleSheetsBaseTest):
 
     @staticmethod
     def name():
-        return "tap_tester_google_sheets__discovery_test"
+        return "tap_tester_google_sheets_discovery_test"
 
     def test_run(self):
         """
         Testing that discovery creates the appropriate catalog with valid metadata.
 
         • Verify number of actual streams discovered match expected
+            -verify that sheets with empty header row in the first row are skipped
         • Verify the stream names discovered were what we expect
         • Verify stream names follow naming convention
           streams should only have lowercase alphas and underscores
@@ -26,8 +27,7 @@ class DiscoveryTest(GoogleSheetsBaseTest):
         • verify the actual replication matches our expected replication method
         • verify that primary, replication keys are given the inclusion of automatic.
         • verify that all other fields have inclusion of available metadata.
-        TODO add the following
-        - Error message meets expectations during critical error when first row is empty
+       
         """
         streams_to_test = self.expected_streams()
 
