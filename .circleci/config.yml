@@ -11,16 +11,19 @@ jobs:
       - run:
           name: 'Setup virtual env'
           command: |
-            virtualenv -p python3 ~/.virtualenvs/tap-google-sheets
-            source ~/.virtualenvs/tap-google-sheets/bin/activate
+            python3 -mvenv /usr/local/share/virtualenvs/tap-google-sheets
+            source /usr/local/share/virtualenvs/tap-google-sheets/bin/activate
             pip install .[dev]
+      - run:
+          name: 'pylint'
+          command: |
+            source /usr/local/share/virtualenvs/tap-google-sheets/bin/activate
             pylint tap_google_sheets -d C,R,W
       - run:
           name: 'JSON Validator'
           command: |
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
             stitch-validate-json tap_google_sheets/schemas/*.json
-
       - add_ssh_keys
       - run:
           name: 'Integration Tests'

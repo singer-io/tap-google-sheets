@@ -66,10 +66,6 @@ class DatatypesTest(GoogleSheetsBaseTest):
         record_count_by_stream = self.run_and_verify_sync(conn_id)
         synced_records = runner.get_records_from_target_output()
 
-        our_message_actions_by_stream = {stream: [message['action']
-                                                  for message in synced_records[stream]['messages']]
-                                         for stream in tested_streams}
-
         ##########################################################################
         ### Test the consistency between a sheet and the sheet_metadata stream
         ##########################################################################
@@ -91,12 +87,16 @@ class DatatypesTest(GoogleSheetsBaseTest):
         self.assertSetEqual(expected_sheets, sheet_metadata_titles_set)
 
         test_sheet = 'happysheet'
+
+        # get column names and google-sheets datatypes from the tested sheet's sheet_metadata record
         sheet_metadata_entry = [record['columns']
                                 for record in sheet_metadata_records
                                 if record['title'] == test_sheet][0]
         column_name_to_type = {entry['columnName']: entry['columnType']
                                for entry in sheet_metadata_entry}
         md_column_names = set(column_name_to_type.keys())
+
+        # get field names for the tested sheet frome the replicated schema
         test_sheet_schema = synced_records[test_sheet]['schema']
         schema_column_names = {schema_property
                                for schema_property in test_sheet_schema['properties'].keys()
@@ -105,7 +105,7 @@ class DatatypesTest(GoogleSheetsBaseTest):
         # Verify the sheet metadata accounts for all columns in the schema
         self.assertSetEqual(schema_column_names, md_column_names)
 
-        # Verify that the sheet metadata column types are consistent with the sheet schema
+        # Verify that the sheet's sheet_metadata column types are consistent with the sheet's schema
         for column_name in schema_column_names:
             with self.subTest(column=column_name):
                 column_type = column_name_to_type[column_name]

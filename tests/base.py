@@ -7,7 +7,7 @@ import os
 from datetime import timedelta
 from datetime import datetime as dt
 
-import singer
+import backoff
 from tap_tester import connections, menagerie, runner
 
 
@@ -29,7 +29,6 @@ class GoogleSheetsBaseTest(unittest.TestCase):
     FULL_TABLE = "FULL_TABLE"
     START_DATE_FORMAT = "%Y-%m-%dT00:00:00Z"
     BOOKMARK_COMPARISON_FORMAT =  "%Y-%m-%dT%H:%M:%S.%fZ"
-    LOGGER = singer.get_logger()
 
     start_date = ""
 
@@ -209,7 +208,13 @@ class GoogleSheetsBaseTest(unittest.TestCase):
         return found_catalogs
 
     # BUG_TDL-14407 https://jira.talendforge.org/browse/TDL-14407
-    def run_and_verify_sync(self, conn_id):  # TODO implement backoff since this now fails twice in a row
+    @backoff.on_exception(
+        backoff.constant,
+        AssertionError,
+        interval=100,
+        max_tries=2
+    )
+    def run_and_verify_sync(self, conn_id):
         """
         Run a sync job and make sure it exited properly.
         Return a dictionary with keys of streams synced
@@ -220,16 +225,6 @@ class GoogleSheetsBaseTest(unittest.TestCase):
 
         # Verify tap and target exit codes
         exit_status = menagerie.get_exit_status(conn_id, sync_job_name)
-
-        if exit_status['tap_exit_status'] and \
-           'quota exceeded' in exit_status['tap_error_message'].lower():  # BUG_TDL-14407 
-            from time import sleep
-            sleep(60)
-            print(f"WARNING: SYNC FAILED WITH exit_status: {exit_status}")
-            print("RETYRING SYNC")
-            sync_job_name = runner.run_sync_mode(self, conn_id)
-            exit_status = menagerie.get_exit_status(conn_id, sync_job_name)
-
         menagerie.verify_sync_exit_status(self, exit_status, sync_job_name)
 
         # Verify actual rows were synced

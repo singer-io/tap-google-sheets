@@ -1,7 +1,3 @@
-"""
-Test that with no fields selected for a stream automatic fields are still replicated
-
-"""
 import copy
 import datetime
 import os
@@ -12,28 +8,28 @@ from base import GoogleSheetsBaseTest
 
 
 class BookmarksTest(GoogleSheetsBaseTest):
-    """Test that with no fields selected for a stream automatic fields are still replicated"""
-
+    """Ensure all sheets streams will replicate based off of the most recent bookmarked state for 'file_metadata'"""
     @staticmethod
     def name():
         return "tap_tester_google_sheets_bookmarks"
 
     def test_run(self):
         """
-        TODO fix this docstring
-        Ensure running the tap with all streams selected and all fields deselected results in the
-        replication of just the primary keys and replication keys (automatic fields).
-         - Verify we can deselect all fields except when inclusion=automatic (SaaS Taps).
-         - Verify that only the automatic fields are sent to the target.
-         - TODO Verify that you get more than a page of data w/ ony automatic fields.
+        Run check mode, perform table and field selection, and run a sync.
+        Replication can be triggered by pushing back state to prior 'file_metadata' state.
+        Run a second sync after not updating state to verify no streams are being synced
+        Run a 3rd sync and ensure full table streams are triggered by the simulated bookmark value.
+
+        - Verify initial sync message actions include activate versions and the upserts
+        - Verify no streams are synced when 'file_metadata' bookmark does not change
+        - Verify that the third sync with the updated simulated bookmark has the same synced streams as the first sync
+        - Verify that streams will sync based off of 'file_metadata' even when it is not selected
         """
         skipped_streams = {stream
                            for stream in self.expected_streams()
                            if stream.startswith('sadsheet')}.union({
                                    'file_metadata' # testing case without file_metadata selected, but still providing bookmark
                            })
-
-
         expected_streams = self.expected_streams() - skipped_streams
 
         # instantiate connection
@@ -54,7 +50,7 @@ class BookmarksTest(GoogleSheetsBaseTest):
         record_count_by_stream_1 = self.run_and_verify_sync(conn_id)
         synced_records_1 = runner.get_records_from_target_output()
 
-        # Update state to be prior to the last file_metadata state for stream
+        # Grab state to be updated later
         state = menagerie.get_state(conn_id)
         # BUG full table streams are saving bookmarks unnecessarily https://jira.talendforge.org/browse/TDL-14343
 
@@ -63,7 +59,6 @@ class BookmarksTest(GoogleSheetsBaseTest):
         # verify message actions are correct
         for stream in expected_streams.difference({'sheet_metadata', 'spreadsheet_metadata', 'sheets_loaded'}):
             with self.subTest(stream=stream):
-                sync1_messages = synced_records_1[stream]['messages']
                 sync1_message_actions = [message['action'] for message in synced_records_1[stream]['messages']]
                 self.assertEqual('activate_version', sync1_message_actions[0])
                 self.assertEqual('activate_version', sync1_message_actions[-1])
