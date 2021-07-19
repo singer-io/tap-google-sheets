@@ -153,6 +153,10 @@ class GoogleSheetsBaseTest(unittest.TestCase):
                 in self.expected_metadata().items()}
 
     def expected_automatic_fields(self):
+        """
+        return a dictionary with key of table name
+        and value as a set of automatic key fields
+        """
         auto_fields = {}
         for k, v in self.expected_metadata().items():
             auto_fields[k] = v.get(self.PRIMARY_KEYS, set()).union(v.get(self.REPLICATION_KEYS, set()))
@@ -204,7 +208,8 @@ class GoogleSheetsBaseTest(unittest.TestCase):
 
         return found_catalogs
 
-    def run_and_verify_sync(self, conn_id):
+    # BUG_TDL-14407 https://jira.talendforge.org/browse/TDL-14407
+    def run_and_verify_sync(self, conn_id):  # TODO implement backoff since this now fails twice in a row
         """
         Run a sync job and make sure it exited properly.
         Return a dictionary with keys of streams synced
@@ -215,6 +220,16 @@ class GoogleSheetsBaseTest(unittest.TestCase):
 
         # Verify tap and target exit codes
         exit_status = menagerie.get_exit_status(conn_id, sync_job_name)
+
+        if exit_status['tap_exit_status'] and \
+           'quota exceeded' in exit_status['tap_error_message'].lower():  # BUG_TDL-14407 
+            from time import sleep
+            sleep(60)
+            print(f"WARNING: SYNC FAILED WITH exit_status: {exit_status}")
+            print("RETYRING SYNC")
+            sync_job_name = runner.run_sync_mode(self, conn_id)
+            exit_status = menagerie.get_exit_status(conn_id, sync_job_name)
+
         menagerie.verify_sync_exit_status(self, exit_status, sync_job_name)
 
         # Verify actual rows were synced
