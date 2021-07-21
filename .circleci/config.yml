@@ -11,7 +11,7 @@ jobs:
       - run:
           name: 'Setup virtual env'
           command: |
-            python3 -mvenv /usr/local/share/virtualenvs/tap-google-sheets
+            python3 -m venv /usr/local/share/virtualenvs/tap-google-sheets
             source /usr/local/share/virtualenvs/tap-google-sheets/bin/activate
             pip install .[dev]
       - run:
@@ -31,7 +31,7 @@ jobs:
             aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sandbox dev_env.sh
             source dev_env.sh
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
-            run-test --tap=tap-google-sheets tests
+            run-test --tap=tap-google-sheets tests/test_google_sheets_bookmarks.py
       - slack/notify-on-failure:
           only_for_branches: master
 
