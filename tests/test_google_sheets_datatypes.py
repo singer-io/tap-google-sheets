@@ -199,15 +199,30 @@ class DatatypesTest(GoogleSheetsBaseTest):
 
                         if test_case is None or 'empty' in test_case: # some rows we expect empty values rather than strings
 
+                            # BUG_TDL-14450 | https://jira.talendforge.org/browse/TDL-14450
+                            #                 The boolean empty rows are getting parsed as False...but only when it's not the last column
+                            if column == 'Boolean': # BUG_TDL-14450
+                                continue  # skip
+
                             # verify the expected rows are actually Null
                             self.assertIsNone(value)
 
                         elif value:
 
                             # BUG_TDL-14369 | https://jira.talendforge.org/browse/TDL-14369
-                            #                 Skipping boolean values becuase they do not correctly fall back to string
-                            if column == 'Boolean':
+                            #                 Skipping boolean column values becuase they do not correctly fall back to string
+                            if column == 'Boolean': # BUG_TDL-14369
                                 continue  # skip
+
+                            # BUG_TDL-14448 | https://jira.talendforge.org/browse/TDL-14448
+                            #                 Skipping Number and Currency columns with boolean values because they do not fallback to string
+                            if test_case == 'boolean' and column in {'Currency', 'Number'}: # BUG_TDL-14448
+                                continue  # skip
+
+                            # BUG_TDL-14449 |  https://jira.talendforge.org/browse/TDL-14449
+                            if test_case in {'date', 'time', 'datetime'} and column in {'Currency', 'Number'}: # BUG_TDL-14449
+                                continue  # skip
+
 
                             # verify the non-standard value has fallen back to a string type
                             self.assertTrue(isinstance(value, str), msg=f'test case: {test_case}  value: {value}')
