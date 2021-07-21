@@ -10,6 +10,9 @@ from datetime import datetime as dt
 import backoff
 from tap_tester import connections, menagerie, runner
 
+class TapRateLimitError(Exception):
+    def __init__(self, message):
+        super().__init__(message)
 
 class GoogleSheetsBaseTest(unittest.TestCase):
     """
@@ -99,6 +102,7 @@ class GoogleSheetsBaseTest(unittest.TestCase):
             "Shipping Method":default_sheet,
             "Pagination": default_sheet,
             "happysheet": default_sheet,
+            "happysheet-string-fallback": default_sheet,
             "sadsheet-pagination": default_sheet,
             "sadsheet-number": default_sheet,
             "sadsheet-datetime": default_sheet,
@@ -109,7 +113,6 @@ class GoogleSheetsBaseTest(unittest.TestCase):
             'sadsheet-empty-row-2': default_sheet,
             'sadsheet-headers-only': default_sheet,
             'sadsheet-duplicate-headers-case': default_sheet,
-            
         }
 
     def expected_streams(self):
@@ -124,7 +127,7 @@ class GoogleSheetsBaseTest(unittest.TestCase):
         }
         sync_streams = self.expected_streams().difference(remove_streams)
         return sync_streams
-    
+
     def child_streams(self):
         """
         Return a set of streams that are child streams
@@ -183,6 +186,13 @@ class GoogleSheetsBaseTest(unittest.TestCase):
     #   Helper Methods      #
     #########################
 
+    # BUG_TDL-14407 https://jira.talendforge.org/browse/TDL-14407
+    @backoff.on_exception(
+        backoff.constant,
+        TapRateLimitError,
+        interval=100,
+        max_tries=2
+    )
     def run_and_verify_check_mode(self, conn_id):
         """
         Run the tap in check mode and verify it succeeds.
@@ -195,6 +205,13 @@ class GoogleSheetsBaseTest(unittest.TestCase):
 
         # verify check exit codes
         exit_status = menagerie.get_exit_status(conn_id, check_job_name)
+
+        if exit_status['discovery_exit_status'] and \
+           'quota exceeded' in exit_status['discovery_error_message'].lower():  # BUG_TDL-14407
+
+            print(f"WARNING: SYNC FAILED WITH exit_status: {exit_status}")
+            raise TapRateLimitError(exit_status)
+
         menagerie.verify_check_exit_status(self, exit_status, check_job_name)
 
         found_catalogs = menagerie.get_catalogs(conn_id)
@@ -210,7 +227,7 @@ class GoogleSheetsBaseTest(unittest.TestCase):
     # BUG_TDL-14407 https://jira.talendforge.org/browse/TDL-14407
     @backoff.on_exception(
         backoff.constant,
-        AssertionError,
+        TapRateLimitError,
         interval=100,
         max_tries=2
     )
@@ -225,9 +242,15 @@ class GoogleSheetsBaseTest(unittest.TestCase):
 
         # Verify tap and target exit codes
         exit_status = menagerie.get_exit_status(conn_id, sync_job_name)
+
+        if exit_status['tap_exit_status'] and \
+           'quota exceeded' in exit_status['tap_error_message'].lower():  # BUG_TDL-14407
+
+            print(f"WARNING: SYNC FAILED WITH exit_status: {exit_status}")
+            raise TapRateLimitError(exit_status)
+
         menagerie.verify_sync_exit_status(self, exit_status, sync_job_name)
 
-        # Verify actual rows were synced
         sync_record_count = runner.examine_target_output_file(
             self, conn_id, self.expected_streams(), self.expected_primary_keys())
         self.assertGreater(
@@ -370,4 +393,3 @@ class GoogleSheetsBaseTest(unittest.TestCase):
     def undiscoverable_sheets(self):
         undiscoverable_streams = {'sadsheet-duplicate-headers', 'sadsheet-empty-row-1', 'sadsheet-empty'}
         return undiscoverable_streams
-    

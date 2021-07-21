@@ -1,10 +1,14 @@
 import datetime
+
 import os
 from decimal import Decimal
 
 from tap_tester import connections, runner
 
 from base import GoogleSheetsBaseTest
+
+
+# TODO Go through this test, comment sections that are unclear, cleanup reused datamapping
 
 
 #  BUG_TDL-14371 | https://jira.talendforge.org/browse/TDL-14371
@@ -47,9 +51,30 @@ class DatatypesTest(GoogleSheetsBaseTest):
     def name():
         return "tap_tester_google_sheets_datatypes_test"
 
+    def assertStringFormat(self, str_value, str_format):
+            """
+            Verify a given value (str_value) is  of the specified string format (str_format).
+            else raise an AssertionError
+            """
+            try:
+                date_stripped = datetime.datetime.strptime(str_value, str_format)
+            except ValueError:
+                raise AssertionError(f"{str_value} is not of the specified format {str_format}")
+
+    def assertNotStringFormat(self, str_value, str_format):
+            """
+            Verify a given value (str_value) is NOT of the specified string format (str_format).
+            else raise an AssertionError
+            """
+            try:
+                date_stripped = datetime.datetime.strptime(str_value, str_format)
+                raise AssertionError(f"{str_value} is UNEXPECTEDLY of the specified format {str_format}")
+            except ValueError:
+                pass
+
     def test_run(self):
         sadsheets = {stream for stream in self.expected_sync_streams() if stream.startswith('sadsheet-')}
-        tested_streams = sadsheets.union({'happysheet', 'sheet_metadata'}) 
+        tested_streams = sadsheets.union({'happysheet', 'happysheet-string-fallback', 'sheet_metadata'})
 
         # instantiate connection
         conn_id = connections.ensure_connection(self)
@@ -120,7 +145,7 @@ class DatatypesTest(GoogleSheetsBaseTest):
         ##########################################################################
 
         # Verify that all data has been coerced to the expected column datatype
-        record_data = [message['data'] for message in synced_records['happysheet']['messages'] if message.get('data')]
+        record_data = [message['data'] for message in synced_records[test_sheet]['messages'] if message.get('data')]
         data_map = {
 	    "Currency": Decimal, # BUG Currency is being identified as a decimal type rather than string https://jira.talendforge.org/browse/TDL-14360
 	    "Datetime": str,
@@ -130,29 +155,78 @@ class DatatypesTest(GoogleSheetsBaseTest):
             "Number": Decimal,
             "Boolean": bool,
         }
-
-        # TODO setup data in a way that does not require the try catch
-        #      use the test case columns to determine if string fallback is necessary rather than leaving
-        #      an ambiguous assertion in this test
+        string_column_formats = {
+	    "Datetime": "%Y-%m-%dT%H:%M:%S.%fZ",
+            "Time":  "%H:%M:%S",
+            "Date": "%Y-%m-%d",
+        }
 
         for record in record_data:
             with self.subTest(record=record):
-                for col in data_map.keys():
-                    with self.subTest(col=col):
-                        try:
-                            if record.get(col):
-                                self.assertTrue(isinstance(record[col], data_map[col]), msg=f'actual={type(record[col])}, expected={data_map[col]}')
-                        # some datatypes can also be str
-                        except AssertionError as error:
-                            print(f"{error} error caught, string assertion made instead")
-                            self.assertTrue(isinstance(record[col], str), msg=f'actual={type(record[col])}, expected=string')
+                for column in data_map.keys():
+                    with self.subTest(column=column):
+                        if record.get(column):
 
+                            # verify the datatypes for happysheet values match expectations
+                            self.assertTrue(
+                                isinstance(record[column], data_map[column]),
+                                msg=f'actual_type={type(record[column])}, expected_type={data_map[column]}, value={record[column]}'
+                            )
+
+                            # TODO implement this when requirements are clear [https://jira.talendforge.org/browse/TDL-14431]
+                            # # verify dates, times and datetimes are of the expected format
+                            # if column in string_column_formats.keys():
+                            #     self.assertStringFormat(record[column], string_column_formats[column])
+
+        ##########################################################################
+        ### Test the string fallbacks for each datatype
+        ##########################################################################
+
+        test_sheet = 'happysheet-string-fallback'
+
+        # get field names for the tested sheet frome the replicated schema
+        record_data = [message['data']
+                       for message in synced_records[test_sheet]['messages']
+                       if message.get('data')]
+        columns = set(data_map.keys())
+
+        for record in record_data[1:]:  # skip the __sdc_row 2 since it is a valid type
+            with self.subTest(row=record['__sdc_row']):
+                for column in columns:
+                    with self.subTest(column=column):
+                        test_case = record.get(f"{column} Test Case")
+                        value = record.get(column)
+
+                        if test_case is None or 'empty' in test_case: # some rows we expect empty values rather than strings
+
+                            # verify the expected rows are actually Null
+                            self.assertIsNone(value)
+
+                        elif value:
+
+                            # BUG_TDL-14369 | https://jira.talendforge.org/browse/TDL-14369
+                            #                 Skipping boolean values becuase they do not correctly fall back to string
+                            if column == 'Boolean':
+                                continue  # skip
+
+                            # verify the non-standard value has fallen back to a string type
+                            self.assertTrue(isinstance(value, str), msg=f'test case: {test_case}  value: {value}')
+
+                            # TODO implement this when requirements are clear [https://jira.talendforge.org/browse/TDL-14431]
+                            # # verify dates, times and datetimes DO NOT COERCE VALUES to the standard format
+                            # if column in string_column_formats.keys():
+                            #     self.assertNotStringFormat(value, string_column_formats[column])
+
+                        else:
+                            raise AssertionError(f"An unexpected row was empty! test case: {test_case}  value: {value}")
 
 
         ##########################################################################
         ### Test the unhappy path datatype values
         ##########################################################################
 
+        # TODO Once some of the sadsheet (unhappy-path) test cases have been fixed we can implement
+        #      assertions here for them.
 
         ##########################################################################
         ### BUGs
