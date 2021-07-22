@@ -13,6 +13,7 @@ class BookmarksTest(GoogleSheetsBaseTest):
     conn_id = ""
     expected_test_streams = ""
     record_count_by_stream_1 = ""
+
     @staticmethod
     def name():
         return "tap_tester_google_sheets_bookmarks"
@@ -56,7 +57,6 @@ class BookmarksTest(GoogleSheetsBaseTest):
                 self.assertEqual('activate_version', sync1_message_actions[-1])
                 self.assertSetEqual({'upsert'}, set(sync1_message_actions[1:-1]))
 
-        # TODO retry this sync if rate limited
         # run a sync again, this time we shouldn't get any records back
         sync_job_name = runner.run_sync_mode(self, self.conn_id)
         exit_status = menagerie.get_exit_status(self.conn_id, sync_job_name)
@@ -85,7 +85,6 @@ class BookmarksTest(GoogleSheetsBaseTest):
 
         menagerie.set_state(self.conn_id, new_state)
 
-        # TODO retry this sync if rate limited
         record_count_by_stream_3 = self.run_and_verify_sync(self.conn_id)
         synced_records_3 = runner.get_records_from_target_output()
 
