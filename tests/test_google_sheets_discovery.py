@@ -61,6 +61,7 @@ class DiscoveryTest(GoogleSheetsBaseTest):
                 expected_primary_keys = self.expected_primary_keys()[stream]
                 expected_replication_keys = self.expected_replication_keys()[stream]
                 expected_automatic_fields = self.expected_automatic_fields()[stream]
+                expected_unsupported_fields = self.expected_unsupported_fields()[stream]
                 expected_replication_method = self.expected_replication_method()[stream]
 
                 # collecting actual values...
@@ -80,6 +81,10 @@ class DiscoveryTest(GoogleSheetsBaseTest):
                 actual_automatic_fields = set(
                     item.get("breadcrumb", ["properties", None])[1] for item in metadata
                     if item.get("metadata").get("inclusion") == "automatic"
+                )
+                actual_unsupported_fields = set(
+                    item.get("breadcrumb", ["properties", None])[1] for item in metadata
+                    if item.get("metadata").get("inclusion") == "unsupported"
                 )
 
                 ##########################################################################
@@ -113,12 +118,20 @@ class DiscoveryTest(GoogleSheetsBaseTest):
                     expected_automatic_fields.remove('modifiedTime')
                 self.assertSetEqual(expected_automatic_fields, actual_automatic_fields)
 
+                # verify columns missing headers or missing values where __sdc_row = 2
+                # are marked with inclusion of unsupported
+                # BUG_TDL-14475 | https://jira.talendforge.org/browse/TDL-14475
+                failing_streams = {'sadsheet-column-skip-bug', 'Item Master'}  # BUG_TDL-14475
+                if stream not in failing_streams:  # BUG_TDL-14475
+                    self.assertSetEqual(expected_unsupported_fields, actual_unsupported_fields)
 
                 # verify that all other fields have inclusion of available
-                # This assumes there are no unsupported fields for SaaS sources
                 field_metadata = [item for item in metadata if item["breadcrumb"] != []]
                 expected_available_field_metadata = [fmd for fmd in field_metadata
-                                                     if fmd["breadcrumb"][1] not in expected_automatic_fields]
+                                                     if fmd["breadcrumb"][1] not in expected_automatic_fields
+                                                     and fmd["breadcrumb"][1] not in expected_unsupported_fields]
                 for item in expected_available_field_metadata:
                     with self.subTest(field=item["breadcrumb"][1]):
                         self.assertEqual("available", item["metadata"]["inclusion"])
+
+                

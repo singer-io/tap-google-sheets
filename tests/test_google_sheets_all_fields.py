@@ -4,8 +4,6 @@ from tap_tester import runner, connections, menagerie
 
 from base import GoogleSheetsBaseTest
 
-# TODO add a test case for skipped columns '__sdc_skip_col_06'
-
 
 class AllFields(GoogleSheetsBaseTest):
     """Test that with all fields selected for a stream automatic and available fields are  replicated"""
@@ -24,9 +22,9 @@ class AllFields(GoogleSheetsBaseTest):
 
         expected_streams = self.expected_sync_streams().difference({
             'Item Master',   # missing data for several columns
-            'Test 2',   # missing data for one column
+            'sadsheet-column-skip-bug',   # missing data for one column
         })
-
+        
         # instantiate connection
         conn_id = connections.ensure_connection(self)
 

@@ -24,6 +24,7 @@ class GoogleSheetsBaseTest(unittest.TestCase):
     Shared tap-specific methods (as needed).
     """
     AUTOMATIC_FIELDS = "automatic"
+    UNSUPPORTED_FIELDS = "unsupported"
     REPLICATION_KEYS = "valid-replication-keys"
     PRIMARY_KEYS = "table-key-properties"
     FOREIGN_KEYS = "table-foreign-key-properties"
@@ -93,9 +94,14 @@ class GoogleSheetsBaseTest(unittest.TestCase):
                 self.REPLICATION_METHOD: self.FULL_TABLE,
             },
             "Test-1": default_sheet,
-            "Test 2": default_sheet,
             "SKU COGS":default_sheet,
-            "Item Master": default_sheet,
+            "Item Master":  {
+                self.PRIMARY_KEYS:{"__sdc_row"},
+                self.REPLICATION_METHOD: self.FULL_TABLE,  # DOCS_BUG TDL-14240 | DOCS say INC but it is FULL
+                self.UNSUPPORTED_FIELDS: {
+                    'ATT3', 'ATT4', 'ATT5', 'ATT7', 'ATT6'
+                },
+            },
             "Retail Price": default_sheet,
             "Retail Price NEW":default_sheet,
             "Forecast Scenarios": default_sheet,
@@ -111,9 +117,14 @@ class GoogleSheetsBaseTest(unittest.TestCase):
             "sadsheet-currency": default_sheet,
             "sadsheet-time": default_sheet,
             "sadsheet-string": default_sheet,
-            'sadsheet-empty-row-2': default_sheet,
-            'sadsheet-headers-only': default_sheet,
-            'sadsheet-duplicate-headers-case': default_sheet,
+            "sadsheet-empty-row-2": default_sheet,
+            "sadsheet-headers-only": default_sheet,
+            "sadsheet-duplicate-headers-case": default_sheet,
+            "sadsheet-column-skip-bug": {
+                self.PRIMARY_KEYS:{"__sdc_row"},
+                self.REPLICATION_METHOD: self.FULL_TABLE,  # DOCS_BUG TDL-14240 | DOCS say INC but it is FULL
+                self.UNSUPPORTED_FIELDS: {'__sdc_skip_col_06'},
+            }
         }
 
     def expected_streams(self):
@@ -382,3 +393,14 @@ class GoogleSheetsBaseTest(unittest.TestCase):
     def undiscoverable_sheets(self):
         undiscoverable_streams = {'sadsheet-duplicate-headers', 'sadsheet-empty-row-1', 'sadsheet-empty'}
         return undiscoverable_streams
+
+    def expected_unsupported_fields(self):
+        """
+        return a dictionary with key of table name
+        and value as a set of automatic key fields
+        """
+        bad_fields = {}
+        for k, v in self.expected_metadata().items():
+            bad_fields[k] = v.get(self.UNSUPPORTED_FIELDS, set())
+
+        return bad_fields
