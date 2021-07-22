@@ -10,6 +10,14 @@ from datetime import datetime as dt
 import backoff
 from tap_tester import connections, menagerie, runner
 
+# TODO stop getting the missing activate_versions failure
+# 1. Create a setup method that will generate a connection, run discovery, perform table and field selection, and sync.
+# 2. wrap that ^ method in the backoff fixture and raise the TapRateLimitError for exit status in discovery OR sync.
+# The point here is we can't retry the sync and still expect it to function the same way as an initial full table sync.
+
+# TODO talk to Brian/devs about activate_version on second sync and on interrupted full table
+
+
 class TapRateLimitError(Exception):
     def __init__(self, message):
         super().__init__(message)
