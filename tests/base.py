@@ -194,13 +194,7 @@ class GoogleSheetsBaseTest(unittest.TestCase):
     #   Helper Methods      #
     #########################
 
-    # BUG_TDL-14407 https://jira.talendforge.org/browse/TDL-14407
-    @backoff.on_exception(
-        backoff.constant,
-        TapRateLimitError,
-        interval=100,
-        max_tries=2
-    )
+    @backoff.on_exception(backoff.constant, TapRateLimitError, interval=100, max_tries=2)
     def run_and_verify_check_mode(self, conn_id):
         """
         Run the tap in check mode and verify it succeeds.
@@ -232,13 +226,7 @@ class GoogleSheetsBaseTest(unittest.TestCase):
 
         return found_catalogs
 
-    # BUG_TDL-14407 https://jira.talendforge.org/browse/TDL-14407
-    @backoff.on_exception(
-        backoff.constant,
-        TapRateLimitError,
-        interval=100,
-        max_tries=2
-    )
+    @backoff.on_exception(backoff.constant, TapRateLimitError, interval=100, max_tries=2)
     def run_and_verify_sync(self, conn_id):
         """
         Run a sync job and make sure it exited properly.

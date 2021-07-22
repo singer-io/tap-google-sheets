@@ -35,7 +35,10 @@ class BookmarksTest(GoogleSheetsBaseTest):
                                    'file_metadata' # testing case without file_metadata selected, but still providing bookmark
                            })
         self.expected_test_streams = self.expected_streams() - skipped_streams
+
+        # Grab connection, and run discovery and initial sync
         self.starter()
+
         synced_records_1 = runner.get_records_from_target_output()
 
         # Grab state to be updated later
@@ -53,7 +56,7 @@ class BookmarksTest(GoogleSheetsBaseTest):
                 self.assertEqual('activate_version', sync1_message_actions[-1])
                 self.assertSetEqual({'upsert'}, set(sync1_message_actions[1:-1]))
 
-
+        # TODO retry this sync if rate limited
         # run a sync again, this time we shouldn't get any records back
         sync_job_name = runner.run_sync_mode(self, self.conn_id)
         exit_status = menagerie.get_exit_status(self.conn_id, sync_job_name)
@@ -82,6 +85,7 @@ class BookmarksTest(GoogleSheetsBaseTest):
 
         menagerie.set_state(self.conn_id, new_state)
 
+        # TODO retry this sync if rate limited
         record_count_by_stream_3 = self.run_and_verify_sync(self.conn_id)
         synced_records_3 = runner.get_records_from_target_output()
 
@@ -92,15 +96,39 @@ class BookmarksTest(GoogleSheetsBaseTest):
     @backoff.on_exception(backoff.constant, TapRateLimitError, interval=100, max_tries=2)
     def starter(self):
         """
-        instantiate connection, run discovery, and sync 
+        Instantiate connection, run discovery, and initial sync.
+
+        This entire process needs to retry if we get rate limited so that we are using a fresh connection
+        and can test the activate version messages.
         """
 
-        # instantiate connection
+        ##########################################################################
+        ### Instantiate connection
+        ##########################################################################
         self.conn_id = connections.ensure_connection(self)
+        
+        ##########################################################################
+        ### Discovery without the backoff
+        ##########################################################################
+        check_job_name = runner.run_check_mode(self, self.conn_id)
+        exit_status = menagerie.get_exit_status(self.conn_id, check_job_name)
+        if exit_status['discovery_exit_status'] and \
+           'quota exceeded' in exit_status['discovery_error_message'].lower():  # BUG_TDL-14407
 
-        # run check mode
-        found_catalogs = self.run_and_verify_check_mode(self.conn_id)
+            print(f"WARNING: SYNC FAILED WITH exit_status: {exit_status}")
+            raise TapRateLimitError(exit_status)
 
+        menagerie.verify_check_exit_status(self, exit_status, check_job_name)
+
+
+        found_catalogs = menagerie.get_catalogs(self.conn_id)
+        self.assertGreater(len(found_catalogs), 0, msg="unable to locate schemas for connection {}".format(self.conn_id))
+        found_catalog_names = set(map(lambda c: c['stream_name'], found_catalogs))
+
+        self.assertSetEqual(self.expected_streams(), found_catalog_names, msg="discovered schemas do not match")
+        print("discovered schemas are OK")
+
+        
         # table and field selection
         test_catalogs = [catalog for catalog in found_catalogs
                          if catalog.get('stream_name') in self.expected_test_streams]
@@ -109,8 +137,30 @@ class BookmarksTest(GoogleSheetsBaseTest):
             self.conn_id, test_catalogs, select_all_fields=True,
         )
 
-        # run initial sync
-        self.record_count_by_stream_1 = self.run_and_verify_sync(self.conn_id)
+        ##########################################################################
+        ### Initial sync without the backoff
+        ##########################################################################
+        sync_job_name = runner.run_sync_mode(self, self.conn_id)
+
+        # Verify tap and target exit codes
+        exit_status = menagerie.get_exit_status(self.conn_id, sync_job_name)
+
+        if exit_status['tap_exit_status'] and \
+           'quota exceeded' in exit_status['tap_error_message'].lower():  # BUG_TDL-14407
+
+            print(f"WARNING: SYNC FAILED WITH exit_status: {exit_status}")
+            raise TapRateLimitError(exit_status)
+
+        menagerie.verify_sync_exit_status(self, exit_status, sync_job_name)
+
+        self.record_count_by_stream_1 = runner.examine_target_output_file(
+            self, self.conn_id, self.expected_streams(), self.expected_primary_keys())
+        self.assertGreater(
+            sum(self.record_count_by_stream_1.values()), 0,
+            msg="failed to replicate any data: {}".format(self.record_count_by_stream_1)
+        )
+        print("total replicated row count: {}".format(sum(self.record_count_by_stream_1.values())))
+
        
     
        
