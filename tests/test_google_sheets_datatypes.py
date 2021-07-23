@@ -8,12 +8,8 @@ from tap_tester import connections, runner
 from base import GoogleSheetsBaseTest
 
 
-# TODO Go through this test, comment sections that are unclear, cleanup reused datamapping
-
-
 #  BUG_TDL-14371 | https://jira.talendforge.org/browse/TDL-14371
 #                  there are md keys in the schema: selected and inclusion
-
 # expected mapping of google types to json schema
 google_datatypes_to_json_schema = {
     'stringValue': {'inclusion': 'available',
@@ -73,6 +69,18 @@ class DatatypesTest(GoogleSheetsBaseTest):
                 pass
 
     def test_run(self):
+        """
+        Run discovery, initial sync.
+        Test sheets:
+        happysheet tests the happy flows where we ensure proper data typing of common values
+        happysheet-string-fallback tests the flows where we inserted different data type values into a specific data type column and we expect to fall back to a string
+        Assertions:
+        Verify that the google defined datatypes in the sheet metadata stream map to the JSON schema as expected
+        Verify usage of JSON schema
+        -for a given datatype, we are able to use the string and nullible types 
+        Verify date, datetime, time formatting meets expectations
+        Verify tap can support data for all supported datatypes
+        """
         sadsheets = {stream for stream in self.expected_sync_streams() if stream.startswith('sadsheet-')}
         tested_streams = sadsheets.union({'happysheet', 'happysheet-string-fallback', 'sheet_metadata'})
 
@@ -162,9 +170,15 @@ class DatatypesTest(GoogleSheetsBaseTest):
         }
 
         for record in record_data:
-            with self.subTest(record=record):
+
+            sdc_row = record['__sdc_row']
+
+            with self.subTest(__sdc_row=sdc_row):
                 for column in data_map.keys():
-                    with self.subTest(column=column):
+
+                    test_case = record.get(f'{column} Test Case')
+
+                    with self.subTest(column=column, test_case=test_case):
                         if record.get(column):
 
                             # verify the datatypes for happysheet values match expectations
@@ -173,10 +187,17 @@ class DatatypesTest(GoogleSheetsBaseTest):
                                 msg=f'actual_type={type(record[column])}, expected_type={data_map[column]}, value={record[column]}'
                             )
 
-                            # TODO implement this when requirements are clear [https://jira.talendforge.org/browse/TDL-14431]
-                            # # verify dates, times and datetimes are of the expected format
-                            # if column in string_column_formats.keys():
-                            #     self.assertStringFormat(record[column], string_column_formats[column])
+                            # BUG_TDL-14482 | https://jira.talendforge.org/browse/TDL-14482
+                            #                 Rows of numberType.Time are falling back to string when there
+                            #                 is an underlying date value associated with the formatted time value.
+
+                            # verify dates, times and datetimes are of the expected format
+                            if column in string_column_formats.keys():
+
+                                if column == 'Time' and 'epoch' in test_case:  # BUG_TDL-14482
+                                    continue  # skip assertion
+                                
+                                self.assertStringFormat(record[column], string_column_formats[column])
 
         ##########################################################################
         ### Test the string fallbacks for each datatype
@@ -191,10 +212,14 @@ class DatatypesTest(GoogleSheetsBaseTest):
         columns = set(data_map.keys())
 
         for record in record_data[1:]:  # skip the __sdc_row 2 since it is a valid type
-            with self.subTest(row=record['__sdc_row']):
+            sdc_row = record['__sdc_row']
+            
+            with self.subTest(__sdc_row=sdc_row):
                 for column in columns:
-                    with self.subTest(column=column):
-                        test_case = record.get(f"{column} Test Case")
+
+                    test_case = record.get(f"{column} Test Case")
+                    with self.subTest(column=column, test_case=test_case):
+
                         value = record.get(column)
 
                         if test_case is None or 'empty' in test_case: # some rows we expect empty values rather than strings
@@ -216,21 +241,26 @@ class DatatypesTest(GoogleSheetsBaseTest):
 
                             # BUG_TDL-14448 | https://jira.talendforge.org/browse/TDL-14448
                             #                 Skipping Number and Currency columns with boolean values because they do not fallback to string
-                            if test_case == 'boolean' and column in {'Currency', 'Number'}: # BUG_TDL-14448
+                            elif test_case == 'boolean' and column in {'Currency', 'Number'}: # BUG_TDL-14448
                                 continue  # skip
 
                             # BUG_TDL-14449 |  https://jira.talendforge.org/browse/TDL-14449
-                            if test_case in {'date', 'time', 'datetime'} and column in {'Currency', 'Number'}: # BUG_TDL-14449
+                            elif test_case in {'date', 'time', 'datetime'} and column in {'Currency', 'Number'}: # BUG_TDL-14449
                                 continue  # skip
 
 
                             # verify the non-standard value has fallen back to a string type
                             self.assertTrue(isinstance(value, str), msg=f'test case: {test_case}  value: {value}')
 
-                            # TODO implement this when requirements are clear [https://jira.talendforge.org/browse/TDL-14431]
-                            # # verify dates, times and datetimes DO NOT COERCE VALUES to the standard format
-                            # if column in string_column_formats.keys():
-                            #     self.assertNotStringFormat(value, string_column_formats[column])
+                            # BUG_TDL-14431 [https://jira.talendforge.org/browse/TDL-14431]
+                            #               Date and Datetime do not fall back to string for boolean, time, or numbers
+
+                            # verify dates, times and datetimes DO NOT COERCE VALUES to the standard format
+                            if column in string_column_formats.keys():
+                                if column in ["Date", "Datetime"] and sdc_row in [3, 4, 6, 7]:  # BUG_TDL-14431
+                                    continue  # skip assertion
+
+                                self.assertNotStringFormat(value, string_column_formats[column])
 
                         else:
                             raise AssertionError(f"An unexpected row was empty! test case: {test_case}  value: {value}")
