@@ -7,24 +7,13 @@ import os
 from datetime import timedelta
 from datetime import datetime as dt
 
-import singer
+import backoff
 from tap_tester import connections, menagerie, runner
 
 
-# TODO Get base.py implemented
-# Change all references from fb to google-sheets
-
-# Use the google-sheets environment variables
-#     change the properties and credentials
-
-# Fix the metadata
-#   take the streams with pks from combined to get a start
-#   figure out which replication method is used by running  the existing test
-#   if any are incremental
-
-# Copy the facebook discovery
-
-
+class TapRateLimitError(Exception):
+    def __init__(self, message):
+        super().__init__(message)
 
 class GoogleSheetsBaseTest(unittest.TestCase):
     """
@@ -35,29 +24,29 @@ class GoogleSheetsBaseTest(unittest.TestCase):
     Shared tap-specific methods (as needed).
     """
     AUTOMATIC_FIELDS = "automatic"
+    UNSUPPORTED_FIELDS = "unsupported"
     REPLICATION_KEYS = "valid-replication-keys"
     PRIMARY_KEYS = "table-key-properties"
     FOREIGN_KEYS = "table-foreign-key-properties"
     REPLICATION_METHOD = "forced-replication-method"
-    API_LIMIT = "max-row-limit"
+    API_LIMIT = 200
     INCREMENTAL = "INCREMENTAL"
     FULL_TABLE = "FULL_TABLE"
     START_DATE_FORMAT = "%Y-%m-%dT00:00:00Z"
-    BOOKMARK_COMPARISON_FORMAT = "%Y-%m-%dT00:00:00+00:00"
-    LOGGER = singer.get_logger()
+    BOOKMARK_COMPARISON_FORMAT =  "%Y-%m-%dT%H:%M:%S.%fZ"
 
     start_date = ""
-    # TODO
+
     @staticmethod
     def tap_name():
         """The name of the tap"""
-        return "tap-google_sheets"
-    # TODO
+        return "tap-google-sheets"
+
     @staticmethod
     def get_type():
         """the expected url route ending"""
-        return "platform.google_sheets"
-    # TODO
+        return "platform.google-sheets"
+
     def get_properties(self, original: bool = True):
         """Configuration properties required for the tap."""
         return_value = {
@@ -70,7 +59,6 @@ class GoogleSheetsBaseTest(unittest.TestCase):
         return_value["start_date"] = self.start_date
         return return_value
 
-    # TODO
     @staticmethod
     def get_credentials():
         """Authentication information for the test account"""
@@ -80,49 +68,77 @@ class GoogleSheetsBaseTest(unittest.TestCase):
             "refresh_token": os.getenv("TAP_GOOGLE_SHEETS_REFRESH_TOKEN"),
         }
 
-    # TODO
     def expected_metadata(self):
         """The expected streams and metadata about the streams"""
         default_sheet = {
             self.PRIMARY_KEYS:{"__sdc_row"},
-            self.REPLICATION_METHOD: self.INCREMENTAL,
-            self.REPLICATION_KEYS: {"modified_at"}
+            self.REPLICATION_METHOD: self.FULL_TABLE,  # DOCS_BUG TDL-14240 | DOCS say INC but it is FULL
+            # self.REPLICATION_KEYS: {"modified_at"}
         }
         return {
-        
             "file_metadata": {
                 self.PRIMARY_KEYS: {"id", },
                 self.REPLICATION_METHOD: self.INCREMENTAL,
                 self.REPLICATION_KEYS: {"modifiedTime"}
             },
             "sheet_metadata": {
-                self.PRIMARY_KEYS: {"sheetId", "spreadsheetId"},
+                self.PRIMARY_KEYS: {"sheetId"}, # "spreadsheetId"}, # BUG? | This is not in the real tap, "spreadsheetId"},
                 self.REPLICATION_METHOD: self.FULL_TABLE,
-                },
+            },
             "sheets_loaded":{
-                self.PRIMARY_KEYS:{"spreadsheetId", "sheetId", "loadDate"},
+                self.PRIMARY_KEYS:{"spreadsheetId", "sheetId", "loadDate"},  # DOCS_BUG  TDL-14240 | loadDate
                 self.REPLICATION_METHOD: self.FULL_TABLE
             },
             "spreadsheet_metadata": {
                 self.PRIMARY_KEYS: {"spreadsheetId"},
                 self.REPLICATION_METHOD: self.FULL_TABLE,
-                    },
+            },
             "Test-1": default_sheet,
-            "Test 2": default_sheet,
             "SKU COGS":default_sheet,
-            "Item Master": default_sheet,
+            "Item Master":  {
+                self.PRIMARY_KEYS:{"__sdc_row"},
+                self.REPLICATION_METHOD: self.FULL_TABLE,  # DOCS_BUG TDL-14240 | DOCS say INC but it is FULL
+                self.UNSUPPORTED_FIELDS: {
+                    'ATT3', 'ATT4', 'ATT5', 'ATT7', 'ATT6'
+                },
+            },
             "Retail Price": default_sheet,
             "Retail Price NEW":default_sheet,
             "Forecast Scenarios": default_sheet,
             "Promo Type": default_sheet,
             "Shipping Method":default_sheet,
-            
+            "Pagination": default_sheet,
+            "happysheet": default_sheet,
+            "happysheet-string-fallback": default_sheet,
+            "sadsheet-pagination": default_sheet,
+            "sadsheet-number": default_sheet,
+            "sadsheet-datetime": default_sheet,
+            "sadsheet-date": default_sheet,
+            "sadsheet-currency": default_sheet,
+            "sadsheet-time": default_sheet,
+            "sadsheet-string": default_sheet,
+            "sadsheet-empty-row-2": default_sheet,
+            "sadsheet-headers-only": default_sheet,
+            "sadsheet-duplicate-headers-case": default_sheet,
+            "sadsheet-column-skip-bug": {
+                self.PRIMARY_KEYS:{"__sdc_row"},
+                self.REPLICATION_METHOD: self.FULL_TABLE,  # DOCS_BUG TDL-14240 | DOCS say INC but it is FULL
+                self.UNSUPPORTED_FIELDS: {'__sdc_skip_col_06'},
+            }
         }
-
 
     def expected_streams(self):
         """A set of expected stream names"""
         return set(self.expected_metadata().keys())
+
+    def expected_sync_streams(self):
+        remove_streams = {
+            'sadsheet-duplicate-headers-case', # BUG |https://jira.talendforge.org/browse/TDL-14398 comment out to reproduce headers case
+            'sadsheet-empty-row-2',
+            'sadsheet-headers-only'
+        }
+        sync_streams = self.expected_streams().difference(remove_streams)
+        return sync_streams
 
     def child_streams(self):
         """
@@ -150,21 +166,14 @@ class GoogleSheetsBaseTest(unittest.TestCase):
                 for table, properties
                 in self.expected_metadata().items()}
 
-    def expected_foreign_keys(self):
+    def expected_automatic_fields(self):
         """
         return a dictionary with key of table name
-        and value as a set of foreign key fields
+        and value as a set of automatic key fields
         """
-        return {table: properties.get(self.FOREIGN_KEYS, set())
-                for table, properties
-                in self.expected_metadata().items()}
-
-
-    def expected_automatic_fields(self):
         auto_fields = {}
         for k, v in self.expected_metadata().items():
-            auto_fields[k] = v.get(self.PRIMARY_KEYS, set()) | v.get(self.REPLICATION_KEYS, set()) \
-                | v.get(self.FOREIGN_KEYS, set())
+            auto_fields[k] = v.get(self.PRIMARY_KEYS, set()).union(v.get(self.REPLICATION_KEYS, set()))
         return auto_fields
 
     def expected_replication_method(self):
@@ -174,21 +183,22 @@ class GoogleSheetsBaseTest(unittest.TestCase):
                 in self.expected_metadata().items()}
 
     def setUp(self):
-        missing_envs = [x for x in [            
-            os.getenv("TAP_GOOGLE_SHEETS_START_DATE"),
-            os.getenv("TAP_GOOGLE_SHEETS_SPREADSHEET_ID"),
-            os.getenv("TAP_GOOGLE_SHEETS_CLIENT_ID"),
-            os.getenv("TAP_GOOGLE_SHEETS_CLIENT_SECRET"),
-            os.getenv("TAP_GOOGLE_SHEETS_REFRESH_TOKEN"),
-        ] if x is None]
+        missing_envs = [x for x in [
+            "TAP_GOOGLE_SHEETS_START_DATE",
+            "TAP_GOOGLE_SHEETS_SPREADSHEET_ID",
+            "TAP_GOOGLE_SHEETS_CLIENT_ID",
+            "TAP_GOOGLE_SHEETS_CLIENT_SECRET",
+            "TAP_GOOGLE_SHEETS_REFRESH_TOKEN",
+        ] if os.getenv(x) is None]
         if len(missing_envs) != 0:
-            raise Exception("set environment variables")
+            raise Exception(f"missing variables: {missing_envs}")
 
 
     #########################
     #   Helper Methods      #
     #########################
 
+    @backoff.on_exception(backoff.constant, TapRateLimitError, interval=100, max_tries=2)
     def run_and_verify_check_mode(self, conn_id):
         """
         Run the tap in check mode and verify it succeeds.
@@ -201,6 +211,13 @@ class GoogleSheetsBaseTest(unittest.TestCase):
 
         # verify check exit codes
         exit_status = menagerie.get_exit_status(conn_id, check_job_name)
+
+        if exit_status['discovery_exit_status'] and \
+           'quota exceeded' in exit_status['discovery_error_message'].lower():  # BUG_TDL-14407
+
+            print(f"WARNING: SYNC FAILED WITH exit_status: {exit_status}")
+            raise TapRateLimitError(exit_status)
+
         menagerie.verify_check_exit_status(self, exit_status, check_job_name)
 
         found_catalogs = menagerie.get_catalogs(conn_id)
@@ -213,20 +230,27 @@ class GoogleSheetsBaseTest(unittest.TestCase):
 
         return found_catalogs
 
+    @backoff.on_exception(backoff.constant, TapRateLimitError, interval=100, max_tries=2)
     def run_and_verify_sync(self, conn_id):
         """
         Run a sync job and make sure it exited properly.
         Return a dictionary with keys of streams synced
-        and values of records synced for each stream
+        and values of record count for each stream.
         """
         # Run a sync job using orchestrator
         sync_job_name = runner.run_sync_mode(self, conn_id)
 
         # Verify tap and target exit codes
         exit_status = menagerie.get_exit_status(conn_id, sync_job_name)
+
+        if exit_status['tap_exit_status'] and \
+           'quota exceeded' in exit_status['tap_error_message'].lower():  # BUG_TDL-14407
+
+            print(f"WARNING: SYNC FAILED WITH exit_status: {exit_status}")
+            raise TapRateLimitError(exit_status)
+
         menagerie.verify_sync_exit_status(self, exit_status, sync_job_name)
 
-        # Verify actual rows were synced
         sync_record_count = runner.examine_target_output_file(
             self, conn_id, self.expected_streams(), self.expected_primary_keys())
         self.assertGreater(
@@ -262,7 +286,9 @@ class GoogleSheetsBaseTest(unittest.TestCase):
             catalog_entry = menagerie.get_annotated_schema(conn_id, cat['stream_id'])
 
             # Verify all testable streams are selected
-            selected = catalog_entry.get('annotated-schema').get('selected')
+            top_level_md = [md_entry for md_entry in catalog_entry['metadata']
+                            if md_entry['breadcrumb'] == []]
+            selected = top_level_md[0]['metadata'].get('selected')
             print("Validating selection on {}: {}".format(cat['stream_name'], selected))
             if cat['stream_name'] not in expected_selected:
                 self.assertFalse(selected, msg="Stream selected, but not testable.")
@@ -271,8 +297,11 @@ class GoogleSheetsBaseTest(unittest.TestCase):
 
             if select_all_fields:
                 # Verify all fields within each selected stream are selected
-                for field, field_props in catalog_entry.get('annotated-schema').get('properties').items():
-                    field_selected = field_props.get('selected')
+                field_level_md = [md_entry for md_entry in catalog_entry['metadata']
+                                  if md_entry['breadcrumb'] != []]
+                for field_md in field_level_md:
+                    field = field_md['breadcrumb'][1]
+                    field_selected = field_md['metadata'].get('selected')
                     print("\tValidating selection on {}.{}: {}".format(
                         cat['stream_name'], field, field_selected))
                     self.assertTrue(field_selected, msg="Field not selected.")
@@ -280,6 +309,9 @@ class GoogleSheetsBaseTest(unittest.TestCase):
                 # Verify only automatic fields are selected
                 expected_automatic_fields = self.expected_automatic_fields().get(cat['stream_name'])
                 selected_fields = self.get_selected_fields_from_metadata(catalog_entry['metadata'])
+                # BUG TDL-14241 | Replication keys are not automatic
+                if cat['stream_name'] == "file_metadata":
+                    expected_automatic_fields.remove('modifiedTime')
                 self.assertEqual(expected_automatic_fields, selected_fields)
 
     @staticmethod
@@ -347,8 +379,28 @@ class GoogleSheetsBaseTest(unittest.TestCase):
                 return dt.strftime(return_date, self.BOOKMARK_COMPARISON_FORMAT)
 
             except ValueError:
-                return Exception("Datetime object is not of the format: {}".format(self.START_DATE_FORMAT))
+                valid_formats = [self.BOOKMARK_COMPARISON_FORMAT, self.START_DATE_FORMAT]
+                return Exception(f"Datetime object is not in an expected format: {valid_formats}")
 
     ##########################################################################
     ### Tap Specific Methods
     ##########################################################################
+
+    def is_sheet(self, stream):
+        non_sheets_streams = {'sheet_metadata', 'file_metadata', 'sheets_loaded', 'spreadsheet_metadata'}
+        return stream in self.expected_streams().difference(non_sheets_streams)
+
+    def undiscoverable_sheets(self):
+        undiscoverable_streams = {'sadsheet-duplicate-headers', 'sadsheet-empty-row-1', 'sadsheet-empty'}
+        return undiscoverable_streams
+
+    def expected_unsupported_fields(self):
+        """
+        return a dictionary with key of table name
+        and value as a set of automatic key fields
+        """
+        bad_fields = {}
+        for k, v in self.expected_metadata().items():
+            bad_fields[k] = v.get(self.UNSUPPORTED_FIELDS, set())
+
+        return bad_fields
