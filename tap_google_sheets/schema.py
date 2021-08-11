@@ -105,8 +105,8 @@ def get_sheet_schema_columns(sheet):
                         col_val = str(val)
                     elif key in ('errorType', 'formulaType'):
                         col_val = str(val)
-                        raise Exception('DATA TYPE ERROR 2ND ROW VALUE: SHEET: {}, COL: {}, CELL: {}2, TYPE: {}, VALUE: {}'.format(
-                            sheet_title, column_name, column_letter, key, col_val))
+                        raise Exception('DATA TYPE ERROR 2ND ROW VALUE: SHEET: {}, COL: {}, CELL: {}2, TYPE: {}'.format(
+                            sheet_title, column_name, column_letter, key))
 
             column_number_format = first_values[i].get('effectiveFormat', {}).get(
                 'numberFormat', {})
