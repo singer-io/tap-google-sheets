@@ -167,8 +167,8 @@ def get_sheet_schema_columns(sheet):
             else:
                 col_properties = {'type': ['null', 'string']}
                 column_gs_type = 'unsupportedValue'
-                LOGGER.info('WARNING: UNSUPPORTED 2ND ROW VALUE: SHEET: {}, COL: {}, CELL: {}2, TYPE: {}, VALUE: {}'.format(
-                        sheet_title, column_name, column_letter, column_effective_value_type, col_val))
+                LOGGER.info('WARNING: UNSUPPORTED 2ND ROW VALUE: SHEET: {}, COL: {}, CELL: {}2, TYPE: {}'.format(
+                        sheet_title, column_name, column_letter, column_effective_value_type))
                 LOGGER.info('Converting to string.')
         else: # skipped
             column_is_skipped = True
