@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.1.4
+  * Removes PII from logging [#40](https://github.com/singer-io/tap-google-sheets/pull/40)
+
 ## 1.1.3
   * Add padding to columns without data and ignore hidden sheets [#35](https://github.com/singer-io/tap-google-sheets/pull/35)
 
