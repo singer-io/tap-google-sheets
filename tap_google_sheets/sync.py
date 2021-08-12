@@ -42,7 +42,6 @@ def write_record(stream_name, record, time_extracted, version=None):
                 time_extracted=time_extracted)
     except OSError as err:
         LOGGER.info('OS Error writing record for: {}'.format(stream_name))
-        LOGGER.info('record: {}'.format(record))
         raise err
 
 
@@ -273,16 +272,16 @@ def transform_sheet_data(spreadsheet_id, sheet_id, sheet_title, from_row, column
                             col_val = excel_to_dttm_str(value)
                         else:
                             col_val = str(value)
-                            LOGGER.info('WARNING: POSSIBLE DATA TYPE ERROR; SHEET: {}, COL: {}, CELL: {}{}, TYPE: {}, VALUE: {}'.format(
-                                sheet_title, col_name, col_letter, row_num, col_type, value))
+                            LOGGER.info('WARNING: POSSIBLE DATA TYPE ERROR; SHEET: {}, COL: {}, CELL: {}{}, TYPE: {}'.format(
+                                sheet_title, col_name, col_letter, row_num, col_type))
                     # DATE
                     elif col_type == 'numberType.DATE':
                         if isinstance(value, (int, float)):
                             col_val = excel_to_dttm_str(value)[:10]
                         else:
                             col_val = str(value)
-                            LOGGER.info('WARNING: POSSIBLE DATA TYPE ERROR; SHEET: {}, COL: {}, CELL: {}{}, TYPE: {}, VALUE: {}'.format(
-                                sheet_title, col_name, col_letter, row_num, col_type, value))
+                            LOGGER.info('WARNING: POSSIBLE DATA TYPE ERROR; SHEET: {}, COL: {}, CELL: {}{}, TYPE: {}'.format(
+                                sheet_title, col_name, col_letter, row_num, col_type))
                     # TIME ONLY (NO DATE)
                     elif col_type == 'numberType.TIME':
                         if isinstance(value, (int, float)):
@@ -292,8 +291,8 @@ def transform_sheet_data(spreadsheet_id, sheet_id, sheet_title, from_row, column
                                 col_val = str(timedelta(seconds=total_secs))
                             except ValueError:
                                 col_val = str(value)
-                                LOGGER.info('WARNING: POSSIBLE DATA TYPE ERROR; SHEET: {}, COL: {}, CELL: {}{}, TYPE: {}, VALUE: {}'.format(
-                                    sheet_title, col_name, col_letter, row_num, col_type, value))
+                                LOGGER.info('WARNING: POSSIBLE DATA TYPE ERROR; SHEET: {}, COL: {}, CELL: {}{}, TYPE: {}'.format(
+                                    sheet_title, col_name, col_letter, row_num, col_type))
                         else:
                             col_val = str(value)
                     # NUMBER (INTEGER AND FLOAT)
@@ -309,19 +308,19 @@ def transform_sheet_data(spreadsheet_id, sheet_id, sheet_title, from_row, column
                                     col_val = float(round(value, 15))
                                 except ValueError:
                                     col_val = str(value)
-                                    LOGGER.info('WARNING: POSSIBLE DATA TYPE ERROR; SHEET: {}, COL: {}, CELL: {}{}, TYPE: {}, VALUE: {}'.format(
-                                        sheet_title, col_name, col_letter, row_num, col_type, value))
+                                    LOGGER.info('WARNING: POSSIBLE DATA TYPE ERROR; SHEET: {}, COL: {}, CELL: {}{}, TYPE: {}'.format(
+                                        sheet_title, col_name, col_letter, row_num, col_type))
                             else: # decimal_digits <= 15, no rounding
                                 try:
                                     col_val = float(value)
                                 except ValueError:
                                     col_val = str(value)
-                                    LOGGER.info('WARNING: POSSIBLE DATA TYPE ERROR: SHEET: {}, COL: {}, CELL: {}{}, TYPE: {}, VALUE: {}'.format(
-                                        sheet_title, col_name, col_letter, row_num, col_type, value))
+                                    LOGGER.info('WARNING: POSSIBLE DATA TYPE ERROR: SHEET: {}, COL: {}, CELL: {}{}, TYPE: {}'.format(
+                                        sheet_title, col_name, col_letter, row_num, col_type))
                         else:
                             col_val = str(value)
-                            LOGGER.info('WARNING: POSSIBLE DATA TYPE ERROR: SHEET: {}, COL: {}, CELL: {}{}, TYPE: {}, VALUE: {}'.format(
-                                   sheet_title, col_name, col_letter, row_num, col_type, value))
+                            LOGGER.info('WARNING: POSSIBLE DATA TYPE ERROR: SHEET: {}, COL: {}, CELL: {}{}, TYPE: {}'.format(
+                                   sheet_title, col_name, col_letter, row_num, col_type))
                     # STRING
                     elif col_type == 'stringValue':
                         col_val = str(value)
@@ -336,8 +335,8 @@ def transform_sheet_data(spreadsheet_id, sheet_id, sheet_title, from_row, column
                                 col_val = False
                             else:
                                 col_val = str(value)
-                                LOGGER.info('WARNING: POSSIBLE DATA TYPE ERROR; SHEET: {}, COL: {}, CELL: {}{}, TYPE: {}, VALUE: {}'.format(
-                                    sheet_title, col_name, col_letter, row, col_type, value))
+                                LOGGER.info('WARNING: POSSIBLE DATA TYPE ERROR; SHEET: {}, COL: {}, CELL: {}{}, TYPE: {}'.format(
+                                    sheet_title, col_name, col_letter, row, col_type))
                         elif isinstance(value, int):
                             if value in (1, -1):
                                 col_val = True
@@ -345,13 +344,13 @@ def transform_sheet_data(spreadsheet_id, sheet_id, sheet_title, from_row, column
                                 col_val = False
                             else:
                                 col_val = str(value)
-                                LOGGER.info('WARNING: POSSIBLE DATA TYPE ERROR; SHEET: {}, COL: {}, CELL: {}{}, TYPE: {}, VALUE: {}'.format(
-                                    sheet_title, col_name, col_letter, row, col_type, value))
+                                LOGGER.info('WARNING: POSSIBLE DATA TYPE ERROR; SHEET: {}, COL: {}, CELL: {}{}, TYPE: {}'.format(
+                                    sheet_title, col_name, col_letter, row, col_type))
                     # OTHER: Convert everything else to a string
                     else:
                         col_val = str(value)
-                        LOGGER.info('WARNING: POSSIBLE DATA TYPE ERROR; SHEET: {}, COL: {}, CELL: {}{}, TYPE: {}, VALUE: {}'.format(
-                            sheet_title, col_name, col_letter, row, col_type, value))
+                        LOGGER.info('WARNING: POSSIBLE DATA TYPE ERROR; SHEET: {}, COL: {}, CELL: {}{}, TYPE: {}'.format(
+                            sheet_title, col_name, col_letter, row, col_type))
                     sheet_data_row_tf[col_name] = col_val
                 col_num = col_num + 1
             # APPEND non-empty row
