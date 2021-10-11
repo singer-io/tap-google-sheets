@@ -7,13 +7,7 @@ import os
 from datetime import timedelta
 from datetime import datetime as dt
 
-import backoff
 from tap_tester import connections, menagerie, runner
-
-
-class TapRateLimitError(Exception):
-    def __init__(self, message):
-        super().__init__(message)
 
 class GoogleSheetsBaseTest(unittest.TestCase):
     """
@@ -198,7 +192,6 @@ class GoogleSheetsBaseTest(unittest.TestCase):
     #   Helper Methods      #
     #########################
 
-    @backoff.on_exception(backoff.constant, TapRateLimitError, interval=100, max_tries=2)
     def run_and_verify_check_mode(self, conn_id):
         """
         Run the tap in check mode and verify it succeeds.
@@ -211,13 +204,6 @@ class GoogleSheetsBaseTest(unittest.TestCase):
 
         # verify check exit codes
         exit_status = menagerie.get_exit_status(conn_id, check_job_name)
-
-        if exit_status['discovery_exit_status'] and \
-           'quota exceeded' in exit_status['discovery_error_message'].lower():  # BUG_TDL-14407
-
-            print(f"WARNING: SYNC FAILED WITH exit_status: {exit_status}")
-            raise TapRateLimitError(exit_status)
-
         menagerie.verify_check_exit_status(self, exit_status, check_job_name)
 
         found_catalogs = menagerie.get_catalogs(conn_id)
@@ -230,7 +216,6 @@ class GoogleSheetsBaseTest(unittest.TestCase):
 
         return found_catalogs
 
-    @backoff.on_exception(backoff.constant, TapRateLimitError, interval=100, max_tries=2)
     def run_and_verify_sync(self, conn_id):
         """
         Run a sync job and make sure it exited properly.
@@ -242,13 +227,6 @@ class GoogleSheetsBaseTest(unittest.TestCase):
 
         # Verify tap and target exit codes
         exit_status = menagerie.get_exit_status(conn_id, sync_job_name)
-
-        if exit_status['tap_exit_status'] and \
-           'quota exceeded' in exit_status['tap_error_message'].lower():  # BUG_TDL-14407
-
-            print(f"WARNING: SYNC FAILED WITH exit_status: {exit_status}")
-            raise TapRateLimitError(exit_status)
-
         menagerie.verify_sync_exit_status(self, exit_status, sync_job_name)
 
         sync_record_count = runner.examine_target_output_file(
