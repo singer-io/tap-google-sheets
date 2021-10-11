@@ -1,10 +1,9 @@
 import copy
 import datetime
 import os
-import backoff
 from tap_tester import runner, connections, menagerie
 
-from base import GoogleSheetsBaseTest, TapRateLimitError
+from base import GoogleSheetsBaseTest
 
 
 class BookmarksTest(GoogleSheetsBaseTest):
@@ -91,8 +90,6 @@ class BookmarksTest(GoogleSheetsBaseTest):
         # verify we sync sheets based off the state of file_metadata
         self.assertDictEqual(self.record_count_by_stream_1, record_count_by_stream_3)
 
-    # BUG_TDL-14407 https://jira.talendforge.org/browse/TDL-14407
-    @backoff.on_exception(backoff.constant, TapRateLimitError, interval=100, max_tries=2)
     def starter(self):
         """
         Instantiate connection, run discovery, and initial sync.
@@ -111,12 +108,6 @@ class BookmarksTest(GoogleSheetsBaseTest):
         ##########################################################################
         check_job_name = runner.run_check_mode(self, self.conn_id)
         exit_status = menagerie.get_exit_status(self.conn_id, check_job_name)
-        if exit_status['discovery_exit_status'] and \
-           'quota exceeded' in exit_status['discovery_error_message'].lower():  # BUG_TDL-14407
-
-            print(f"WARNING: SYNC FAILED WITH exit_status: {exit_status}")
-            raise TapRateLimitError(exit_status)
-
         menagerie.verify_check_exit_status(self, exit_status, check_job_name)
 
 
@@ -143,13 +134,6 @@ class BookmarksTest(GoogleSheetsBaseTest):
 
         # Verify tap and target exit codes
         exit_status = menagerie.get_exit_status(self.conn_id, sync_job_name)
-
-        if exit_status['tap_exit_status'] and \
-           'quota exceeded' in exit_status['tap_error_message'].lower():  # BUG_TDL-14407
-
-            print(f"WARNING: SYNC FAILED WITH exit_status: {exit_status}")
-            raise TapRateLimitError(exit_status)
-
         menagerie.verify_sync_exit_status(self, exit_status, sync_job_name)
 
         self.record_count_by_stream_1 = runner.examine_target_output_file(
