@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.1.5
+  * Implementing Request Timeout [#63] (https://github.com/singer-io/tap-google-analytics/pull/63)
+
 ## 1.1.4
   * Removes PII from logging [#40](https://github.com/singer-io/tap-google-sheets/pull/40)
 
