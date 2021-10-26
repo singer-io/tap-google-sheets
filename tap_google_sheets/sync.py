@@ -514,7 +514,7 @@ def sync(client, config, catalog, state):
                             from_row=from_row,
                             columns=columns,
                             sheet_data_rows=sheet_data_rows)
-                        if row_num < to_row:
+                        if not sheet_data_rows: # If a whole blank page found, then stop looping.
                             is_last_row = True
 
                         # Process records, send batch of records to target

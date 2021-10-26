@@ -43,9 +43,7 @@ class PaginationTest(GoogleSheetsBaseTest):
         record_count_by_stream = self.run_and_verify_sync(conn_id)
         synced_records = runner.get_records_from_target_output()
 
-        for stream in testable_streams.difference({
-                'sadsheet-pagination',  # BUG TDL-14376
-        }):
+        for stream in testable_streams:
             with self.subTest(stream=stream):
 
                 our_fake_pk = 'id'
@@ -61,10 +59,23 @@ class PaginationTest(GoogleSheetsBaseTest):
                 # verify that we can paginate with all fields selected
                 self.assertGreater(record_count_by_stream.get(stream, 0), self.API_LIMIT)
 
+                record_count_sync = record_count_by_stream.get(stream, 0)
+
+                if record_count_sync > self.API_LIMIT:
+                    primary_keys_list_1 = actual_pk_list[:self.API_LIMIT]
+                    primary_keys_list_2 = actual_pk_list[self.API_LIMIT:2*self.API_LIMIT]
+
+                    primary_keys_page_1 = set(primary_keys_list_1)
+                    primary_keys_page_2 = set(primary_keys_list_2)
+
+                    # Verify by primary keys that data is unique for page
+                    self.assertTrue(
+                        primary_keys_page_1.isdisjoint(primary_keys_page_2))
+
                 # verify the data for the "Pagination" stream is free of any duplicates or breaks by checking
                 # our fake pk value ('id')
                 # THIS ASSERTION CAN BE MADE BECAUSE WE SETUP DATA IN A SPECIFIC WAY. DONT COPY THIS
-                self.assertEqual(list(range(1, 239)), fake_pk_list)
+                self.assertEqual(list(range(1, 239)), fake_pk_list) 
 
                 # verify the data for the "Pagination" stream is free of any duplicates or breaks by checking
                 # the actual primary key values (__sdc_row)
