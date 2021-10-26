@@ -187,6 +187,8 @@ def get_sheet_schema_columns(sheet):
             sheet_json_schema['properties'].pop(prior_header, None)
             LOGGER.info('TWO CONSECUTIVE SKIPPED COLUMNS. STOPPING SCAN AT: SHEET: {}, COL: {}, CELL {}1'.format(
                 sheet_title, column_name, column_letter))
+            LOGGER.warn('SKIPPING THE SHEET AS FOUND TWO CONSECUTIVE EMPTY HEADERS. SHEET: {}'.format(
+                sheet_title))
             break
 
         else:
