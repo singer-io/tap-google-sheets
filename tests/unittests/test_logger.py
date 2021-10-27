@@ -8,6 +8,9 @@ from tap_google_sheets import schema
 class TestLogger(unittest.TestCase):
     @mock.patch('tap_google_sheets.schema.LOGGER.warn')
     def test_logger_message(self, mocked_logger):
+        """
+        Test if the logger statement is printed when the header row is empty and the sheet is being skipped.
+        """
         sheet_data = {
             "properties": {
                 "sheetId": 0,
@@ -60,4 +63,5 @@ class TestLogger(unittest.TestCase):
             }]
         }
         sheet_schema, columns = schema.get_sheet_schema_columns(sheet_data)
+        # check if the logger is called with correct logger message
         mocked_logger.assert_called_with('SKIPPING THE SHEET AS FOUND TWO CONSECUTIVE EMPTY HEADERS. SHEET: Sheet1')
