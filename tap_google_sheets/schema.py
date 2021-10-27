@@ -175,6 +175,7 @@ def get_sheet_schema_columns(sheet):
             skipped = skipped + 1
             column_index_str = str(column_index).zfill(2)
             column_name = '__sdc_skip_col_{}'.format(column_index_str)
+            # unsupported field description if the field is to be skipped
             col_properties = {'type': ['null', 'string'], 'description': 'Column is unsupported and would be skipped because header is not available'}
             column_gs_type = 'stringValue'
             LOGGER.info('WARNING: SKIPPED COLUMN; NO COLUMN HEADER. SHEET: {}, COL: {}, CELL: {}1'.format(
@@ -306,6 +307,8 @@ def get_schemas(client, spreadsheet_id):
                             valid_replication_keys=None,
                             replication_method='FULL_TABLE'
                         )
+                        # for each column check if the `columnSkipped` value is true in the
+                        # columns dict, if true: update the incusion property to `unsupported`
                         for column in columns:
                             if column.get('columnSkipped'):
                                 mdata = metadata.to_map(sheet_mdata)
