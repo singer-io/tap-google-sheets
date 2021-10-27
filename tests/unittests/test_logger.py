@@ -12,56 +12,67 @@ class TestLogger(unittest.TestCase):
         Test if the logger statement is printed when the header row is empty and the sheet is being skipped.
         """
         sheet_data = {
-            "properties": {
-                "sheetId": 0,
-                "title":"Sheet1",
-                "index":0,
+            "properties":{
+                "sheetId":2074712559,
+                "title":"Sheet5",
+                "index":1,
                 "sheetType":"GRID",
                 "gridProperties":{
-                    "rowCount":3,
+                    "rowCount":1000,
                     "columnCount":26
                 }
             },
-            "data": [{
-                "rowData": [{
-                    "values": [
+            "data":[
+                {
+                    "rowData":[
+                        {},
                         {
-                            "effectiveFormat":{
-                                "fontFamily":"Calibri"
+                        "values":[
+                            {
+                                "userEnteredValue":{
+                                    "numberValue":1
+                                },
+                                "effectiveValue":{
+                                    "numberValue":1
+                                },
+                                "formattedValue":"1",
+                            },
+                            {
+                                "userEnteredValue":{
+                                    "numberValue":2
+                                },
+                                "effectiveValue":{
+                                    "numberValue":2
+                                },
+                                "formattedValue":"2"
+                            },
+                            {
+                                "userEnteredValue":{
+                                    "numberValue":3
+                                },
+                                "effectiveValue":{
+                                    "numberValue":3
+                                },
+                                "formattedValue":"3",
                             }
-                        },
+                        ]
+                        }
+                    ],
+                    "rowMetadata":[
                         {
-                            "effectiveFormat":{
-                                "fontFamily":"Calibri"
-                            }
-                        },
+                        "pixelSize":21
+                        }
+                    ],
+                    "columnMetadata":[
                         {
-                            "effectiveFormat":{
-                                "fontFamily":"Calibri"
-                            }
+                        "pixelSize":100
                         }
                     ]
-                },
-                {
-                    "values":[{
-                        "userEnteredValue":{
-                            "stringValue":"A"
-                        }
-                    },
-                    {
-                        "userEnteredValue":{
-                            "stringValue":"B"
-                        }
-                    },
-                    {
-                        "userEnteredValue":{
-                            "stringValue":"C"
-                        }
-                    }]
                 }
-                ]
-            }]
+            ]
         }
+        # retrieve the sheet title from the `sheet_data`
+        sheet_title = sheet_data.get('properties', {}).get('title')
         sheet_schema, columns = schema.get_sheet_schema_columns(sheet_data)
         # check if the logger is called with correct logger message
-        mocked_logger.assert_called_with('SKIPPING THE SHEET AS FOUND TWO CONSECUTIVE EMPTY HEADERS. SHEET: Sheet1')
+        mocked_logger.assert_called_with('SKIPPING THE SHEET AS HEADERS ROW IS EMPTY. SHEET: {}'.format(sheet_title))

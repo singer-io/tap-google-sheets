@@ -65,6 +65,11 @@ def get_sheet_schema_columns(sheet):
     prior_header = None
     i = 0
     skipped = 0
+
+    # if no headers are present, log the message that sheet is skipped
+    if not headers:
+        LOGGER.warn('SKIPPING THE SHEET AS HEADERS ROW IS EMPTY. SHEET: {}'.format(sheet_title))
+
     # Read column headers until end or 2 consecutive skipped headers
     for header in headers:
         # LOGGER.info('header = {}'.format(json.dumps(header, indent=2, sort_keys=True)))
@@ -187,8 +192,6 @@ def get_sheet_schema_columns(sheet):
             sheet_json_schema['properties'].pop(prior_header, None)
             LOGGER.info('TWO CONSECUTIVE SKIPPED COLUMNS. STOPPING SCAN AT: SHEET: {}, COL: {}, CELL {}1'.format(
                 sheet_title, column_name, column_letter))
-            LOGGER.warn('SKIPPING THE SHEET AS FOUND TWO CONSECUTIVE EMPTY HEADERS. SHEET: {}'.format(
-                sheet_title))
             break
 
         else:
