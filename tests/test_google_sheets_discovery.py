@@ -122,7 +122,7 @@ class DiscoveryTest(GoogleSheetsBaseTest):
                 # are marked with inclusion of unsupported
                 # BUG_TDL-14475 | https://jira.talendforge.org/browse/TDL-14475
                 failing_streams = {'sadsheet-column-skip-bug', 'Item Master'}  # BUG_TDL-14475
-                if stream not in failing_streams:  # BUG_TDL-14475
+                if stream in failing_streams:  # BUG_TDL-14475
                     self.assertSetEqual(expected_unsupported_fields, actual_unsupported_fields)
 
                 # verify that all other fields have inclusion of available
