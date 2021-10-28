@@ -25,6 +25,7 @@ class PaginationTest(GoogleSheetsBaseTest):
         Verify that for each stream you can get multiple pages of data
         and that when all fields are selected more than the automatic fields are replicated.
 
+        Verify by primary keys that data is unique for page
         PREREQUISITE
         This test relies on the existence of a specific sheet with the name Pagination that has a column
         called 'id' with values 1 -> 238.
@@ -43,6 +44,7 @@ class PaginationTest(GoogleSheetsBaseTest):
         record_count_by_stream = self.run_and_verify_sync(conn_id)
         synced_records = runner.get_records_from_target_output()
 
+        # Added back `sadsheet-pagination` to testable_streams as # BUG TDL-14376 resolved.
         for stream in testable_streams:
             with self.subTest(stream=stream):
 
@@ -72,10 +74,25 @@ class PaginationTest(GoogleSheetsBaseTest):
                     self.assertTrue(
                         primary_keys_page_1.isdisjoint(primary_keys_page_2))
 
+                if stream == "sadsheet-pagination":
+                    # verify the data for the "sadsheet-pagination" stream is free of any duplicates or breaks by checking
+                    # our fake pk value ('id')
+                    expected_pk_list = list(range(1, 238))
+                    expected_pk_list = [x for x in expected_pk_list if x not in [198, 199]]
+                    self.assertEqual(expected_pk_list, fake_pk_list)
+                    
+                    # verify the data for the "sadsheet-pagination" stream is free of any duplicates or breaks by checking
+                    # the actual primary key values (__sdc_row)
+                    expected_pk_list = list(range(2, 239))
+                    expected_pk_list = [x for x in expected_pk_list if x not in [199, 200]]
+                    self.assertEqual(expected_pk_list, actual_pk_list)
+                    
+                    continue
+
                 # verify the data for the "Pagination" stream is free of any duplicates or breaks by checking
                 # our fake pk value ('id')
                 # THIS ASSERTION CAN BE MADE BECAUSE WE SETUP DATA IN A SPECIFIC WAY. DONT COPY THIS
-                self.assertEqual(list(range(1, 239)), fake_pk_list) 
+                self.assertEqual(list(range(1, 239)), fake_pk_list)
 
                 # verify the data for the "Pagination" stream is free of any duplicates or breaks by checking
                 # the actual primary key values (__sdc_row)
