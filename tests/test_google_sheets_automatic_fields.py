@@ -50,7 +50,6 @@ class AutomaticFields(GoogleSheetsBaseTest):
 
                 # expected values
                 expected_keys = self.expected_automatic_fields().get(stream)
-
                 expected_primary_keys = self.expected_primary_keys().get(stream)
                 # collect actual values
                 messages = synced_records.get(stream)
@@ -58,7 +57,7 @@ class AutomaticFields(GoogleSheetsBaseTest):
                                         if message['action'] == 'upsert']
 
                 primary_keys_list = [tuple(message.get('data', {}).get(expected_pk) for expected_pk in expected_primary_keys)
-                                       for message in data.get('messages', [])
+                                       for message in messages.get('messages', [])
                                        if message.get('action') == 'upsert']
                 unique_primary_keys_list = set(primary_keys_list)
 

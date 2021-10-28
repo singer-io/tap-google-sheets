@@ -360,6 +360,9 @@ class GoogleSheetsBaseTest(unittest.TestCase):
                 valid_formats = [self.BOOKMARK_COMPARISON_FORMAT, self.START_DATE_FORMAT]
                 return Exception(f"Datetime object is not in an expected format: {valid_formats}")
 
+    def is_incremental(self, stream):
+        return self.expected_metadata()[stream][self.REPLICATION_METHOD] == self.INCREMENTAL
+
     ##########################################################################
     ### Tap Specific Methods
     ##########################################################################
