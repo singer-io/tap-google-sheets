@@ -14,10 +14,12 @@ setup(name='tap-google-sheets',
           'singer-python==5.12.2'
       ],
       extras_require={
-          'dev': [
-              'ipdb==0.11',
+          'test': [
               'pylint',
               'nose'
+          ],
+          'dev': [
+              'ipdb==0.11',
           ]
       },
       entry_points='''
