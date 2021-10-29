@@ -154,6 +154,9 @@ class StartDate(GoogleSheetsBaseTest):
                     # records as the 1st sync.
                     self.assertEqual(record_count_sync_2, record_count_sync_1)
 
-                    # Verify by primary key the same records are replicated in the 1st and 2nd syncs
-                    self.assertSetEqual(primary_keys_sync_1,
-                                        primary_keys_sync_2)
+                    # Set of primary key for `sheets_loaded` stream contain loadDate field which is time of sheet when it is loaded.
+                    # So, primary key will be always different for each sync.
+                    if not stream == "sheets_loaded":
+                        # Verify by primary key the same records are replicated in the 1st and 2nd syncs
+                        self.assertSetEqual(primary_keys_sync_1,
+                                            primary_keys_sync_2) 
