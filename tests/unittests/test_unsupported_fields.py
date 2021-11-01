@@ -104,5 +104,5 @@ class TestUnsupportedFields(unittest.TestCase):
         self.assertEqual(expected_schema, schemas["Sheet1"])
         for each in field_metadata["Sheet1"]:
             if each["breadcrumb"] and '__sdc_skip_col_01' in each["breadcrumb"]:
-                    # check if the inclusion property is updated to `unsupported`
-                   self.assertEqual(each["metadata"]["inclusion"], "unsupported")
+                # check if the inclusion property is updated to `unsupported`
+                self.assertEqual(each["metadata"]["inclusion"], "unsupported")
