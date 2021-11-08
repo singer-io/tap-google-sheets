@@ -186,6 +186,13 @@ def get_sheet_schema_columns(sheet):
             # skipped = 2 consecutive skipped headers
             # Remove prior_header column_name
             sheet_json_schema['properties'].pop(prior_header, None)
+            # prior index is the index of the column prior to the currently column
+            prior_index = column_index - 1
+            # change the skipped property of the prior column to as due to consecutive empty headers
+            # both the columns should not be included in the schema as well as the metadata
+            # and due to the extra check to write the`unsupported` inclusion property in `get_schemas()`
+            # the metadata of the first of the two consecutive empty header columns was being written
+            columns[prior_index-1]["columnSkipped"] = False
             LOGGER.info('TWO CONSECUTIVE SKIPPED COLUMNS. STOPPING SCAN AT: SHEET: {}, COL: {}, CELL {}1'.format(
                 sheet_title, column_name, column_letter))
             break
