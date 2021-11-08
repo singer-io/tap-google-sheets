@@ -83,4 +83,10 @@ class AllFields(GoogleSheetsBaseTest):
                     #  BUG | below keys are not synced https://jira.talendforge.org/browse/TDL-14409
                     expected_all_keys.remove('teamDriveId')
                     expected_all_keys.remove('driveId')
+                    # Earlier field `emailAddress` was defined as `emailAdress`(typo mismatch) in file_metadata.json.
+                    # So, this particular field did not collected. Because API response contain `emailAddress` field.
+                    # Now, typo has been correted and verifying that `emailAddress` field collected.
+                    lastModifyingUser_fields = set(messages['messages'][0].get('data', {}).get('lastModifyingUser', {}).keys()) # Get `lastModifyingUser` from file_metadata records
+                    # Verify that `emailAddress` field under `lastModifyingUser` collected.
+                    self.assertTrue({'emailAddress'}.issubset(lastModifyingUser_fields), msg="emailAddress does not found in lastModifyingUser")
                 self.assertSetEqual(expected_all_keys, actual_all_keys) 
