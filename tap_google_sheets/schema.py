@@ -316,7 +316,7 @@ def get_schemas(client, spreadsheet_id):
                         # in the columns dict. The `prior_column_skipped` would be true  when it is the first column of the two
                         # consecutive empty headers column if true: update the incusion property to `unsupported`
                         for column in columns:
-                            if column.get('columnSkipped') and not column.get('prior_column_skipped', None):
+                            if column.get('columnSkipped') and not column.get('prior_column_skipped'):
                                 mdata = metadata.to_map(sheet_mdata)
                                 sheet_mdata = metadata.write(mdata, ('properties', column.get('columnName')), 'inclusion', 'unsupported')
                                 sheet_mdata = metadata.to_list(mdata)
