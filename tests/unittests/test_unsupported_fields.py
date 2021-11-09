@@ -188,5 +188,5 @@ class TestUnsupportedFields(unittest.TestCase):
             }
         }
         sheet_json_schema, columns = schema.get_sheet_schema_columns(sheet)
-        self.assertEqual(sheet_json_schema, expected_schema)
-        self.assertEqual(columns, expected_columns)
+        self.assertEqual(sheet_json_schema, expected_schema) # test the schema is as expected
+        self.assertEqual(columns, expected_columns) # tst if the columns is as expected
