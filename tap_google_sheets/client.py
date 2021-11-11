@@ -5,11 +5,12 @@ import requests
 import singer
 from singer import metrics
 from singer import utils
+from requests.exceptions import Timeout
 
 BASE_URL = 'https://www.googleapis.com'
 GOOGLE_TOKEN_URI = 'https://oauth2.googleapis.com/token'
 LOGGER = singer.get_logger()
-
+REQUEST_TIMEOUT = 300
 
 class Server5xxError(Exception):
     pass
@@ -131,6 +132,7 @@ class GoogleClient: # pylint: disable=too-many-instance-attributes
                  client_id,
                  client_secret,
                  refresh_token,
+                 request_timeout=REQUEST_TIMEOUT,
                  user_agent=None):
         self.__client_id = client_id
         self.__client_secret = client_secret
@@ -140,6 +142,12 @@ class GoogleClient: # pylint: disable=too-many-instance-attributes
         self.__expires = None
         self.__session = requests.Session()
         self.base_url = None
+        # if request_timeout is other than 0,"0" or "" then use request_timeout
+        if request_timeout and float(request_timeout):
+            request_timeout = float(request_timeout)
+        else: # If value is 0,"0" or "" then set default to 300 seconds.
+            request_timeout = REQUEST_TIMEOUT
+        self.request_timeout = request_timeout
 
 
     def __enter__(self):
@@ -148,7 +156,6 @@ class GoogleClient: # pylint: disable=too-many-instance-attributes
 
     def __exit__(self, exception_type, exception_value, traceback):
         self.__session.close()
-
 
     @backoff.on_exception(backoff.expo,
                           Server5xxError,
@@ -186,6 +193,8 @@ class GoogleClient: # pylint: disable=too-many-instance-attributes
         LOGGER.info('Authorized, token expires = {}'.format(self.__expires))
 
 
+    #backoff request for 5 times when we get Timeout error
+    @backoff.on_exception(backoff.expo, Timeout, max_tries=5)
     # Rate Limit: https://developers.google.com/sheets/api/limits
     #   100 request per 100 seconds per User
     @backoff.on_exception(backoff.expo,
@@ -221,7 +230,8 @@ class GoogleClient: # pylint: disable=too-many-instance-attributes
             kwargs['headers']['Content-Type'] = 'application/json'
 
         with metrics.http_request_timer(endpoint) as timer:
-            response = self.__session.request(method, url, **kwargs)
+            
+            response = self.__session.request(method, url, timeout=self.request_timeout, **kwargs)
             timer.tags[metrics.Tag.http_status_code] = response.status_code
 
         if response.status_code >= 500:
