@@ -194,7 +194,10 @@ class GoogleClient: # pylint: disable=too-many-instance-attributes
 
 
     #backoff request for 5 times when we get Timeout error
-    @backoff.on_exception(backoff.expo, Timeout, max_tries=5)
+    @backoff.on_exception(backoff.expo, 
+                          (Timeout), 
+                          max_tries=5, 
+                          factor=3)
     # Rate Limit: https://developers.google.com/sheets/api/limits
     #   100 request per 100 seconds per User
     @backoff.on_exception(backoff.expo,
