@@ -5,7 +5,7 @@ import requests
 import singer
 from singer import metrics
 from singer import utils
-from requests.exceptions import Timeout
+from requests.exceptions import Timeout, ConnectionError
 
 BASE_URL = 'https://www.googleapis.com'
 GOOGLE_TOKEN_URI = 'https://oauth2.googleapis.com/token'
@@ -194,10 +194,10 @@ class GoogleClient: # pylint: disable=too-many-instance-attributes
 
 
     #backoff request for 5 times when we get Timeout error
-    @backoff.on_exception(backoff.expo, 
+    @backoff.on_exception(backoff.constant,
                           (Timeout), 
-                          max_tries=5, 
-                          factor=3)
+                          max_tries=5,
+                          interval=10)
     # Rate Limit: https://developers.google.com/sheets/api/limits
     #   100 request per 100 seconds per User
     @backoff.on_exception(backoff.expo,
