@@ -157,6 +157,11 @@ class GoogleClient: # pylint: disable=too-many-instance-attributes
     def __exit__(self, exception_type, exception_value, traceback):
         self.__session.close()
 
+    # backoff request for 5 times at an interval of 10 seconds in case of Timeout error
+    @backoff.on_exception(backoff.constant,
+                          Timeout,
+                          max_tries=5,
+                          interval=10)
     @backoff.on_exception(backoff.expo,
                           Server5xxError,
                           max_tries=5,
@@ -179,7 +184,8 @@ class GoogleClient: # pylint: disable=too-many-instance-attributes
                 'client_id': self.__client_id,
                 'client_secret': self.__client_secret,
                 'refresh_token': self.__refresh_token,
-            })
+            },
+            timeout=self.request_timeout)
 
         if response.status_code >= 500:
             raise Server5xxError()
@@ -193,7 +199,7 @@ class GoogleClient: # pylint: disable=too-many-instance-attributes
         LOGGER.info('Authorized, token expires = {}'.format(self.__expires))
 
 
-    #backoff request for 5 times when we get Timeout error
+    #backoff request for 5 times at an interval of 10 seconds when we get Timeout error
     @backoff.on_exception(backoff.constant,
                           (Timeout), 
                           max_tries=5,

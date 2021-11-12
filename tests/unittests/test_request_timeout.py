@@ -3,7 +3,6 @@ import unittest
 from unittest import mock
 from unittest.case import TestCase
 from requests.exceptions import Timeout
-
 class TestBackoffError(unittest.TestCase):
     '''
     Test that backoff logic works properly.
@@ -12,13 +11,24 @@ class TestBackoffError(unittest.TestCase):
     @mock.patch('tap_google_sheets.client.GoogleClient.get_access_token')
     def test_request_timeout_and_backoff(self, mock_get_token, mock_request):
         """
-        Check whether the request backoffs properly for 5 times in case of Timeout error.
+        Check whether the request backoffs properly for request() for 5 times in case of Timeout error.
         """
         mock_request.side_effect = Timeout
         with self.assertRaises(Timeout):
             client = GoogleClient("dummy_client_id", "dummy_client_secret", "dummy_refresh_token", 300)
             client.request("GET")
         self.assertEquals(mock_request.call_count, 5)
+
+    @mock.patch('tap_google_sheets.client.requests.Session.post')
+    def test_get_access_token_timeout_and_backoff(self, mock_post):
+        """
+        Check whether the request backoffs properly for get_access_token() for 5 times in case of Timeout error.
+        """
+        mock_post.side_effect = Timeout
+        with self.assertRaises(Timeout):
+            client = GoogleClient("dummy_client_id", "dummy_client_secret", "dummy_refresh_token", 300)
+            client.get_access_token()
+        self.assertEquals(mock_post.call_count, 5)
 
 class MockResponse():
     '''
