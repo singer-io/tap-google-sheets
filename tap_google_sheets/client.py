@@ -204,7 +204,7 @@ class GoogleClient: # pylint: disable=too-many-instance-attributes
                           (Timeout), 
                           max_tries=5,
                           interval=10,
-                          jitter=None)
+                          jitter=None) # Interval value not consistent if jitter not None
     # Rate Limit: https://developers.google.com/sheets/api/limits
     #   100 request per 100 seconds per User
     @backoff.on_exception(backoff.expo,
