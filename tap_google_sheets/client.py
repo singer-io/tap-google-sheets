@@ -149,7 +149,12 @@ class GoogleClient: # pylint: disable=too-many-instance-attributes
             request_timeout = REQUEST_TIMEOUT
         self.request_timeout = request_timeout
 
-
+    # Backoff request for 5 times at an interval of 10 seconds in case of Timeout error
+    @backoff.on_exception(backoff.constant,
+                          (Timeout, ConnectionError),
+                          max_tries=5,
+                          interval=10,
+                          jitter=None) # Interval value not consistent if jitter not None
     def __enter__(self):
         self.get_access_token()
         return self
@@ -157,11 +162,6 @@ class GoogleClient: # pylint: disable=too-many-instance-attributes
     def __exit__(self, exception_type, exception_value, traceback):
         self.__session.close()
 
-    # backoff request for 5 times at an interval of 10 seconds in case of Timeout error
-    @backoff.on_exception(backoff.constant,
-                          Timeout,
-                          max_tries=5,
-                          interval=10)
     @backoff.on_exception(backoff.expo,
                           Server5xxError,
                           max_tries=5,
@@ -199,11 +199,12 @@ class GoogleClient: # pylint: disable=too-many-instance-attributes
         LOGGER.info('Authorized, token expires = {}'.format(self.__expires))
 
 
-    #backoff request for 5 times at an interval of 10 seconds when we get Timeout error
+    # Backoff request for 5 times at an interval of 10 seconds when we get Timeout error
     @backoff.on_exception(backoff.constant,
                           (Timeout), 
                           max_tries=5,
-                          interval=10)
+                          interval=10,
+                          jitter=None)
     # Rate Limit: https://developers.google.com/sheets/api/limits
     #   100 request per 100 seconds per User
     @backoff.on_exception(backoff.expo,

@@ -3,6 +3,7 @@ import unittest
 from unittest import mock
 from unittest.case import TestCase
 from requests.exceptions import Timeout
+
 class TestBackoffError(unittest.TestCase):
     '''
     Test that backoff logic works properly.
@@ -19,16 +20,32 @@ class TestBackoffError(unittest.TestCase):
             client.request("GET")
         self.assertEquals(mock_request.call_count, 5)
 
-    @mock.patch('tap_google_sheets.client.requests.Session.post')
-    def test_get_access_token_timeout_and_backoff(self, mock_post):
+    @mock.patch('tap_google_sheets.client.requests.Session.request')
+    def test_get_access_token_timeout_and_backoff(self, mocked_request):
         """
-        Check whether the request backoffs properly for get_access_token() for 5 times in case of Timeout error.
+        Check whether the request backoffs properly for __enter__() for 5 times in case of Timeout error.
         """
-        mock_post.side_effect = Timeout
-        with self.assertRaises(Timeout):
-            client = GoogleClient("dummy_client_id", "dummy_client_secret", "dummy_refresh_token", 300)
-            client.get_access_token()
-        self.assertEquals(mock_post.call_count, 5)
+        mocked_request.side_effect = Timeout
+
+        config = {
+            "client_id": "dummy_ci",
+            "client_secret": "dummy_cs",
+            "refresh_token": "test_rt",
+            "user_agent": "test_ua",
+        }
+        # initialize 'LinkedinClient'
+        try:
+            with GoogleClient(config['client_id'],
+                config['client_secret'],
+                config['refresh_token'],
+                config.get('request_timeout'),
+                config['user_agent']) as client:
+                pass
+        except Timeout:
+            pass
+
+        # verify that we backoff for 5 times
+        self.assertEquals(mocked_request.call_count, 5)
 
 class MockResponse():
     '''
