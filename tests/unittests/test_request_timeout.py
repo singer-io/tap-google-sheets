@@ -2,7 +2,7 @@ from tap_google_sheets.client import GoogleClient
 import unittest
 from unittest import mock
 from unittest.case import TestCase
-from requests.exceptions import Timeout
+from requests.exceptions import Timeout, ConnectionError
 
 class TestBackoffError(unittest.TestCase):
     '''
@@ -33,7 +33,7 @@ class TestBackoffError(unittest.TestCase):
             "refresh_token": "test_rt",
             "user_agent": "test_ua",
         }
-        # initialize 'LinkedinClient'
+        # initialize 'GoogleClient'
         try:
             with GoogleClient(config['client_id'],
                 config['client_secret'],
@@ -42,6 +42,33 @@ class TestBackoffError(unittest.TestCase):
                 config['user_agent']) as client:
                 pass
         except Timeout:
+            pass
+
+        # verify that we backoff for 5 times
+        self.assertEquals(mocked_request.call_count, 5)
+    
+    @mock.patch('tap_google_sheets.client.requests.Session.request')
+    def test_check_access_token_connection_error_and_backoff(self, mocked_request):
+        """
+        Check whether the request backoffs properly for __enter__() for 5 times in case of Timeout error.
+        """
+        mocked_request.side_effect = ConnectionError
+
+        config = {
+            "client_id": "dummy_ci",
+            "client_secret": "dummy_cs",
+            "refresh_token": "test_rt",
+            "user_agent": "test_ua",
+        }
+        # initialize 'GoogleClient'
+        try:
+            with GoogleClient(config['client_id'],
+                config['client_secret'],
+                config['refresh_token'],
+                config.get('request_timeout'),
+                config['user_agent']) as client:
+                pass
+        except ConnectionError:
             pass
 
         # verify that we backoff for 5 times

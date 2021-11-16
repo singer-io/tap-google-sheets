@@ -149,7 +149,7 @@ class GoogleClient: # pylint: disable=too-many-instance-attributes
             request_timeout = REQUEST_TIMEOUT
         self.request_timeout = request_timeout
 
-    # Backoff request for 5 times at an interval of 10 seconds in case of Timeout error
+    # Backoff request for 5 times at an interval of 10 seconds in case of Timeout or Connection error
     @backoff.on_exception(backoff.constant,
                           (Timeout, ConnectionError),
                           max_tries=5,
