@@ -4,6 +4,6 @@
     "refresh_token": "YOUR_REFRESH_TOKEN",
     "spreadsheet_id": "YOUR_GOOGLE_SPREADSHEET_ID",
     "start_date": "2019-01-01T00:00:00Z",
-    "user_agent": "tap-google-search-console <api_user_email@example.com>"
+    "user_agent": "tap-google-search-console <api_user_email@example.com>",
     "request_timeout": 300
 }
