@@ -83,5 +83,4 @@ class AllFields(GoogleSheetsBaseTest):
                     #  BUG | below keys are not synced https://jira.talendforge.org/browse/TDL-14409
                     expected_all_keys.remove('teamDriveId')
                     expected_all_keys.remove('driveId')
-                    expected_all_keys.remove('lastModifyingUser')
                 self.assertSetEqual(expected_all_keys, actual_all_keys) 
