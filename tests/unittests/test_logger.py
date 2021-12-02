@@ -1,5 +1,4 @@
 import unittest
-from unittest.case import TestCase
 from unittest import mock
 import tap_google_sheets
 from tap_google_sheets import schema
