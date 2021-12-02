@@ -192,7 +192,7 @@ def get_sheet_schema_columns(sheet):
 
         else:
             # skipped < 2 prepare `columns` dictionary with index, letter, column name, column type and 
-            # if the column is to be skiped or not for each column in the list
+            # if the column is to be skipped or not for each column in the list
             column = {}
             column = {
                 'columnIndex': column_index,
