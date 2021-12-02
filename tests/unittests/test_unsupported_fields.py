@@ -1,8 +1,7 @@
 from tap_google_sheets.client import GoogleClient
 import unittest
-from unittest.case import TestCase
 from unittest import mock
-from tap_google_sheets import LOGGER, schema
+from tap_google_sheets import schema
 
 class TestUnsupportedFields(unittest.TestCase):
     @mock.patch('tap_google_sheets.GoogleClient.get')
@@ -189,4 +188,4 @@ class TestUnsupportedFields(unittest.TestCase):
         }
         sheet_json_schema, columns = schema.get_sheet_schema_columns(sheet)
         self.assertEqual(sheet_json_schema, expected_schema) # test the schema is as expected
-        self.assertEqual(columns, expected_columns) # tst if the columns is as expected
+        self.assertEqual(columns, expected_columns) # test if the columns is as expected
