@@ -137,7 +137,7 @@ class StartDate(GoogleSheetsBaseTest):
                     # of records replicated in sync 2
                     if stream == 'file_metadata':
                         # For incremental stream `file_metadata` only 1 records available. 
-                        # We are able to generate new records, so in both sync no of records remain same.
+                        # We are not able to generate new records, so in both sync no of records remain same.
                         self.assertGreaterEqual(record_count_sync_1,
                                        record_count_sync_2)
                     else:
