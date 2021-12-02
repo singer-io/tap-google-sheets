@@ -83,10 +83,6 @@ class StartDate(GoogleSheetsBaseTest):
 
                 # expected values
                 expected_primary_keys = self.expected_primary_keys()[stream]
-                expected_start_date_1 = self.timedelta_formatted(
-                    self.start_date_1)
-                expected_start_date_2 = self.timedelta_formatted(
-                    self.start_date_2)
 
                 # collect information for assertions from syncs 1 & 2 base on expected values
                 record_count_sync_1 = record_count_by_stream_1.get(stream, 0)
@@ -102,7 +98,7 @@ class StartDate(GoogleSheetsBaseTest):
                 primary_keys_sync_1 = set(primary_keys_list_1)
                 primary_keys_sync_2 = set(primary_keys_list_2)
 
-                if self.is_incremental(stream):
+                if self.expected_metadata()[stream][self.OBEYS_START_DATE]:
 
                     # collect information specific to incremental streams from syncs 1 & 2
                     expected_replication_key = next(
@@ -119,9 +115,9 @@ class StartDate(GoogleSheetsBaseTest):
 
                         self.assertGreaterEqual(
                             self.parse_date(replication_date), self.parse_date(
-                                expected_start_date_1),
+                                self.start_date_1),
                             msg="Report pertains to a date prior to our start date.\n" +
-                            "Sync start_date: {}\n".format(expected_start_date_1) +
+                            "Sync start_date: {}\n".format(self.start_date_1) +
                                 "Record date: {} ".format(replication_date)
                         )
 
@@ -130,19 +126,23 @@ class StartDate(GoogleSheetsBaseTest):
 
                         self.assertGreaterEqual(
                             self.parse_date(replication_date), self.parse_date(
-                                expected_start_date_2),
+                                self.start_date_2),
                             msg="Report pertains to a date prior to our start date.\n" +
-                            "Sync start_date: {}\n".format(expected_start_date_2) +
+                            "Sync start_date: {}\n".format(self.start_date_2) +
                                 "Record date: {} ".format(replication_date)
                         )
 
-                    # This assertion has been commented as for incremental stream `file_metadata` only 1 records available. 
-                    # We are able to generate new records.
                     
                     # Verify the number of records replicated in sync 1 is greater than the number
                     # of records replicated in sync 2
-                    # self.assertGreater(record_count_sync_1,
-                    #                    record_count_sync_2)
+                    if stream == 'file_metadata':
+                        # For incremental stream `file_metadata` only 1 records available. 
+                        # We are able to generate new records, so in both sync no of records remain same.
+                        self.assertGreaterEqual(record_count_sync_1,
+                                       record_count_sync_2)
+                    else:
+                        self.assertGreater(record_count_sync_1,
+                                        record_count_sync_2)
 
                     # Verify the records replicated in sync 2 were also replicated in sync 1
                     self.assertTrue(

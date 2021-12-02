@@ -29,6 +29,7 @@ class GoogleSheetsBaseTest(unittest.TestCase):
     START_DATE_FORMAT = "%Y-%m-%dT00:00:00Z"
     BOOKMARK_COMPARISON_FORMAT =  "%Y-%m-%dT%H:%M:%S.%fZ"
 
+    OBEYS_START_DATE = "obey-start-date"
     start_date = ""
 
     @staticmethod
@@ -67,24 +68,29 @@ class GoogleSheetsBaseTest(unittest.TestCase):
         default_sheet = {
             self.PRIMARY_KEYS:{"__sdc_row"},
             self.REPLICATION_METHOD: self.FULL_TABLE,  # DOCS_BUG TDL-14240 | DOCS say INC but it is FULL
+            self.OBEYS_START_DATE: False,
             # self.REPLICATION_KEYS: {"modified_at"}
         }
         return {
             "file_metadata": {
                 self.PRIMARY_KEYS: {"id", },
                 self.REPLICATION_METHOD: self.INCREMENTAL,
+                self.OBEYS_START_DATE: True,
                 self.REPLICATION_KEYS: {"modifiedTime"}
             },
             "sheet_metadata": {
                 self.PRIMARY_KEYS: {"sheetId"}, # "spreadsheetId"}, # BUG? | This is not in the real tap, "spreadsheetId"},
                 self.REPLICATION_METHOD: self.FULL_TABLE,
+                self.OBEYS_START_DATE: False,
             },
             "sheets_loaded":{
                 self.PRIMARY_KEYS:{"spreadsheetId", "sheetId", "loadDate"},  # DOCS_BUG  TDL-14240 | loadDate
+                self.OBEYS_START_DATE: False,
                 self.REPLICATION_METHOD: self.FULL_TABLE
             },
             "spreadsheet_metadata": {
                 self.PRIMARY_KEYS: {"spreadsheetId"},
+                self.OBEYS_START_DATE: False,
                 self.REPLICATION_METHOD: self.FULL_TABLE,
             },
             "Test-1": default_sheet,
@@ -92,6 +98,7 @@ class GoogleSheetsBaseTest(unittest.TestCase):
             "Item Master":  {
                 self.PRIMARY_KEYS:{"__sdc_row"},
                 self.REPLICATION_METHOD: self.FULL_TABLE,  # DOCS_BUG TDL-14240 | DOCS say INC but it is FULL
+                self.OBEYS_START_DATE: False,
                 self.UNSUPPORTED_FIELDS: {
                     'ATT3', 'ATT4', 'ATT5', 'ATT7', 'ATT6'
                 },
@@ -117,6 +124,7 @@ class GoogleSheetsBaseTest(unittest.TestCase):
             "sadsheet-column-skip-bug": {
                 self.PRIMARY_KEYS:{"__sdc_row"},
                 self.REPLICATION_METHOD: self.FULL_TABLE,  # DOCS_BUG TDL-14240 | DOCS say INC but it is FULL
+                self.OBEYS_START_DATE: False,
                 self.UNSUPPORTED_FIELDS: {'__sdc_skip_col_06'},
             }
         }
@@ -359,9 +367,6 @@ class GoogleSheetsBaseTest(unittest.TestCase):
             except ValueError:
                 valid_formats = [self.BOOKMARK_COMPARISON_FORMAT, self.START_DATE_FORMAT]
                 return Exception(f"Datetime object is not in an expected format: {valid_formats}")
-
-    def is_incremental(self, stream):
-        return self.expected_metadata()[stream][self.REPLICATION_METHOD] == self.INCREMENTAL
 
     ##########################################################################
     ### Tap Specific Methods
