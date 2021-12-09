@@ -6,11 +6,6 @@ from tap_tester import connections, runner
 from base import GoogleSheetsBaseTest
 
 
-# BUG_TDL-14376 | https://jira.talendforge.org/browse/TDL-14376
-#                 Expectation: Tap will pick up next page (200 rows) iff there is a non-null value on that page
-#  We observed a BUG where the tap does not paginate properly on sheets where the last two rows in a batch
-# are empty values. The tap does not capture anything on the subsequent pages when this happens.
-#  
 
 
 class PaginationTest(GoogleSheetsBaseTest):
