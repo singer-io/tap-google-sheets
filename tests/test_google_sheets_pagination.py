@@ -44,7 +44,6 @@ class PaginationTest(GoogleSheetsBaseTest):
         record_count_by_stream = self.run_and_verify_sync(conn_id)
         synced_records = runner.get_records_from_target_output()
 
-        # Added back `sadsheet-pagination` to testable_streams as # BUG TDL-14376 resolved.
         for stream in testable_streams:
             with self.subTest(stream=stream):
 
