@@ -73,10 +73,6 @@ class AllFields(GoogleSheetsBaseTest):
                     actual_all_keys = [set(message['data'].keys()) for message in messages['messages']
                                        if message['action'] == 'upsert'][0]
 
-                # Verify that more than just the automatic fields are replicated for each stream.
-                self.assertTrue(expected_automatic_keys.issubset(
-                    expected_all_keys), msg=f'{expected_automatic_keys-expected_all_keys} is not in "expected_all_keys"')
-
                 # Verify that you get some records for each stream
                 self.assertGreater(record_count_by_stream.get(stream, -1), 0)
 
