@@ -44,6 +44,7 @@ class PaginationTest(GoogleSheetsBaseTest):
         record_count_by_stream = self.run_and_verify_sync(conn_id)
         synced_records = runner.get_records_from_target_output()
 
+        # Added back `sadsheet-pagination` to testable_streams as # BUG TDL-14376 resolved.
         for stream in testable_streams:
             with self.subTest(stream=stream):
 
@@ -60,39 +61,18 @@ class PaginationTest(GoogleSheetsBaseTest):
                 # verify that we can paginate with all fields selected
                 self.assertGreater(record_count_by_stream.get(stream, 0), self.API_LIMIT)
 
-                record_count_sync = record_count_by_stream.get(stream, 0)
 
-                if record_count_sync > self.API_LIMIT:
-                    primary_keys_list_1 = actual_pk_list[:self.API_LIMIT]
-                    primary_keys_list_2 = actual_pk_list[self.API_LIMIT:2*self.API_LIMIT]
-
-                    primary_keys_page_1 = set(primary_keys_list_1)
-                    primary_keys_page_2 = set(primary_keys_list_2)
-
-                    # Verify by primary keys that data is unique for page
-                    self.assertTrue(
-                        primary_keys_page_1.isdisjoint(primary_keys_page_2))
-                
                 if stream == "sadsheet-pagination":
                     # verify the data for the "sadsheet-pagination" stream is free of any duplicates or breaks by checking
-                    # our fake pk value ('id'). 'id' is column in sheet which contains unique index 1 to 237
-                    expected_pk_list = list(range(1, 238)) # Return 1 to 237
-
-                    # Remove 198 and 199 from expected_pk_list because id by this number does not exist. 
-                    # That means those two rows are blank.
+                    # our fake pk value ('id')
+                    expected_pk_list = list(range(1, 238))
                     expected_pk_list = [x for x in expected_pk_list if x not in [198, 199]]
-
-                    # This assertion can be made because the data is in a specific way.
                     self.assertEqual(expected_pk_list, fake_pk_list)
                     
                     # verify the data for the "sadsheet-pagination" stream is free of any duplicates or breaks by checking
                     # the actual primary key values (__sdc_row)
-                    expected_pk_list = list(range(2, 239)) # Return 2 to 238. Because 1st row contains header values itself.
-
-                    # Remove 199 and 200 from expected_pk_list because __sdc_row by this number does not exist. 
-                    # That means those two rows are blank.
+                    expected_pk_list = list(range(2, 239))
                     expected_pk_list = [x for x in expected_pk_list if x not in [199, 200]]
-
                     self.assertEqual(expected_pk_list, actual_pk_list)
                     
                     continue
