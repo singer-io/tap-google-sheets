@@ -514,6 +514,17 @@ def sync(client, config, catalog, state):
                             from_row=from_row,
                             columns=columns,
                             sheet_data_rows=sheet_data_rows)
+
+                        # Here row_num is the addition of from_row and total records get in response(per batch).
+                        # Condition row_num < to_row was checking that if records on the current page are less than expected(to_row) or not.
+                        # If the condition returns true then it was breaking the loop.
+                        # API does not return the last empty rows in response.
+                        # For example, rows 199 and 200 are empty, and a total of 400 rows are there in the sheet. So, in 1st iteration,
+                        # to_row = 200, from_row = 2, row_num = 2(from_row) + 197 = 199(1st row contain header value)
+                        # So, the above condition become true and breaks the loop without syncing records from 201 to 400.
+                        # sheet_data_rows is no of records return in the current page. If it's a whole blank page then stop looping.
+                        # So, in the above case, it syncs records 201 to 400 also even if rows 199 and 200 are blank.
+                        # Then when the next batch 401 to 600 is empty, it breaks the loop.
                         if not sheet_data_rows: # If a whole blank page found, then stop looping.
                             is_last_row = True
 
