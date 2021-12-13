@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.2.0
+  * Fixed Pagination Failure [#50](https://github.com/singer-io/tap-google-sheets/pull/50)
+  * Implemented Request Timeout [#54](https://github.com/singer-io/tap-google-sheets/pull/54)
+  * Added a logger message when the sheet has the first row empty(noheaders) [$46](https://github.com/singer-io/tap-google-sheets/pull/46)
+  * Added unsupported inclusion property and description [#47](https://github.com/singer-io/tap-google-sheets/pull/47)
+  * Email address typo corrected [#53] (https://github.com/singer-io/tap-google-sheets/pull/53)
+
+
 ## 1.1.4
   * Removes PII from logging [#40](https://github.com/singer-io/tap-google-sheets/pull/40)
 
