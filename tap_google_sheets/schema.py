@@ -65,6 +65,11 @@ def get_sheet_schema_columns(sheet):
     prior_header = None
     i = 0
     skipped = 0
+
+    # if no headers are present, log the message that sheet is skipped
+    if not headers:
+        LOGGER.warn('SKIPPING THE SHEET AS HEADERS ROW IS EMPTY. SHEET: {}'.format(sheet_title))
+
     # Read column headers until end or 2 consecutive skipped headers
     for header in headers:
         # LOGGER.info('header = {}'.format(json.dumps(header, indent=2, sort_keys=True)))
