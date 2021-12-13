@@ -6,11 +6,6 @@ from tap_tester import connections, runner
 from base import GoogleSheetsBaseTest
 
 
-# BUG_TDL-14376 | https://jira.talendforge.org/browse/TDL-14376
-#                 Expectation: Tap will pick up next page (200 rows) iff there is a non-null value on that page
-#  We observed a BUG where the tap does not paginate properly on sheets where the last two rows in a batch
-# are empty values. The tap does not capture anything on the subsequent pages when this happens.
-#  
 
 
 class PaginationTest(GoogleSheetsBaseTest):
@@ -25,6 +20,7 @@ class PaginationTest(GoogleSheetsBaseTest):
         Verify that for each stream you can get multiple pages of data
         and that when all fields are selected more than the automatic fields are replicated.
 
+        Verify by primary keys that data is unique for page
         PREREQUISITE
         This test relies on the existence of a specific sheet with the name Pagination that has a column
         called 'id' with values 1 -> 238.
@@ -43,9 +39,8 @@ class PaginationTest(GoogleSheetsBaseTest):
         record_count_by_stream = self.run_and_verify_sync(conn_id)
         synced_records = runner.get_records_from_target_output()
 
-        for stream in testable_streams.difference({
-                'sadsheet-pagination',  # BUG TDL-14376
-        }):
+        # Added back `sadsheet-pagination` to testable_streams as # BUG TDL-14376 resolved.
+        for stream in testable_streams:
             with self.subTest(stream=stream):
 
                 our_fake_pk = 'id'
@@ -60,6 +55,22 @@ class PaginationTest(GoogleSheetsBaseTest):
 
                 # verify that we can paginate with all fields selected
                 self.assertGreater(record_count_by_stream.get(stream, 0), self.API_LIMIT)
+
+
+                if stream == "sadsheet-pagination":
+                    # verify the data for the "sadsheet-pagination" stream is free of any duplicates or breaks by checking
+                    # our fake pk value ('id')
+                    expected_pk_list = list(range(1, 238))
+                    expected_pk_list = [x for x in expected_pk_list if x not in [198, 199]]
+                    self.assertEqual(expected_pk_list, fake_pk_list)
+                    
+                    # verify the data for the "sadsheet-pagination" stream is free of any duplicates or breaks by checking
+                    # the actual primary key values (__sdc_row)
+                    expected_pk_list = list(range(2, 239))
+                    expected_pk_list = [x for x in expected_pk_list if x not in [199, 200]]
+                    self.assertEqual(expected_pk_list, actual_pk_list)
+                    
+                    continue
 
                 # verify the data for the "Pagination" stream is free of any duplicates or breaks by checking
                 # our fake pk value ('id')
