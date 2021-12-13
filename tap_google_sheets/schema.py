@@ -180,7 +180,8 @@ def get_sheet_schema_columns(sheet):
             skipped = skipped + 1
             column_index_str = str(column_index).zfill(2)
             column_name = '__sdc_skip_col_{}'.format(column_index_str)
-            col_properties = {'type': ['null', 'string']}
+            # unsupported field description if the field is to be skipped
+            col_properties = {'type': ['null', 'string'], 'description': 'Column is unsupported and would be skipped because header is not available'}
             column_gs_type = 'stringValue'
             LOGGER.info('WARNING: SKIPPED COLUMN; NO COLUMN HEADER. SHEET: {}, COL: {}, CELL: {}1'.format(
                 sheet_title, column_name, column_letter))
@@ -190,6 +191,11 @@ def get_sheet_schema_columns(sheet):
             # skipped = 2 consecutive skipped headers
             # Remove prior_header column_name
             sheet_json_schema['properties'].pop(prior_header, None)
+            # prior index is the index of the column prior to the currently column
+            prior_index = column_index - 1
+            # added a new boolean key `prior_column_skipped` to check if the column is one of the two columns with consecutive headers 
+            # as due to consecutive empty headers both the columns should not be included in the schema as well as the metadata
+            columns[prior_index-1]['prior_column_skipped'] = True
             LOGGER.info('TWO CONSECUTIVE SKIPPED COLUMNS. STOPPING SCAN AT: SHEET: {}, COL: {}, CELL {}1'.format(
                 sheet_title, column_name, column_letter))
             break
@@ -311,6 +317,14 @@ def get_schemas(client, spreadsheet_id):
                             valid_replication_keys=None,
                             replication_method='FULL_TABLE'
                         )
+                        # for each column check if the `columnSkipped` value is true and the `prior_column_skipped` is false or None
+                        # in the columns dict. The `prior_column_skipped` would be true  when it is the first column of the two
+                        # consecutive empty headers column if true: update the incusion property to `unsupported`
+                        for column in columns:
+                            if column.get('columnSkipped') and not column.get('prior_column_skipped'):
+                                mdata = metadata.to_map(sheet_mdata)
+                                sheet_mdata = metadata.write(mdata, ('properties', column.get('columnName')), 'inclusion', 'unsupported')
+                                sheet_mdata = metadata.to_list(mdata)
                         field_metadata[sheet_title] = sheet_mdata
 
     return schemas, field_metadata

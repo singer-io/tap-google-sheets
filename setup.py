@@ -11,13 +11,15 @@ setup(name='tap-google-sheets',
       install_requires=[
           'backoff==1.8.0',
           'requests==2.22.0',
-          'singer-python==5.9.0'
+          'singer-python==5.12.2'
       ],
       extras_require={
-          'dev': [
-              'ipdb==0.11',
+          'test': [
               'pylint',
               'nose'
+          ],
+          'dev': [
+              'ipdb==0.11',
           ]
       },
       entry_points='''

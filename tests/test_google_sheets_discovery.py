@@ -118,11 +118,13 @@ class DiscoveryTest(GoogleSheetsBaseTest):
                     expected_automatic_fields.remove('modifiedTime')
                 self.assertSetEqual(expected_automatic_fields, actual_automatic_fields)
 
-                # verify columns missing headers or missing values where __sdc_row = 2
+                # verify missing values where __sdc_row = 2
                 # are marked with inclusion of unsupported
-                # BUG_TDL-14475 | https://jira.talendforge.org/browse/TDL-14475
-                failing_streams = {'sadsheet-column-skip-bug', 'Item Master'}  # BUG_TDL-14475
-                if stream not in failing_streams:  # BUG_TDL-14475
+                # The card TDL-14475 was only about adding unsupported 
+                # inclusion property for empty header values. The sheet 
+                # `Item Master` has columns with empty row values
+                failing_streams = {'Item Master'}
+                if stream not in failing_streams:
                     self.assertSetEqual(expected_unsupported_fields, actual_unsupported_fields)
 
                 # verify that all other fields have inclusion of available
