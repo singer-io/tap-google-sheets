@@ -65,13 +65,18 @@ def get_sheet_schema_columns(sheet):
     prior_header = None
     i = 0
     skipped = 0
+
+    # if no headers are present, log the message that sheet is skipped
+    if not headers:
+        LOGGER.warn('SKIPPING THE SHEET AS HEADERS ROW IS EMPTY. SHEET: {}'.format(sheet_title))
+
     # Read column headers until end or 2 consecutive skipped headers
     for header in headers:
         # LOGGER.info('header = {}'.format(json.dumps(header, indent=2, sort_keys=True)))
         column_index = i + 1
         column_letter = colnum_string(column_index)
         header_value = header.get('formattedValue')
-        if header_value: # NOT skipped
+        if header_value: # if the column is NOT to be skipped
             column_is_skipped = False
             skipped = 0
             column_name = '{}'.format(header_value)
@@ -170,12 +175,13 @@ def get_sheet_schema_columns(sheet):
                 LOGGER.info('WARNING: UNSUPPORTED 2ND ROW VALUE: SHEET: {}, COL: {}, CELL: {}2, TYPE: {}'.format(
                         sheet_title, column_name, column_letter, column_effective_value_type))
                 LOGGER.info('Converting to string.')
-        else: # skipped
+        else: # if the column is to be skipped
             column_is_skipped = True
             skipped = skipped + 1
             column_index_str = str(column_index).zfill(2)
             column_name = '__sdc_skip_col_{}'.format(column_index_str)
-            col_properties = {'type': ['null', 'string']}
+            # unsupported field description if the field is to be skipped
+            col_properties = {'type': ['null', 'string'], 'description': 'Column is unsupported and would be skipped because header is not available'}
             column_gs_type = 'stringValue'
             LOGGER.info('WARNING: SKIPPED COLUMN; NO COLUMN HEADER. SHEET: {}, COL: {}, CELL: {}1'.format(
                 sheet_title, column_name, column_letter))
@@ -184,12 +190,20 @@ def get_sheet_schema_columns(sheet):
         if skipped >= 2:
             # skipped = 2 consecutive skipped headers
             # Remove prior_header column_name
+            # stop scanning the sheet and break
             sheet_json_schema['properties'].pop(prior_header, None)
+            # prior index is the index of the column prior to the currently column
+            prior_index = column_index - 1
+            # added a new boolean key `prior_column_skipped` to check if the column is one of the two columns with consecutive headers 
+            # as due to consecutive empty headers both the columns should not be included in the schema as well as the metadata
+            columns[prior_index-1]['prior_column_skipped'] = True
             LOGGER.info('TWO CONSECUTIVE SKIPPED COLUMNS. STOPPING SCAN AT: SHEET: {}, COL: {}, CELL {}1'.format(
                 sheet_title, column_name, column_letter))
             break
 
         else:
+            # skipped < 2 prepare `columns` dictionary with index, letter, column name, column type and 
+            # if the column is to be skipped or not for each column in the list
             column = {}
             column = {
                 'columnIndex': column_index,
@@ -204,10 +218,10 @@ def get_sheet_schema_columns(sheet):
                 col_properties = {
                     'anyOf': [
                         col_properties,
-                        {'type': ['null', 'string']}
+                        {'type': ['null', 'string']} # all the date, time has string types in schema
                     ]
                 }
-
+            # add the column properties in the `properties` in json schema for the respective column name
             sheet_json_schema['properties'][column_name] = col_properties
 
         prior_header = column_name
@@ -231,8 +245,10 @@ def get_sheet_metadata(sheet, spreadsheet_id, client):
     params = stream_metadata.get('params', {})
     sheet_title_encoded = urllib.parse.quote_plus(sheet_title)
     sheet_title_escaped = re.escape(sheet_title)
+    # create querystring for preparing the request
     querystring = '&'.join(['%s=%s' % (key, value) for (key, value) in \
         params.items()]).replace('{sheet_title}', sheet_title_encoded)
+    # create path for preparing the request
     path = '{}?{}'.format(stream_metadata.get('path').replace('{spreadsheet_id}', \
         spreadsheet_id), querystring)
 
@@ -280,7 +296,9 @@ def get_schemas(client, spreadsheet_id):
         if stream_name == 'spreadsheet_metadata':
             api = stream_metadata.get('api', 'sheets')
             params = stream_metadata.get('params', {})
+            # prepare the query string for the request
             querystring = '&'.join(['%s=%s' % (key, value) for (key, value) in params.items()])
+            # prepare the path for request
             path = '{}?{}'.format(stream_metadata.get('path').replace('{spreadsheet_id}', \
                 spreadsheet_id), querystring)
 
@@ -306,6 +324,14 @@ def get_schemas(client, spreadsheet_id):
                             valid_replication_keys=None,
                             replication_method='FULL_TABLE'
                         )
+                        # for each column check if the `columnSkipped` value is true and the `prior_column_skipped` is false or None
+                        # in the columns dict. The `prior_column_skipped` would be true  when it is the first column of the two
+                        # consecutive empty headers column if true: update the incusion property to `unsupported`
+                        for column in columns:
+                            if column.get('columnSkipped') and not column.get('prior_column_skipped'):
+                                mdata = metadata.to_map(sheet_mdata)
+                                sheet_mdata = metadata.write(mdata, ('properties', column.get('columnName')), 'inclusion', 'unsupported')
+                                sheet_mdata = metadata.to_list(mdata)
                         field_metadata[sheet_title] = sheet_mdata
 
     return schemas, field_metadata

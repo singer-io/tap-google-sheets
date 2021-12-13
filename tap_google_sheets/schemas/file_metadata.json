@@ -35,7 +35,7 @@
         "displayName": {
           "type": ["null", "string"]
         },
-        "emailAdress": {
+        "emailAddress": {
           "type": ["null", "string"]
         }
       }
