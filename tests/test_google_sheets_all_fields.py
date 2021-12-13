@@ -80,7 +80,10 @@ class AllFields(GoogleSheetsBaseTest):
                 self.assertGreater(len(expected_all_keys), len(expected_automatic_keys))
                 self.assertTrue(expected_automatic_keys.issubset(expected_all_keys), msg=f'{expected_automatic_keys-expected_all_keys} is not in "expected_all_keys"')
                 if stream == "file_metadata":
-                    #  BUG | below keys are not synced https://jira.talendforge.org/browse/TDL-14409
+
+                    # As per google documentation https://developers.google.com/drive/api/v3/reference/files `teamDriveId` is deprecated. There is mentioned that use `driveId` instead.
+                    # `driveId` is populated from items in the team shared drives. But stitch integration does not support shared team drive. So replicating driveid is not possible.
+                    # So, these two fields will not be synced.
                     expected_all_keys.remove('teamDriveId')
                     expected_all_keys.remove('driveId')
                     # Earlier field `emailAddress` was defined as `emailAdress`(typo mismatch) in file_metadata.json.
