@@ -76,7 +76,7 @@ def get_sheet_schema_columns(sheet):
         column_index = i + 1
         column_letter = colnum_string(column_index)
         header_value = header.get('formattedValue')
-        if header_value: # NOT skipped
+        if header_value: # if the column is NOT to be skipped
             column_is_skipped = False
             skipped = 0
             column_name = '{}'.format(header_value)
@@ -175,7 +175,7 @@ def get_sheet_schema_columns(sheet):
                 LOGGER.info('WARNING: UNSUPPORTED 2ND ROW VALUE: SHEET: {}, COL: {}, CELL: {}2, TYPE: {}'.format(
                         sheet_title, column_name, column_letter, column_effective_value_type))
                 LOGGER.info('Converting to string.')
-        else: # skipped
+        else: # if the column is to be skipped
             column_is_skipped = True
             skipped = skipped + 1
             column_index_str = str(column_index).zfill(2)
@@ -190,6 +190,7 @@ def get_sheet_schema_columns(sheet):
         if skipped >= 2:
             # skipped = 2 consecutive skipped headers
             # Remove prior_header column_name
+            # stop scanning the sheet and break
             sheet_json_schema['properties'].pop(prior_header, None)
             # prior index is the index of the column prior to the currently column
             prior_index = column_index - 1
@@ -201,6 +202,8 @@ def get_sheet_schema_columns(sheet):
             break
 
         else:
+            # skipped < 2 prepare `columns` dictionary with index, letter, column name, column type and 
+            # if the column is to be skipped or not for each column in the list
             column = {}
             column = {
                 'columnIndex': column_index,
@@ -215,10 +218,10 @@ def get_sheet_schema_columns(sheet):
                 col_properties = {
                     'anyOf': [
                         col_properties,
-                        {'type': ['null', 'string']}
+                        {'type': ['null', 'string']} # all the date, time has string types in schema
                     ]
                 }
-
+            # add the column properties in the `properties` in json schema for the respective column name
             sheet_json_schema['properties'][column_name] = col_properties
 
         prior_header = column_name
@@ -242,8 +245,10 @@ def get_sheet_metadata(sheet, spreadsheet_id, client):
     params = stream_metadata.get('params', {})
     sheet_title_encoded = urllib.parse.quote_plus(sheet_title)
     sheet_title_escaped = re.escape(sheet_title)
+    # create querystring for preparing the request
     querystring = '&'.join(['%s=%s' % (key, value) for (key, value) in \
         params.items()]).replace('{sheet_title}', sheet_title_encoded)
+    # create path for preparing the request
     path = '{}?{}'.format(stream_metadata.get('path').replace('{spreadsheet_id}', \
         spreadsheet_id), querystring)
 
@@ -291,7 +296,9 @@ def get_schemas(client, spreadsheet_id):
         if stream_name == 'spreadsheet_metadata':
             api = stream_metadata.get('api', 'sheets')
             params = stream_metadata.get('params', {})
+            # prepare the query string for the request
             querystring = '&'.join(['%s=%s' % (key, value) for (key, value) in params.items()])
+            # prepare the path for request
             path = '{}?{}'.format(stream_metadata.get('path').replace('{spreadsheet_id}', \
                 spreadsheet_id), querystring)
 
