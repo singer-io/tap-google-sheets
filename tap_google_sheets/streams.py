@@ -22,7 +22,8 @@ FILE_METADATA = {
     "replication_method": "INCREMENTAL",
     "replication_keys": ["modifiedTime"],
     "params": {
-        "fields": "id,name,createdTime,modifiedTime,version,teamDriveId,driveId,lastModifyingUser"
+        "fields": "id,name,createdTime,modifiedTime,version,teamDriveId,driveId,lastModifyingUser",
+        "supportsAllDrives": True
     }
 }
 
