@@ -50,8 +50,8 @@ def get_bookmark(state, stream, default):
         return default
     return (
         state
-        .get('bookmarks', {})
-        .get(stream, default)
+            .get('bookmarks', {})
+            .get(stream, default)
     )
 
 
@@ -154,7 +154,7 @@ def get_data(stream_name,
     stream_name_encoded = urllib.parse.quote_plus(stream_name)
     path = endpoint_config.get('path', stream_name).replace(
         '{spreadsheet_id}', spreadsheet_id).replace('{sheet_title}', stream_name_encoded).replace(
-            '{range_rows}', range_rows)
+        '{range_rows}', range_rows)
     params = endpoint_config.get('params', {})
     api = endpoint_config.get('api', 'sheets')
     # Add in querystring parameters and replace {placeholder} variables
@@ -201,8 +201,23 @@ def transform_spreadsheet_metadata(spreadsheet_metadata):
     return spreadsheet_metadata_arr
 
 
+str_rep_map = {
+    '#': '_no_',
+    '&': '_and_',
+    '%': '_percent_',
+    # '-': '_'
+}
+rep_obj = str.maketrans(str_rep_map)
+
+
+def fix_event_name(text):
+    return re.sub(r'\W+', '_', rf'{text.translate(rep_obj)}', flags=re.ASCII).strip("_").strip().lower()
+
+
 # Tranform spreadsheet_metadata: add spreadsheetId, sheetUrl, and columns metadata
 def transform_sheet_metadata(spreadsheet_id, sheet, columns):
+    columns = [fix_event_name(col) for col in columns]
+
     # Convert to properties to dict
     sheet_metadata = sheet.get('properties')
     sheet_metadata_tf = json.loads(json.dumps(sheet_metadata))
@@ -222,7 +237,7 @@ def excel_to_dttm_str(excel_date_sn, timezone_str=None):
         timezone_str = 'UTC'
     tzn = pytz.timezone(timezone_str)
     sec_per_day = 86400
-    excel_epoch = 25569 # 1970-01-01T00:00:00Z, Lotus Notes Serial Number for Epoch Start Date
+    excel_epoch = 25569  # 1970-01-01T00:00:00Z, Lotus Notes Serial Number for Epoch Start Date
     epoch_sec = math.floor((excel_date_sn - excel_epoch) * sec_per_day)
     epoch_dttm = datetime(1970, 1, 1)
     excel_dttm = epoch_dttm + timedelta(seconds=epoch_sec)
@@ -272,27 +287,30 @@ def transform_sheet_data(spreadsheet_id, sheet_id, sheet_title, from_row, column
                             col_val = excel_to_dttm_str(value)
                         else:
                             col_val = str(value)
-                            LOGGER.info('WARNING: POSSIBLE DATA TYPE ERROR; SHEET: {}, COL: {}, CELL: {}{}, TYPE: {}'.format(
-                                sheet_title, col_name, col_letter, row_num, col_type))
+                            LOGGER.info(
+                                'WARNING: POSSIBLE DATA TYPE ERROR; SHEET: {}, COL: {}, CELL: {}{}, TYPE: {}'.format(
+                                    sheet_title, col_name, col_letter, row_num, col_type))
                     # DATE
                     elif col_type == 'numberType.DATE':
                         if isinstance(value, (int, float)):
                             col_val = excel_to_dttm_str(value)[:10]
                         else:
                             col_val = str(value)
-                            LOGGER.info('WARNING: POSSIBLE DATA TYPE ERROR; SHEET: {}, COL: {}, CELL: {}{}, TYPE: {}'.format(
-                                sheet_title, col_name, col_letter, row_num, col_type))
+                            LOGGER.info(
+                                'WARNING: POSSIBLE DATA TYPE ERROR; SHEET: {}, COL: {}, CELL: {}{}, TYPE: {}'.format(
+                                    sheet_title, col_name, col_letter, row_num, col_type))
                     # TIME ONLY (NO DATE)
                     elif col_type == 'numberType.TIME':
                         if isinstance(value, (int, float)):
                             try:
-                                total_secs = value * 86400 # seconds in day
+                                total_secs = value * 86400  # seconds in day
                                 # Create string formatted like HH:MM:SS
                                 col_val = str(timedelta(seconds=total_secs))
                             except ValueError:
                                 col_val = str(value)
-                                LOGGER.info('WARNING: POSSIBLE DATA TYPE ERROR; SHEET: {}, COL: {}, CELL: {}{}, TYPE: {}'.format(
-                                    sheet_title, col_name, col_letter, row_num, col_type))
+                                LOGGER.info(
+                                    'WARNING: POSSIBLE DATA TYPE ERROR; SHEET: {}, COL: {}, CELL: {}{}, TYPE: {}'.format(
+                                        sheet_title, col_name, col_letter, row_num, col_type))
                         else:
                             col_val = str(value)
                     # NUMBER (INTEGER AND FLOAT)
@@ -308,19 +326,22 @@ def transform_sheet_data(spreadsheet_id, sheet_id, sheet_title, from_row, column
                                     col_val = float(round(value, 15))
                                 except ValueError:
                                     col_val = str(value)
-                                    LOGGER.info('WARNING: POSSIBLE DATA TYPE ERROR; SHEET: {}, COL: {}, CELL: {}{}, TYPE: {}'.format(
-                                        sheet_title, col_name, col_letter, row_num, col_type))
-                            else: # decimal_digits <= 15, no rounding
+                                    LOGGER.info(
+                                        'WARNING: POSSIBLE DATA TYPE ERROR; SHEET: {}, COL: {}, CELL: {}{}, TYPE: {}'.format(
+                                            sheet_title, col_name, col_letter, row_num, col_type))
+                            else:  # decimal_digits <= 15, no rounding
                                 try:
                                     col_val = float(value)
                                 except ValueError:
                                     col_val = str(value)
-                                    LOGGER.info('WARNING: POSSIBLE DATA TYPE ERROR: SHEET: {}, COL: {}, CELL: {}{}, TYPE: {}'.format(
-                                        sheet_title, col_name, col_letter, row_num, col_type))
+                                    LOGGER.info(
+                                        'WARNING: POSSIBLE DATA TYPE ERROR: SHEET: {}, COL: {}, CELL: {}{}, TYPE: {}'.format(
+                                            sheet_title, col_name, col_letter, row_num, col_type))
                         else:
                             col_val = str(value)
-                            LOGGER.info('WARNING: POSSIBLE DATA TYPE ERROR: SHEET: {}, COL: {}, CELL: {}{}, TYPE: {}'.format(
-                                   sheet_title, col_name, col_letter, row_num, col_type))
+                            LOGGER.info(
+                                'WARNING: POSSIBLE DATA TYPE ERROR: SHEET: {}, COL: {}, CELL: {}{}, TYPE: {}'.format(
+                                    sheet_title, col_name, col_letter, row_num, col_type))
                     # STRING
                     elif col_type == 'stringValue':
                         col_val = str(value)
@@ -335,8 +356,9 @@ def transform_sheet_data(spreadsheet_id, sheet_id, sheet_title, from_row, column
                                 col_val = False
                             else:
                                 col_val = str(value)
-                                LOGGER.info('WARNING: POSSIBLE DATA TYPE ERROR; SHEET: {}, COL: {}, CELL: {}{}, TYPE: {}'.format(
-                                    sheet_title, col_name, col_letter, row, col_type))
+                                LOGGER.info(
+                                    'WARNING: POSSIBLE DATA TYPE ERROR; SHEET: {}, COL: {}, CELL: {}{}, TYPE: {}'.format(
+                                        sheet_title, col_name, col_letter, row, col_type))
                         elif isinstance(value, int):
                             if value in (1, -1):
                                 col_val = True
@@ -344,13 +366,15 @@ def transform_sheet_data(spreadsheet_id, sheet_id, sheet_title, from_row, column
                                 col_val = False
                             else:
                                 col_val = str(value)
-                                LOGGER.info('WARNING: POSSIBLE DATA TYPE ERROR; SHEET: {}, COL: {}, CELL: {}{}, TYPE: {}'.format(
-                                    sheet_title, col_name, col_letter, row, col_type))
+                                LOGGER.info(
+                                    'WARNING: POSSIBLE DATA TYPE ERROR; SHEET: {}, COL: {}, CELL: {}{}, TYPE: {}'.format(
+                                        sheet_title, col_name, col_letter, row, col_type))
                     # OTHER: Convert everything else to a string
                     else:
                         col_val = str(value)
-                        LOGGER.info('WARNING: POSSIBLE DATA TYPE ERROR; SHEET: {}, COL: {}, CELL: {}{}, TYPE: {}'.format(
-                            sheet_title, col_name, col_letter, row, col_type))
+                        LOGGER.info(
+                            'WARNING: POSSIBLE DATA TYPE ERROR; SHEET: {}, COL: {}, CELL: {}{}, TYPE: {}'.format(
+                                sheet_title, col_name, col_letter, row, col_type))
                     sheet_data_row_tf[col_name] = col_val
                 col_num = col_num + 1
             # APPEND non-empty row
@@ -423,7 +447,7 @@ def sync(client, config, catalog, state):
 
     # Sync spreadsheet_metadata if selected
     sync_stream(stream_name, selected_streams, catalog, state, spreadsheet_metadata_tf, \
-        ss_time_extracted)
+                ss_time_extracted)
 
     # SHEET_METADATA and SHEET_DATA
     sheets = spreadsheet_metadata.get('sheets')
@@ -452,6 +476,7 @@ def sync(client, config, catalog, state):
                 # SHEET_DATA
                 # Should this worksheet tab be synced?
                 if sheet_title in selected_streams:
+                    sheet_title = sheet_title.replace(" ", "_")
                     LOGGER.info('STARTED Syncing Sheet {}'.format(sheet_title))
                     update_currently_syncing(state, sheet_title)
                     selected_fields = get_selected_fields(catalog, sheet_title)
@@ -465,12 +490,13 @@ def sync(client, config, catalog, state):
                     last_integer = int(get_bookmark(state, sheet_title, 0))
                     activate_version = int(time.time() * 1000)
                     activate_version_message = singer.ActivateVersionMessage(
-                            stream=sheet_title,
-                            version=activate_version)
+                        stream=sheet_title,
+                        version=activate_version)
                     if last_integer == 0:
                         # initial load, send activate_version before AND after data sync
                         singer.write_message(activate_version_message)
-                        LOGGER.info('INITIAL SYNC, Stream: {}, Activate Version: {}'.format(sheet_title, activate_version))
+                        LOGGER.info(
+                            'INITIAL SYNC, Stream: {}, Activate Version: {}'.format(sheet_title, activate_version))
 
                     # Determine max range of columns and rows for "paging" through the data
                     sheet_last_col_index = 1
@@ -525,7 +551,7 @@ def sync(client, config, catalog, state):
                         # sheet_data_rows is no of records return in the current page. If it's a whole blank page then stop looping.
                         # So, in the above case, it syncs records 201 to 400 also even if rows 199 and 200 are blank.
                         # Then when the next batch 401 to 600 is empty, it breaks the loop.
-                        if not sheet_data_rows: # If a whole blank page found, then stop looping.
+                        if not sheet_data_rows:  # If a whole blank page found, then stop looping.
                             is_last_row = True
 
                         # Process records, send batch of records to target
@@ -537,7 +563,7 @@ def sync(client, config, catalog, state):
                             version=activate_version)
                         LOGGER.info('Sheet: {}, records processed: {}'.format(
                             sheet_title, record_count))
-                        
+
                         # Update paging from/to_row for next batch
                         from_row = to_row + 1
                         if to_row + batch_rows > sheet_max_row:
@@ -550,7 +576,7 @@ def sync(client, config, catalog, state):
                     write_bookmark(state, sheet_title, activate_version)
                     LOGGER.info('COMPLETE SYNC, Stream: {}, Activate Version: {}'.format(sheet_title, activate_version))
                     LOGGER.info('FINISHED Syncing Sheet {}, Total Rows: {}'.format(
-                        sheet_title, row_num - 2)) # subtract 1 for header row
+                        sheet_title, row_num - 2))  # subtract 1 for header row
                     update_currently_syncing(state, None)
 
                     # SHEETS_LOADED
