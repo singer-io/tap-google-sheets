@@ -116,11 +116,11 @@ def raise_for_error(response):
                 # There is nothing we can do here since Google has neither sent
                 # us a 2xx response nor a response content.
                 return
+            error_code = response.status_code
             response = response.json()
             if ('error' in response) or ('errorCode' in response):
                 message = '%s: %s' % (response.get('error', str(error)),
                                       response.get('message', 'Unknown Error'))
-                error_code = response.get('error', {}).get('code')
                 ex = get_exception_for_error_code(error_code)
                 raise ex(message)
             raise GoogleError(error)
