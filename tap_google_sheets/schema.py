@@ -215,13 +215,13 @@ def get_sheet_schema_columns(sheet):
             }
             columns.append(column)
 
-            if column_gs_type in {'numberType.DATE_TIME', 'numberType.DATE', 'numberType.TIME', 'numberType'}:
-                col_properties = {
-                    'anyOf': [
-                        col_properties,
-                        {'type': ['null', 'string']} # all the date, time has string types in schema
-                    ]
-                }
+            #if column_gs_type in {'numberType.DATE_TIME', 'numberType.DATE', 'numberType.TIME', 'numberType'}:
+            #    col_properties = {
+            #        'anyOf': [
+            #            col_properties,
+            #            {'type': ['null', 'string']} # all the date, time has string types in schema
+            #        ]
+            #    }
             # add the column properties in the `properties` in json schema for the respective column name
             sheet_json_schema['properties'][column_name] = col_properties
 
