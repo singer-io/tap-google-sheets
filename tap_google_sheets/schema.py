@@ -162,11 +162,16 @@ def get_sheet_schema_columns(sheet):
                     column_gs_type = 'stringValue'
                 else:
                     # Interesting - order in the anyOf makes a difference.
+<<<<<<< HEAD
                     # Number w/ singer.decimal must be listed last, otherwise errors occur.
                     col_properties = {
                         'type': ['null', 'string'],
                         'format': 'singer.decimal'
                     }
+=======
+                    # Number w/ multipleOf must be listed last, otherwise errors occur.
+                    col_properties = {'type': 'number', 'multipleOf': 1e-2}
+>>>>>>> e6cf6e9 (Fix multipleOf)
                     column_gs_type = 'numberType'
             # Catch-all to deal with other types and set to string
             # column_effective_value_type: formulaValue, errorValue, or other
