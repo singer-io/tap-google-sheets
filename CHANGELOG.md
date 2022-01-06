@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.2.1
+  * Show error_description in an error message if available in response [#59](https://github.com/singer-io/tap-google-sheets/pull/59)
+
 ## 1.2.0
   * Fixed Pagination Failure [#50](https://github.com/singer-io/tap-google-sheets/pull/50)
   * Implemented Request Timeout [#54](https://github.com/singer-io/tap-google-sheets/pull/54)
