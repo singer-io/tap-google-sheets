@@ -1,6 +1,6 @@
 # Changelog
 
-## 1 2.1
+## 1.2.1
   * Show error_description in an error message if available in response [#59](https://github.com/singer-io/tap-google-sheets/pull/59)
 
 ## 1.2.0
