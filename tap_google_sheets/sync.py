@@ -1,5 +1,4 @@
 import time
-import math
 import json
 import re
 import urllib.parse
@@ -223,7 +222,7 @@ def excel_to_dttm_str(excel_date_sn, timezone_str=None):
     tzn = pytz.timezone(timezone_str)
     sec_per_day = 86400
     excel_epoch = 25569 # 1970-01-01T00:00:00Z, Lotus Notes Serial Number for Epoch Start Date
-    epoch_sec = math.floor((excel_date_sn - excel_epoch) * sec_per_day)
+    epoch_sec = round((excel_date_sn - excel_epoch) * sec_per_day)
     epoch_dttm = datetime(1970, 1, 1)
     excel_dttm = epoch_dttm + timedelta(seconds=epoch_sec)
     utc_dttm = tzn.localize(excel_dttm).astimezone(pytz.utc)
