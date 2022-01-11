@@ -63,6 +63,15 @@ def write_bookmark(state, stream, value):
     singer.write_state(state)
 
 
+def drop_date_on_time(schema, record):
+    for field, field_schema in schema['properties'].items():
+        if field_schema.get('format') == 'time' and 'days,' in record[field]:
+            # `time` fields can come back from Google like `X days, H:M:S`
+            old_time = record[field]
+            new_time = old_time.split(',')[1].strip()
+            record[field] = new_time
+    return record
+
 # Transform/validate batch of records w/ schema and sent to target
 def process_records(catalog,
                     stream_name,
@@ -77,8 +86,9 @@ def process_records(catalog,
             # Transform record for Singer.io
             with Transformer() as transformer:
                 try:
+                    edited_record = drop_date_on_time(schema, record)
                     transformed_record = transformer.transform(
-                        record,
+                        edited_record,
                         schema,
                         stream_metadata)
                 except Exception as err:
