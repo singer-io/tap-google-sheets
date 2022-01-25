@@ -19,7 +19,7 @@ setup(name='tap-google-sheets',
               'nose'
           ],
           'dev': [
-              'ipdb==0.11',
+              'ipdb',
           ]
       },
       entry_points='''
