@@ -21,6 +21,7 @@ class DiscoveryTest(GoogleSheetsBaseTest):
         • Verify stream names follow naming convention
           streams should only have lowercase alphas and underscores
         • verify there is only 1 top level breadcrumb
+        • verify there are no duplicate metadata entries
         • verify replication key(s)
         • verify primary key(s)
         • verify that if there is a replication key we are doing INCREMENTAL otherwise FULL
@@ -87,6 +88,11 @@ class DiscoveryTest(GoogleSheetsBaseTest):
                     if item.get("metadata").get("inclusion") == "unsupported"
                 )
 
+                actual_fields = []
+                for md_entry in metadata:
+                    if md_entry['breadcrumb'] != []:
+                        actual_fields.append(md_entry['breadcrumb'][1])
+
                 ##########################################################################
                 ### metadata assertions
                 ##########################################################################
@@ -95,6 +101,9 @@ class DiscoveryTest(GoogleSheetsBaseTest):
                 self.assertTrue(len(stream_properties) == 1,
                                 msg="There is NOT only one top level breadcrumb for {}".format(stream) + \
                                 "\nstream_properties | {}".format(stream_properties))
+
+                # verify there are no duplicate metadata entries
+                self.assertEqual(len(actual_fields), len(set(actual_fields)), msg = f"duplicates in the fields retrieved")
 
                 # verify replication key(s) match expectations
                 self.assertSetEqual(expected_replication_keys, actual_replication_keys)
