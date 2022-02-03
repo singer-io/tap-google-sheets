@@ -9,7 +9,7 @@ class StandardBookmarksTest(GoogleSheetsBaseTest):
     
     @staticmethod
     def name():
-        return "tap_tester_google_sheets_bookmarks"
+        return "tap_tester_google_sheets_standard_bookmarks"
     
     def test_run(self):
         """
