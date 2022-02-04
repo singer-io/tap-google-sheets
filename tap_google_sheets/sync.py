@@ -547,6 +547,7 @@ def sync(client, config, catalog, state):
 
                     # End of Stream: Send Activate Version and update State
                     singer.write_message(activate_version_message)
+                    write_bookmark(state, sheet_title, activate_version)
                     LOGGER.info('COMPLETE SYNC, Stream: {}, Activate Version: {}'.format(sheet_title, activate_version))
                     LOGGER.info('FINISHED Syncing Sheet {}, Total Rows: {}'.format(
                         sheet_title, row_num - 2)) # subtract 1 for header row
