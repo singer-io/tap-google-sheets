@@ -213,8 +213,8 @@ class FileMetadata(GoogleSheets):
         "fields": "id,name,createdTime,modifiedTime,version,teamDriveId,driveId,lastModifyingUser"
     }
 
-    # return file's metadata
-    def check_file_is_modified(self, state):
+    # sync file's metadata
+    def sync(self, catalog, state, selected_streams):
         self.state = state
         # variable to check if file is changed or not
         file_changed = True
@@ -222,31 +222,30 @@ class FileMetadata(GoogleSheets):
         # get date to start sync from, ie. start date or bookmark date
         start_date = strptime_to_utc(get_bookmark(state, self.stream_name, self.config_start_date))
 
-        LOGGER.info("GET file_meatadata")
+        LOGGER.info("GET file_metadata")
         file_metadata, time_extracted = self.get_data(stream_name=self.stream_name)
-        LOGGER.info("Transform file_meatadata")
+        LOGGER.info("Transform file_metadata")
 
         file_modified_time = strptime_to_utc(file_metadata.get("modifiedTime"))
         LOGGER.info("last_datetime = {}, file_modified_time = {}".format(start_date, file_modified_time))
         if file_modified_time <= start_date:
             # if file is not changed, update the variable
             LOGGER.info("file_modified_time <= last_datetime, FILE NOT CHANGED. EXITING.")
+            # write bookmark
+            write_bookmark(self.state, "file_metadata", strftime(file_modified_time))
+            # update the variable
             file_changed = False
 
+        # only perform sync if file metadata stream is selected and file is changed
+        if self.stream_name in selected_streams and file_changed:
+            # transform file metadata records
+            file_metadata_transformed = internal_transform.transform_file_metadata(file_metadata)
+            # do sync
+            self.sync_stream(file_metadata_transformed, catalog, time_extracted)
+
         # write bookmark
-        write_bookmark(self.state, "file_metadata", strftime(file_modified_time))
-        return file_changed, file_metadata, time_extracted
-
-    def sync(self, catalog, state, file_metadata, time_extracted):
-        self.state = state
-
-        # transform file metadata records
-        file_metadata_transformed = internal_transform.transform_file_metadata(file_metadata)
-        file_modified_time = strptime_to_utc(file_metadata.get("modifiedTime"))
-
-        # Sync file_metadata
-        self.sync_stream(file_metadata_transformed, catalog, time_extracted)
         write_bookmark(self.state, 'file_metadata', strftime(file_modified_time))
+        return file_changed
 
 class SpreadSheetMetadata(GoogleSheets):
     stream_name = "spreadsheet_metadata"

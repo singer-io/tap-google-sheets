@@ -1,5 +1,5 @@
 import singer
-from tap_google_sheets.stream import STREAMS, SheetsLoadData, update_currently_syncing
+from tap_google_sheets.streams import STREAMS, SheetsLoadData
 
 LOGGER = singer.get_logger()
 
@@ -19,8 +19,6 @@ def sync(client, config, catalog, state):
 
     # loop through main streams
     for stream_name in STREAMS.keys():
-        LOGGER.info("START Syncing: %s", stream_name)
-        update_currently_syncing(state, stream_name)
 
         # get the stream object
         stream_obj = STREAMS[stream_name](client, config.get("spreadsheet_id"), config.get("start_date"))
@@ -55,14 +53,8 @@ def sync(client, config, catalog, state):
 
         # sync file metadata
         elif stream_name == "file_metadata":
-            # get file metadata
-            file_changed, file_metadata, time_extracted = stream_obj.check_file_is_modified(state)
-            # if file is not changed, return
+            file_changed = stream_obj.sync(catalog, state, selected_streams)
             if not file_changed:
                 return
-            # if "file_metadata" is selected, do sync
-            if stream_name in selected_streams:
-                stream_obj.sync(catalog, state, file_metadata, time_extracted)
 
-        update_currently_syncing(state, None)
         LOGGER.info("FINISHED Syncing: %s", stream_name)

@@ -1,4 +1,4 @@
-from tap_google_sheets.stream import SpreadSheetMetadata
+from tap_google_sheets.streams import SpreadSheetMetadata
 from tap_google_sheets.client import GoogleClient
 import unittest
 from unittest import mock

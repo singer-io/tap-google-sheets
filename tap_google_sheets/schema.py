@@ -2,7 +2,7 @@ import re
 import urllib.parse
 from collections import OrderedDict
 import singer
-from tap_google_sheets.stream import STREAMS
+from tap_google_sheets.streams import STREAMS
 
 LOGGER = singer.get_logger()
 
