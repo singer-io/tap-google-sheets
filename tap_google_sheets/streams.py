@@ -217,7 +217,6 @@ class FileMetadata(GoogleSheets):
     def sync(self, catalog, state, selected_streams):
         self.state = state
         # variable to check if file is changed or not
-        file_changed = True
 
         # get date to start sync from, ie. start date or bookmark date
         start_date = strptime_to_utc(get_bookmark(state, self.stream_name, self.config_start_date))
@@ -233,11 +232,11 @@ class FileMetadata(GoogleSheets):
             LOGGER.info("file_modified_time <= last_datetime, FILE NOT CHANGED. EXITING.")
             # write bookmark
             write_bookmark(self.state, "file_metadata", strftime(file_modified_time))
-            # update the variable
-            file_changed = False
+            # return and stop syncing the next streams, as the file is not changed
+            return False
 
         # only perform sync if file metadata stream is selected and file is changed
-        if self.stream_name in selected_streams and file_changed:
+        if self.stream_name in selected_streams:
             # transform file metadata records
             file_metadata_transformed = internal_transform.transform_file_metadata(file_metadata)
             # do sync
@@ -245,7 +244,7 @@ class FileMetadata(GoogleSheets):
 
         # write bookmark
         write_bookmark(self.state, 'file_metadata', strftime(file_modified_time))
-        return file_changed
+        return True
 
 class SpreadSheetMetadata(GoogleSheets):
     stream_name = "spreadsheet_metadata"
