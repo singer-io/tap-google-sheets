@@ -31,6 +31,9 @@ def update_currently_syncing(state, stream_name):
     singer.write_state(state)
 
 def write_schema(catalog, stream_name):
+    """
+    Write schema from the stream
+    """
     stream = catalog.get_stream(stream_name)
     schema = stream.schema.to_dict()
     try:
@@ -41,7 +44,12 @@ def write_schema(catalog, stream_name):
         raise err
 
 def write_record(stream_name, record, time_extracted, version=None):
+    """
+    Write records for the stream with extracted time
+    """
     try:
+        # use "write_message" if version is found as
+        # "write_record" params does not contain "version"
         if version:
             singer.messages.write_message(
                 RecordMessage(
@@ -59,6 +67,9 @@ def write_record(stream_name, record, time_extracted, version=None):
         raise err
 
 def get_bookmark(state, stream, default):
+    """
+    Get bookmark for the stream
+    """
     if (state is None) or ('bookmarks' not in state):
         return default
     return (
@@ -68,6 +79,9 @@ def get_bookmark(state, stream, default):
     )
 
 def write_bookmark(state, stream, value):
+    """
+    Write bookmark for the stream
+    """
     if 'bookmarks' not in state:
         state['bookmarks'] = {}
     state['bookmarks'][stream] = value
@@ -79,6 +93,9 @@ def get_abs_path(path):
 
 # List selected fields from stream catalog
 def get_selected_fields(catalog, stream_name):
+    """
+    Get the selected fields for a stream from the catalog
+    """
     stream = catalog.get_stream(stream_name)
     mdata = metadata.to_map(stream.metadata)
     mdata_list = singer.metadata.to_list(mdata)
@@ -230,10 +247,8 @@ class FileMetadata(GoogleSheets):
         if file_modified_time <= start_date:
             # if file is not changed, update the variable
             LOGGER.info("file_modified_time <= last_datetime, FILE NOT CHANGED. EXITING.")
-            # write bookmark
-            write_bookmark(self.state, "file_metadata", strftime(file_modified_time))
             # return and stop syncing the next streams, as the file is not changed
-            return False
+            return False, file_modified_time
 
         # only perform sync if file metadata stream is selected and file is changed
         if self.stream_name in selected_streams:
@@ -242,9 +257,7 @@ class FileMetadata(GoogleSheets):
             # do sync
             self.sync_stream(file_metadata_transformed, catalog, time_extracted)
 
-        # write bookmark
-        write_bookmark(self.state, 'file_metadata', strftime(file_modified_time))
-        return True
+        return True, file_modified_time
 
 class SpreadSheetMetadata(GoogleSheets):
     stream_name = "spreadsheet_metadata"

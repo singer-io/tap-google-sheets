@@ -23,6 +23,9 @@ def discover(client, spreadsheet_id):
                 if table_key_properties:
                     key_properties = table_key_properties
 
+            # get the primary keys for the stream
+            #   if the stream is from STREAM, then get the key_properties
+            #   else use the "table-key-properties" from the metadata
             if not STREAMS.get(stream_name):
                 key_props = key_properties
             else:
