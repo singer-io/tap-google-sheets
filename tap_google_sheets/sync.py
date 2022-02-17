@@ -4,6 +4,15 @@ from tap_google_sheets.streams import STREAMS, SheetsLoadData, write_bookmark, s
 LOGGER = singer.get_logger()
 
 def sync(client, config, catalog, state):
+    """
+    Sync the streams, loop over STREAMS
+        "file_metadata" -> get the file's metadata and if the spreadsheet file is updated then continue the sync else stop the sync
+        "spreadsheet_metadata" -> get the spreadsheet's metadata
+            - sync the spreadsheet_metadata stream if selected
+            - get the sheets in the spreadsheet and loop over the sheets and sync the sheet's records if selected
+                - create 2 lists containing the data related the sheet's metadata and sheets loaded/synced during the sync
+        "sheets_loaded" & "sheet_metadata" -> get the data lists from the "spreadsheet_metadata" stream and sync the records if selected
+    """
     last_stream = singer.get_currently_syncing(state)
     LOGGER.info("last/currently syncing stream: %s", last_stream)
 

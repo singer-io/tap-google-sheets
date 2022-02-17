@@ -13,15 +13,11 @@ import tap_google_sheets.schema as schema
 
 LOGGER = singer.get_logger()
 
-# Currently syncing sets the stream currently being delivered in the state.
-# If the integration is interrupted, this state property is used to identify
-#  the starting point to continue from.
-# Reference: https://github.com/singer-io/singer-python/blob/master/singer/bookmarks.py#L41-L46
 def update_currently_syncing(state, stream_name):
     """
     Currently syncing sets the stream currently being delivered in the state.
     If the integration is interrupted, this state property is used to identify
-     the starting point to continue from.
+        the starting point to continue from.
     Reference: https://github.com/singer-io/singer-python/blob/master/singer/bookmarks.py#L41-L46
     """
     if (stream_name is None) and ("currently_syncing" in state):
@@ -91,10 +87,9 @@ def write_bookmark(state, stream, value):
 def get_abs_path(path):
     return os.path.join(os.path.dirname(os.path.realpath(__file__)), path)
 
-# List selected fields from stream catalog
 def get_selected_fields(catalog, stream_name):
     """
-    Get the selected fields for a stream from the catalog
+    Get the list of selected fields for a stream from the catalog
     """
     stream = catalog.get_stream(stream_name)
     mdata = metadata.to_map(stream.metadata)
@@ -125,8 +120,10 @@ class GoogleSheets:
         self.config_start_date = start_date
         self.spreadsheet_id = spreadsheet_id
 
-    # return schema for streams
     def get_schemas(self):
+        """
+        return schema for streams
+        """
         schemas = {}
         field_metadata = {}
 
@@ -150,8 +147,10 @@ class GoogleSheets:
 
         return schemas, field_metadata
 
-    # Transform/validate batch of records w/ schema and sent to target
     def process_records(self, catalog, stream_name, records, time_extracted, version=None):
+        """
+        Transform/validate batch of records with schema and sent to target
+        """
         stream = catalog.get_stream(stream_name)
         schema = stream.schema.to_dict()
         stream_metadata = metadata.to_map(stream.metadata)
@@ -176,6 +175,9 @@ class GoogleSheets:
             return counter.value
 
     def get_data(self, stream_name, range_rows=None):
+        """
+        Call API for the steram and return response
+        """
         if not range_rows:
             range_rows = ''
         # Replace {placeholder} variables in path
@@ -201,8 +203,10 @@ class GoogleSheets:
             endpoint=stream_name_escaped)
         return data, time_extracted
 
-    # sync stream and write records
     def sync_stream(self, records, catalog, time_extracted=None):
+        """
+        sync stream and write records
+        """
         # Should sheets_loaded be synced?
         LOGGER.info('STARTED Syncing {}'.format(self.stream_name))
         update_currently_syncing(self.state, self.stream_name)
@@ -230,8 +234,10 @@ class FileMetadata(GoogleSheets):
         "fields": "id,name,createdTime,modifiedTime,version,teamDriveId,driveId,lastModifyingUser"
     }
 
-    # sync file's metadata
     def sync(self, catalog, state, selected_streams):
+        """
+        sync file's metadata
+        """
         self.state = state
         # variable to check if file is changed or not
 
@@ -270,6 +276,9 @@ class SpreadSheetMetadata(GoogleSheets):
     }
 
     def get_schemas(self):
+        """
+        Get schema for spreadsheet and generate schema for the sheets in the spreadsheet
+        """
         # get schema of spreadsheet metadata
         schemas, field_metadata = super().get_schemas()
 
@@ -316,6 +325,9 @@ class SpreadSheetMetadata(GoogleSheets):
         return schemas, field_metadata
 
     def sync(self, catalog, state, spreadsheet_metadata, time_extracted):
+        """
+        sync spreadsheet's metadata
+        """
         self.state = state
         LOGGER.info('GET spreadsheet_metadata')
 
@@ -338,8 +350,10 @@ class SheetsLoadData(GoogleSheets):
         "majorDimension": "ROWS"
     }
 
-    # load sheet's records if that sheet is selected for sync
     def load_data(self, catalog, state, selected_streams, sheets, spreadsheet_time_extracted):
+        """
+        Load sheet's records if that sheet is selected for sync
+        """
         self.state = state
         sheet_metadata = []
         sheets_loaded = []
@@ -484,8 +498,10 @@ class SheetMetadata(GoogleSheets):
         "ranges": "'{sheet_title}'!1:2"
     }
 
-    # write sheet's metadata records
     def sync(self, catalog, state, sheet_metadata_records):
+        """
+        Write sheet's metadata records
+        """
         self.state = state
         self.sync_stream(sheet_metadata_records, catalog)
 
@@ -502,8 +518,10 @@ class SheetsLoaded(GoogleSheets):
         "majorDimension": "ROWS"
     }
 
-    # write sheets loaded records
     def sync(self, catalog, state, sheets_loaded_records):
+        """
+        Write sheets loaded records
+        """
         self.state = state
         self.sync_stream(sheets_loaded_records, catalog)
 
