@@ -7,8 +7,6 @@ import os
 from datetime import timedelta
 from datetime import datetime as dt
 
-import dateutil
-import pytz
 from tap_tester import connections, menagerie, runner
 
 class GoogleSheetsBaseTest(unittest.TestCase):
@@ -384,13 +382,3 @@ class GoogleSheetsBaseTest(unittest.TestCase):
             bad_fields[k] = v.get(self.UNSUPPORTED_FIELDS, set())
 
         return bad_fields
-
-    def convert_state_to_utc(self, date_str):
-        """
-        Convert a saved bookmark value of the form '2020-08-25T13:17:36-07:00' to
-        a string formatted utc datetime,
-        in order to compare against json formatted datetime values
-        """
-        date_object = dateutil.parser.parse(date_str)
-        date_object_utc = date_object.astimezone(tz=pytz.UTC)
-        return dt.strftime(date_object_utc, "%Y-%m-%dT%H:%M:%SZ")
