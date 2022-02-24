@@ -120,6 +120,19 @@ class GoogleSheets:
         self.config_start_date = start_date
         self.spreadsheet_id = spreadsheet_id
 
+    def get_path(self, sheet_title_encoded=""):
+        """
+        return path and query string for API Call
+        """
+        # Add in querystring parameters and replace {placeholder} variables
+        # querystring function ensures parameters are added but not encoded causing API errors
+        # create querystring for preparing the request
+        querystring = '&'.join(['%s=%s' % (key, value) for (key, value) in self.params.items()]).replace('{sheet_title}', sheet_title_encoded)
+        # create path for preparing the request
+        path = '{}?{}'.format(self.path.replace('{spreadsheet_id}', self.spreadsheet_id), querystring)
+        # return path and query string
+        return path, querystring
+
     def get_schemas(self):
         """
         return schema for streams
@@ -184,15 +197,11 @@ class GoogleSheets:
         # Encode stream_name: fixes issue w/ special characters in sheet name
         stream_name_escaped = re.escape(stream_name)
         stream_name_encoded = urllib.parse.quote_plus(stream_name)
-        path = self.path.replace( # endpoint_config.get('path', self.stream_name).replace(
+        path = self.path.replace(
             '{spreadsheet_id}', self.spreadsheet_id).replace('{sheet_title}', stream_name_encoded).replace(
                 '{range_rows}', range_rows)
-        params = self.params
-        api = self.api # endpoint_config.get('api', 'sheets')
-        # Add in querystring parameters and replace {placeholder} variables
-        # querystring function ensures parameters are added but not encoded causing API errors
-        querystring = '&'.join(['%s=%s' % (key, value) for (key, value) in params.items()]).replace(
-            '{sheet_title}', stream_name_encoded)
+        api = self.api
+        _, querystring = self.get_path(stream_name_encoded)
         LOGGER.info('URL: {}/{}?{}'.format(self.client.base_url, path, querystring))
         data = {}
         time_extracted = utils.now()
@@ -284,12 +293,7 @@ class SpreadSheetMetadata(GoogleSheets):
 
         # prepare schema for sheets in the spreadsheet
         api = self.api
-        params = self.params
-        # prepare the query string for the request
-        querystring = '&'.join(['%s=%s' % (key, value) for (key, value) in params.items()])
-        # prepare the path for request
-        path = '{}?{}'.format(self.path.replace('{spreadsheet_id}', \
-            self.spreadsheet_id), querystring)
+        path, querystring = self.get_path()
 
         # GET spreadsheet_metadata, which incl. sheets (basic metadata for each worksheet)
         spreadsheet_md_results = self.client.get(path=path, params=querystring, api=api, endpoint=self.stream_name)

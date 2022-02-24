@@ -15,19 +15,16 @@ def discover(client, spreadsheet_id):
             schema = Schema.from_dict(schema_dict)
             mdata = field_metadata[stream_name]
 
-            key_properties = None
-
-            # get primary key for the stream
-            for mdt in mdata:
-                table_key_properties = mdt.get('metadata', {}).get('table-key-properties')
-                if table_key_properties:
-                    key_properties = table_key_properties
-
             # get the primary keys for the stream
             #   if the stream is from STREAM, then get the key_properties
             #   else use the "table-key-properties" from the metadata
             if not STREAMS.get(stream_name):
-                key_props = key_properties
+                key_props = None
+                # get primary key for the stream
+                for mdt in mdata:
+                    table_key_properties = mdt.get('metadata', {}).get('table-key-properties')
+                    if table_key_properties:
+                        key_props = table_key_properties
             else:
                 stream_obj = STREAMS.get(stream_name)(client, spreadsheet_id)
                 key_props = stream_obj.key_properties

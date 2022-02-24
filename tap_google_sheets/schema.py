@@ -239,15 +239,9 @@ def get_sheet_metadata(sheet, spreadsheet_id, client):
     stream_name = 'sheet_metadata'
     stream_obj = STREAMS.get(stream_name)(client, spreadsheet_id)
     api = stream_obj.api
-    params = stream_obj.params
     sheet_title_encoded = urllib.parse.quote_plus(sheet_title)
     sheet_title_escaped = re.escape(sheet_title)
-    # create querystring for preparing the request
-    querystring = '&'.join(['%s=%s' % (key, value) for (key, value) in \
-        params.items()]).replace('{sheet_title}', sheet_title_encoded)
-    # create path for preparing the request
-    path = '{}?{}'.format(stream_obj.path.replace('{spreadsheet_id}', \
-        spreadsheet_id), querystring)
+    path, _ = stream_obj.get_path(sheet_title_encoded)
 
     sheet_md_results = client.get(path=path, api=api, endpoint=sheet_title_escaped)
     # sheet_metadata: 1st `sheets` node in results
