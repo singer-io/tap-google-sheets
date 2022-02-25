@@ -27,10 +27,10 @@ def sync(client, config, catalog, state):
         return
 
     # loop through main streams
-    for stream_name in STREAMS.keys():
+    for stream_name, stream_obj in STREAMS.items():
 
         # get the stream object
-        stream_obj = STREAMS[stream_name](client, config.get("spreadsheet_id"), config.get("start_date"))
+        stream_obj = stream_obj(client, config.get("spreadsheet_id"), config.get("start_date"))
 
         # to sync the sheet's data, we need to get "spreadsheet_metadata"
         if stream_name == "spreadsheet_metadata":

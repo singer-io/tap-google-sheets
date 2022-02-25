@@ -463,7 +463,7 @@ class SheetsLoadData(GoogleSheets):
                                 version=activate_version)
                             LOGGER.info('Sheet: {}, records processed: {}'.format(
                                 sheet_title, record_count))
-                            
+
                             # Update paging from/to_row for next batch
                             from_row = to_row + 1
                             if to_row + batch_rows > sheet_max_row:

@@ -96,7 +96,7 @@ def transform_sheet_time_data(value, sheet_title, col_name, col_letter, row_num,
         return str(value)
 
 # transform boolean values in the sheet
-def transform_sheet_boolean_data(value, sheet_title, col_name, col_letter, row_num, col_type, row):
+def transform_sheet_boolean_data(value, sheet_title, col_name, col_letter, col_type, row):
     if isinstance(value, bool):
         return value
     elif isinstance(value, str):
@@ -182,7 +182,7 @@ def get_column_value(value, sheet_title, col_name, col_letter, row_num, col_type
 
     # BOOLEAN
     elif col_type == 'boolValue':
-        return transform_sheet_boolean_data(value, sheet_title, col_name, col_letter, row_num, col_type, row)
+        return transform_sheet_boolean_data(value, sheet_title, col_name, col_letter, col_type, row)
 
     # OTHER: Convert everything else to a string
     else:
