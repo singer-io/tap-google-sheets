@@ -1,3 +1,4 @@
+from tap_google_sheets.streams import SpreadSheetMetadata
 from tap_google_sheets.client import GoogleClient
 import unittest
 from unittest import mock
@@ -98,7 +99,8 @@ class TestUnsupportedFields(unittest.TestCase):
             }
         }
         mocked_get.return_value = sheet
-        schemas, field_metadata = schema.get_schemas(GoogleClient('client_id', 'client_secret', 'refresh_token'), 'sheet_id')
+        google_sheets_obj = SpreadSheetMetadata(GoogleClient('client_id', 'client_secret', 'refresh_token'), 'sheet_id', '2021-01-01T00:00:00Z')
+        schemas, field_metadata = google_sheets_obj.get_schemas()
         # check if the schemas are equal, hence verifying if the description is present
         self.assertEqual(expected_schema, schemas["Sheet1"])
         for each in field_metadata["Sheet1"]:

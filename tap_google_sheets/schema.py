@@ -1,10 +1,7 @@
-import os
-import json
 import re
 import urllib.parse
 from collections import OrderedDict
 import singer
-from singer import metadata
 from tap_google_sheets.streams import STREAMS
 
 LOGGER = singer.get_logger()
@@ -68,7 +65,7 @@ def get_sheet_schema_columns(sheet):
 
     # if no headers are present, log the message that sheet is skipped
     if not headers:
-        LOGGER.warn('SKIPPING THE SHEET AS HEADERS ROW IS EMPTY. SHEET: {}'.format(sheet_title))
+        LOGGER.warning('SKIPPING THE SHEET AS HEADERS ROW IS EMPTY. SHEET: {}'.format(sheet_title))
 
     # Read column headers until end or 2 consecutive skipped headers
     for header in headers:
@@ -240,17 +237,11 @@ def get_sheet_metadata(sheet, spreadsheet_id, client):
     LOGGER.info('sheet_id = {}, sheet_title = {}'.format(sheet_id, sheet_title))
 
     stream_name = 'sheet_metadata'
-    stream_metadata = STREAMS.get(stream_name)
-    api = stream_metadata.get('api', 'sheets')
-    params = stream_metadata.get('params', {})
+    stream_obj = STREAMS.get(stream_name)(client, spreadsheet_id)
+    api = stream_obj.api
     sheet_title_encoded = urllib.parse.quote_plus(sheet_title)
     sheet_title_escaped = re.escape(sheet_title)
-    # create querystring for preparing the request
-    querystring = '&'.join(['%s=%s' % (key, value) for (key, value) in \
-        params.items()]).replace('{sheet_title}', sheet_title_encoded)
-    # create path for preparing the request
-    path = '{}?{}'.format(stream_metadata.get('path').replace('{spreadsheet_id}', \
-        spreadsheet_id), querystring)
+    path, _ = stream_obj.get_path(sheet_title_encoded)
 
     sheet_md_results = client.get(path=path, api=api, endpoint=sheet_title_escaped)
     # sheet_metadata: 1st `sheets` node in results
@@ -265,73 +256,3 @@ def get_sheet_metadata(sheet, spreadsheet_id, client):
         sheet_json_schema, columns = None, None
 
     return sheet_json_schema, columns
-
-
-def get_abs_path(path):
-    return os.path.join(os.path.dirname(os.path.realpath(__file__)), path)
-
-def get_schemas(client, spreadsheet_id):
-    schemas = {}
-    field_metadata = {}
-
-    for stream_name, stream_metadata in STREAMS.items():
-        schema_path = get_abs_path('schemas/{}.json'.format(stream_name))
-        with open(schema_path) as file:
-            schema = json.load(file)
-        schemas[stream_name] = schema
-        mdata = metadata.new()
-
-        # Documentation:
-        # https://github.com/singer-io/getting-started/blob/master/docs/DISCOVERY_MODE.md#singer-python-helper-functions
-        # Reference:
-        # https://github.com/singer-io/singer-python/blob/master/singer/metadata.py#L25-L44
-        mdata = metadata.get_standard_metadata(
-            schema=schema,
-            key_properties=stream_metadata.get('key_properties', None),
-            valid_replication_keys=stream_metadata.get('replication_keys', None),
-            replication_method=stream_metadata.get('replication_method', None)
-        )
-        field_metadata[stream_name] = mdata
-
-        if stream_name == 'spreadsheet_metadata':
-            api = stream_metadata.get('api', 'sheets')
-            params = stream_metadata.get('params', {})
-            # prepare the query string for the request
-            querystring = '&'.join(['%s=%s' % (key, value) for (key, value) in params.items()])
-            # prepare the path for request
-            path = '{}?{}'.format(stream_metadata.get('path').replace('{spreadsheet_id}', \
-                spreadsheet_id), querystring)
-
-            # GET spreadsheet_metadata, which incl. sheets (basic metadata for each worksheet)
-            spreadsheet_md_results = client.get(path=path, params=querystring, api=api, \
-                endpoint=stream_name)
-
-            sheets = spreadsheet_md_results.get('sheets')
-            if sheets:
-                # Loop thru each worksheet in spreadsheet
-                for sheet in sheets:
-                    # GET sheet_json_schema for each worksheet (from function above)
-                    sheet_json_schema, columns = get_sheet_metadata(sheet, spreadsheet_id, client)
-
-                    # SKIP empty sheets (where sheet_json_schema and columns are None)
-                    if sheet_json_schema and columns:
-                        sheet_title = sheet.get('properties', {}).get('title')
-                        schemas[sheet_title] = sheet_json_schema
-                        sheet_mdata = metadata.new()
-                        sheet_mdata = metadata.get_standard_metadata(
-                            schema=sheet_json_schema,
-                            key_properties=['__sdc_row'],
-                            valid_replication_keys=None,
-                            replication_method='FULL_TABLE'
-                        )
-                        # for each column check if the `columnSkipped` value is true and the `prior_column_skipped` is false or None
-                        # in the columns dict. The `prior_column_skipped` would be true  when it is the first column of the two
-                        # consecutive empty headers column if true: update the incusion property to `unsupported`
-                        for column in columns:
-                            if column.get('columnSkipped') and not column.get('prior_column_skipped'):
-                                mdata = metadata.to_map(sheet_mdata)
-                                sheet_mdata = metadata.write(mdata, ('properties', column.get('columnName')), 'inclusion', 'unsupported')
-                                sheet_mdata = metadata.to_list(mdata)
-                        field_metadata[sheet_title] = sheet_mdata
-
-    return schemas, field_metadata
