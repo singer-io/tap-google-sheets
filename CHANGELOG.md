@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.0
+  * Refactor Code from Dictionary to Class based [#66]((https://github.com/singer-io/tap-google-sheets/pull/66)
+  * Add Missing tap-tester cases [#65]((https://github.com/singer-io/tap-google-sheets/pull/65)
+
 ## 1.2.1
   * Show error_description in an error message if available in response [#59](https://github.com/singer-io/tap-google-sheets/pull/59)
 
