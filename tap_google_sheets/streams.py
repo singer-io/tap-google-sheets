@@ -162,7 +162,7 @@ class GoogleSheets:
 
     def process_records(self, catalog, stream_name, records, time_extracted, version=None):
         """
-        Transform/validate batch of records with schema and sent to target
+        Transform/validate batch of records with schema and send to target
         """
         stream = catalog.get_stream(stream_name)
         schema = stream.schema.to_dict()
@@ -189,7 +189,7 @@ class GoogleSheets:
 
     def get_data(self, stream_name, range_rows=None):
         """
-        Call API for the steram and return response
+        Call API for the stream and return response
         """
         if not range_rows:
             range_rows = ''
