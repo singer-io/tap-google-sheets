@@ -5,11 +5,12 @@ import re
 from collections import OrderedDict
 import urllib.parse
 import singer
-from singer import metrics, metadata, Transformer, utils
+from singer import metrics, metadata, utils
 from singer.utils import strptime_to_utc, strftime
 from singer.messages import RecordMessage
 import tap_google_sheets.transform as internal_transform
 import tap_google_sheets.schema as schema
+from tap_google_sheets.singer_transform import Transformer
 
 LOGGER = singer.get_logger()
 

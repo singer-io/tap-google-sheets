@@ -236,12 +236,12 @@ class DatatypesTest(GoogleSheetsBaseTest):
 
                             # BUG_TDL-14369 | https://jira.talendforge.org/browse/TDL-14369
                             #                 Skipping boolean column values becuase they do not correctly fall back to string
-                            if column == 'Boolean': # BUG_TDL-14369
-                                continue  # skip
+                            # if column == 'Boolean': # BUG_TDL-14369
+                            #     continue  # skip
 
                             # BUG_TDL-14448 | https://jira.talendforge.org/browse/TDL-14448
                             #                 Skipping Number and Currency columns with boolean values because they do not fallback to string
-                            elif test_case == 'boolean' and column in {'Currency', 'Number'}: # BUG_TDL-14448
+                            if test_case == 'boolean' and column in {'Currency', 'Number'}: # BUG_TDL-14448
                                 continue  # skip
 
                             # BUG_TDL-14449 |  https://jira.talendforge.org/browse/TDL-14449
