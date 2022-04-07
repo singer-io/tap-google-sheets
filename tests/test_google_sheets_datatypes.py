@@ -234,11 +234,6 @@ class DatatypesTest(GoogleSheetsBaseTest):
 
                         elif value:
 
-                            # BUG_TDL-14369 | https://jira.talendforge.org/browse/TDL-14369
-                            #                 Skipping boolean column values becuase they do not correctly fall back to string
-                            # if column == 'Boolean': # BUG_TDL-14369
-                            #     continue  # skip
-
                             # BUG_TDL-14448 | https://jira.talendforge.org/browse/TDL-14448
                             #                 Skipping Number and Currency columns with boolean values because they do not fallback to string
                             if test_case == 'boolean' and column in {'Currency', 'Number'}: # BUG_TDL-14448
@@ -250,6 +245,9 @@ class DatatypesTest(GoogleSheetsBaseTest):
 
 
                             # verify the non-standard value has fallen back to a string type
+                            if column == 'Boolean' and value  in (-1, 1, 0): # special integer values falls back to boolean
+                                self.assertTrue(isinstance(value, bool), msg=f'test case: {test_case}  value: {value}')
+
                             self.assertTrue(isinstance(value, str), msg=f'test case: {test_case}  value: {value}')
 
                             # BUG_TDL-14431 [https://jira.talendforge.org/browse/TDL-14431]
