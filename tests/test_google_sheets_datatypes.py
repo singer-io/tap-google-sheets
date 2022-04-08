@@ -247,6 +247,7 @@ class DatatypesTest(GoogleSheetsBaseTest):
                             # verify the non-standard value has fallen back to a string type
                             if column == 'Boolean' and value  in (-1, 1, 0): # special integer values falls back to boolean
                                 self.assertTrue(isinstance(value, bool), msg=f'test case: {test_case}  value: {value}')
+                                continue
 
                             self.assertTrue(isinstance(value, str), msg=f'test case: {test_case}  value: {value}')
 
