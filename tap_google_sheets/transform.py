@@ -2,6 +2,7 @@ import math
 import json
 from datetime import datetime, timedelta
 import pytz
+import cftime
 import singer
 from singer.utils import strftime
 
@@ -48,19 +49,15 @@ def transform_file_metadata(file_metadata):
     return file_metadata_arr
 
 # Convert Excel Date Serial Number (excel_date_sn) to datetime string
-# timezone_str: defaults to UTC (which we assume is the timezone for ALL datetimes)
 def excel_to_dttm_str(excel_date_sn, timezone_str=None):
-    if not timezone_str:
-        timezone_str = 'UTC'
-    tzn = pytz.timezone(timezone_str)
+    reference_unit ="seconds since 1970-01-01T00:00:00Z"
     sec_per_day = 86400
     excel_epoch = 25569 # 1970-01-01T00:00:00Z, Lotus Notes Serial Number for Epoch Start Date
     epoch_sec = math.floor((excel_date_sn - excel_epoch) * sec_per_day)
-    epoch_dttm = datetime(1970, 1, 1)
-    excel_dttm = epoch_dttm + timedelta(seconds=epoch_sec)
-    utc_dttm = tzn.localize(excel_dttm).astimezone(pytz.utc)
-    utc_dttm_str = strftime(utc_dttm)
-    return utc_dttm_str
+    excel_dttm =cftime.num2date(epoch_sec, reference_unit, calendar='proleptic_gregorian', only_use_cftime_datetimes=True, only_use_python_datetimes=False, has_year_zero=True)
+    excel_to_dttm_str = excel_dttm.strftime()
+    return excel_to_dttm_str
+
 
 # transform datetime values in the sheet
 def transform_sheet_datetime_data(value, sheet_title, col_name, col_letter, row_num, col_type):
