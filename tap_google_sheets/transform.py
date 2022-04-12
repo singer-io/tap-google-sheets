@@ -50,6 +50,11 @@ def transform_file_metadata(file_metadata):
 
 # Convert Excel Date Serial Number (excel_date_sn) to datetime string
 def excel_to_dttm_str(excel_date_sn, timezone_str=None):
+    '''
+    `cftime` provides a wide range of calenders due to its use in climate and forecasting applications.
+    Hence the larger date ranges can obe converted to string which is not available in the python's datetime
+    library. For more information on cftime, refer: https://unidata.github.io/cftime/api.html
+    '''
     reference_unit ="seconds since 1970-01-01T00:00:00Z"
     sec_per_day = 86400
     excel_epoch = 25569 # 1970-01-01T00:00:00Z, Lotus Notes Serial Number for Epoch Start Date
