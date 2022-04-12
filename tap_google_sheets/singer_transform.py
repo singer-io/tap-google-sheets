@@ -330,10 +330,7 @@ class Transformer:
 
         elif typ == "boolean":
             if isinstance(data, str) and data is not None:
-                try:
-                    return True, str(data)
-                except:
-                    return False, None
+                return True, data
             try:
                 return True, bool(data)
             except:
