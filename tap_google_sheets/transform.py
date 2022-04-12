@@ -149,8 +149,8 @@ def transform_sheet_number_data(value, sheet_title, col_name, col_letter, row_nu
     elif type(value) == float:
         return transform_sheet_decimal_data(value, sheet_title, col_name, col_letter, row_num, col_type)
     else:
-        LOGGER.info('WARNING: POSSIBLE DATA TYPE ERROR: SHEET: {}, COL: {}, CELL: {}{}, TYPE: {} Value: {}'.format(
-                sheet_title, col_name, col_letter, row_num, col_type, value))
+        LOGGER.info('WARNING: POSSIBLE DATA TYPE ERROR: SHEET: {}, COL: {}, CELL: {}{}, TYPE: {} '.format(
+                sheet_title, col_name, col_letter, row_num, col_type))
         return str(value)
 
 # return transformed column the values based on the datatype
