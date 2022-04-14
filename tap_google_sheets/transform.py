@@ -119,6 +119,11 @@ def transform_sheet_boolean_data(value, sheet_title, col_name, col_letter, col_t
             LOGGER.info('WARNING: POSSIBLE DATA TYPE ERROR; SHEET: {}, COL: {}, CELL: {}{}, TYPE: {}'.format(
                 sheet_title, col_name, col_letter, row, col_type))
         return col_val
+    elif isinstance(value, float):
+        col_val = str(value)
+        LOGGER.info('WARNING: POSSIBLE DATA TYPE ERROR; SHEET: {}, COL: {}, CELL: {}{}, TYPE: {}'.format(
+            sheet_title, col_name, col_letter, row, col_type))
+        return col_val
 
 # transform decimal values in the sheet
 def transform_sheet_decimal_data(value, sheet_title, col_name, col_letter, row_num, col_type):

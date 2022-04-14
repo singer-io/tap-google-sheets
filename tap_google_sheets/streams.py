@@ -5,12 +5,13 @@ import re
 from collections import OrderedDict
 import urllib.parse
 import singer
-from singer import metrics, metadata, utils
+import decimal
+from singer import Transformer, metrics, metadata, utils
 from singer.utils import strptime_to_utc, strftime
 from singer.messages import RecordMessage
+from singer.transform import SchemaKey
 import tap_google_sheets.transform as internal_transform
 import tap_google_sheets.schema as schema
-from tap_google_sheets.singer_transform import Transformer
 
 LOGGER = singer.get_logger()
 
@@ -343,6 +344,93 @@ class SpreadSheetMetadata(GoogleSheets):
         # Sync spreadsheet_metadata if selected
         self.sync_stream(spreadsheet_metadata_transformed, catalog, time_extracted)
 
+def new_transform(self, data, typ, schema, path):
+    '''The new _transform function to replace in the singer module'''
+    if self.pre_hook:
+        data = self.pre_hook(data, typ, schema)
+
+    if typ == "null":
+        if data is None or data == "":
+            return True, None
+        else:
+            return False, None
+
+    elif schema.get("format") == "date-time":
+        data = self._transform_datetime(data)
+        if data is None:
+            return False, None
+
+        return True, data
+    elif schema.get("format") == "singer.decimal":
+        if data is None:
+            return False, None
+
+        if isinstance(data, (str, float, int)):
+            try:
+                return True, str(decimal.Decimal(str(data)))
+            except:
+                return False, None
+        elif isinstance(data, decimal.Decimal):
+            try:
+                if data.is_snan():
+                    return True, 'NaN'
+                else:
+                    return True, str(data)
+            except:
+                return False, None
+
+        return False, None
+    elif typ == "object":
+        # Objects do not necessarily specify properties
+        return self._transform_object(data,
+                                        schema.get("properties", {}),
+                                        path,
+                                        schema.get(SchemaKey.pattern_properties))
+
+    elif typ == "array":
+        return self._transform_array(data, schema["items"], path)
+
+    elif typ == "string":
+        if data is not None:
+            try:
+                return True, str(data)
+            except:
+                return False, None
+        else:
+            return False, None
+
+    elif typ == "integer":
+        if isinstance(data, str):
+            data = data.replace(",", "")
+
+        try:
+            return True, int(data)
+        except:
+            return False, None
+
+    elif typ == "number":
+        if isinstance(data, str):
+            data = data.replace(",", "")
+        try:
+            return True, float(data)
+        except:
+            return False, None
+
+    elif typ == "boolean":
+        # return the data as string itself if the value is of type string
+        if isinstance(data, str) and data is not None:
+            return True, data
+        try:
+            return True, bool(data)
+        except:
+            return False, None
+
+    else:
+        return False, None
+
+# To cast the boolean values differently, overwriting this function of Transformer class of 
+# the singer module
+Transformer._transform = new_transform
 class SheetsLoadData(GoogleSheets):
     api = "sheets"
     path = "spreadsheets/{spreadsheet_id}/values/'{sheet_title}'!{range_rows}"
