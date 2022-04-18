@@ -75,8 +75,8 @@ class PaginationTest(GoogleSheetsBaseTest):
                 # verify the data for the "Pagination" stream is free of any duplicates or breaks by checking
                 # our fake pk value ('id')
                 # THIS ASSERTION CAN BE MADE BECAUSE WE SETUP DATA IN A SPECIFIC WAY. DONT COPY THIS
-                self.assertEqual(list(range(1, 239)), fake_pk_list)
+                self.assertEqual(list(map(str, (range(1, 239)))), fake_pk_list)
 
                 # verify the data for the "Pagination" stream is free of any duplicates or breaks by checking
                 # the actual primary key values (__sdc_row)
-                self.assertEqual(list(range(2, 240)), actual_pk_list)
+                self.assertEqual(list(map(str, (range(2, 240)))), actual_pk_list)

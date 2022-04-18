@@ -154,7 +154,7 @@ class DatatypesTest(GoogleSheetsBaseTest):
         # Verify that all data has been coerced to the expected column datatype
         record_data = [message['data'] for message in synced_records[test_sheet]['messages'] if message.get('data')]
         data_map = {
-	    "Currency": Decimal, # BUG Currency is being identified as a decimal type rather than string https://jira.talendforge.org/browse/TDL-14360
+	    "Currency": str, # BUG Currency is being identified as a decimal type rather than string https://jira.talendforge.org/browse/TDL-14360
 	    "Datetime": str,
             "Time": str,
             "Date": str,
