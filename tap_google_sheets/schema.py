@@ -2,6 +2,7 @@ import re
 import urllib.parse
 from collections import OrderedDict
 import singer
+import json
 from tap_google_sheets.streams import STREAMS
 
 LOGGER = singer.get_logger()
@@ -161,8 +162,11 @@ def get_sheet_schema_columns(sheet):
                     column_gs_type = 'stringValue'
                 else:
                     # Interesting - order in the anyOf makes a difference.
-                    # Number w/ multipleOf must be listed last, otherwise errors occur.
-                    col_properties = {'type': 'number', 'multipleOf': 1e-15}
+                    # Number w/ singer.decimal must be listed last, otherwise errors occur.
+                    col_properties = {
+                        'type': ['null', 'string'],
+                        'format': 'singer.decimal'
+                    }
                     column_gs_type = 'numberType'
             # Catch-all to deal with other types and set to string
             # column_effective_value_type: formulaValue, errorValue, or other
