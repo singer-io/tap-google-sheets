@@ -28,8 +28,7 @@ google_datatypes_to_json_schema = {
                                        {'type': ['null', 'string']}],
                              'inclusion': 'available',
                              'selected': True},
-    'numberType': {'anyOf': [{'multipleOf': Decimal('1E-15'),
-                              'type': 'number'},
+    'numberType': {'anyOf': [{'format': 'singer.decimal', 'type': ['null', 'string']},
                              {'type': ['null', 'string']}],
                    'inclusion': 'available',
                    'selected': True},
@@ -160,7 +159,7 @@ class DatatypesTest(GoogleSheetsBaseTest):
             "Time": str,
             "Date": str,
 	    "String": str,
-            "Number": Decimal,
+            "Number": str,
             "Boolean": bool,
         }
         string_column_formats = {
