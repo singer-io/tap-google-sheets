@@ -60,8 +60,9 @@ class PaginationTest(GoogleSheetsBaseTest):
                 if stream == "sadsheet-pagination":
                     # verify the data for the "sadsheet-pagination" stream is free of any duplicates or breaks by checking
                     # our fake pk value ('id')
-                    expected_pk_list = list(map(str, (range(1, 238))))
+                    expected_pk_list = list(range(1, 238))
                     expected_pk_list = [x for x in expected_pk_list if x not in [198, 199]]
+                    expected_pk_list = list(map(str, expected_pk_list))
                     self.assertEqual(expected_pk_list, fake_pk_list)
                     
                     # verify the data for the "sadsheet-pagination" stream is free of any duplicates or breaks by checking
