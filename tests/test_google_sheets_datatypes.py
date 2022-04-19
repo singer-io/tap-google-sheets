@@ -239,11 +239,6 @@ class DatatypesTest(GoogleSheetsBaseTest):
                             if column == 'Boolean': # BUG_TDL-14369
                                 continue  # skip
 
-                            # BUG_TDL-14448 | https://jira.talendforge.org/browse/TDL-14448
-                            #                 Skipping Number and Currency columns with boolean values because they do not fallback to string
-                            # elif test_case == 'boolean' and column in {'Currency', 'Number'}: # BUG_TDL-14448
-                            #     continue  # skip
-
                             # BUG_TDL-14449 |  https://jira.talendforge.org/browse/TDL-14449
                             elif test_case in {'date', 'time', 'datetime'} and column in {'Currency', 'Number'}: # BUG_TDL-14449
                                 continue  # skip
