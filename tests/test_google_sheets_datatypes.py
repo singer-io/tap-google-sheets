@@ -155,7 +155,7 @@ class DatatypesTest(GoogleSheetsBaseTest):
         # Verify that all data has been coerced to the expected column datatype
         record_data = [message['data'] for message in synced_records[test_sheet]['messages'] if message.get('data')]
         data_map = {
-	    "Currency": Decimal, # BUG Currency is being identified as a decimal type rather than string https://jira.talendforge.org/browse/TDL-14360
+	    "Currency": str, # BUG Currency is being identified as a decimal type rather than string https://jira.talendforge.org/browse/TDL-14360
 	    "Datetime": str,
             "Time": str,
             "Date": str,
@@ -234,21 +234,18 @@ class DatatypesTest(GoogleSheetsBaseTest):
 
                         elif value:
 
-                            # BUG_TDL-14369 | https://jira.talendforge.org/browse/TDL-14369
-                            #                 Skipping boolean column values becuase they do not correctly fall back to string
-                            if column == 'Boolean': # BUG_TDL-14369
-                                continue  # skip
-
                             # BUG_TDL-14448 | https://jira.talendforge.org/browse/TDL-14448
                             #                 Skipping Number and Currency columns with boolean values because they do not fallback to string
-                            elif test_case == 'boolean' and column in {'Currency', 'Number'}: # BUG_TDL-14448
+                            if test_case == 'boolean' and column in {'Currency', 'Number'}: # BUG_TDL-14448
                                 continue  # skip
 
                             # BUG_TDL-14449 |  https://jira.talendforge.org/browse/TDL-14449
                             elif test_case in {'date', 'time', 'datetime'} and column in {'Currency', 'Number'}: # BUG_TDL-14449
                                 continue  # skip
-
-
+                            
+                            if column == 'Boolean' and value  in (-1, 1, 0): # special integer values falls back to boolean
+                                self.assertTrue(isinstance(value, bool), msg=f'test case: {test_case}  value: {value}')
+                                continue
                             # verify the non-standard value has fallen back to a string type
                             self.assertTrue(isinstance(value, str), msg=f'test case: {test_case}  value: {value}')
 

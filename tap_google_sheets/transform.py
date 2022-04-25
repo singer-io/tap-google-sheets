@@ -1,7 +1,7 @@
 import math
 import json
 from datetime import datetime, timedelta
-import pytz
+import cftime
 import singer
 from singer.utils import strftime
 
@@ -48,19 +48,20 @@ def transform_file_metadata(file_metadata):
     return file_metadata_arr
 
 # Convert Excel Date Serial Number (excel_date_sn) to datetime string
-# timezone_str: defaults to UTC (which we assume is the timezone for ALL datetimes)
 def excel_to_dttm_str(excel_date_sn, timezone_str=None):
-    if not timezone_str:
-        timezone_str = 'UTC'
-    tzn = pytz.timezone(timezone_str)
+    '''
+    `cftime` provides a wide range of calenders due to its use in climate and forecasting applications.
+    Hence the larger date ranges can obe converted to string which is not available in the python's datetime
+    library. For more information on cftime, refer: https://unidata.github.io/cftime/api.html
+    '''
+    reference_unit ="seconds since 1970-01-01T00:00:00Z"
     sec_per_day = 86400
     excel_epoch = 25569 # 1970-01-01T00:00:00Z, Lotus Notes Serial Number for Epoch Start Date
     epoch_sec = math.floor((excel_date_sn - excel_epoch) * sec_per_day)
-    epoch_dttm = datetime(1970, 1, 1)
-    excel_dttm = epoch_dttm + timedelta(seconds=epoch_sec)
-    utc_dttm = tzn.localize(excel_dttm).astimezone(pytz.utc)
-    utc_dttm_str = strftime(utc_dttm)
-    return utc_dttm_str
+    excel_dttm =cftime.num2date(epoch_sec, reference_unit, calendar='proleptic_gregorian', only_use_cftime_datetimes=True, only_use_python_datetimes=False, has_year_zero=True)
+    excel_to_dttm_str = excel_dttm.strftime()
+    return excel_to_dttm_str
+
 
 # transform datetime values in the sheet
 def transform_sheet_datetime_data(value, sheet_title, col_name, col_letter, row_num, col_type):
@@ -103,6 +104,10 @@ def transform_sheet_boolean_data(value, sheet_title, col_name, col_letter, col_t
         if value.lower() in ('true', 't', 'yes', 'y'):
             col_val = True
         elif value.lower() in ('false', 'f', 'no', 'n'):
+            col_val = False
+        elif value in ('1', '-1', '1.00', '-1.00'):
+            col_val = True
+        elif value in ('0', '0.00'):
             col_val = False
         else:
             col_val = str(value)
@@ -154,7 +159,7 @@ def transform_sheet_number_data(value, sheet_title, col_name, col_letter, row_nu
         return str(value)
 
 # return transformed column the values based on the datatype
-def get_column_value(value, sheet_title, col_name, col_letter, row_num, col_type, row):
+def get_column_value(value, unformatted_value, sheet_title, col_name, col_letter, row_num, col_type, row):
         # NULL values
     if value is None or value == '':
         return None
@@ -162,15 +167,15 @@ def get_column_value(value, sheet_title, col_name, col_letter, row_num, col_type
     # Convert dates/times from Lotus Notes Serial Numbers
     # DATE-TIME
     elif col_type == 'numberType.DATE_TIME':
-        return transform_sheet_datetime_data(value, sheet_title, col_name, col_letter, row_num, col_type)
+        return transform_sheet_datetime_data(unformatted_value, sheet_title, col_name, col_letter, row_num, col_type)
 
     # DATE
     elif col_type == 'numberType.DATE':
-        return transform_sheet_date_data(value, sheet_title, col_name, col_letter, row_num, col_type)
+        return transform_sheet_date_data(unformatted_value, sheet_title, col_name, col_letter, row_num, col_type)
 
     # TIME ONLY (NO DATE)
     elif col_type == 'numberType.TIME':
-        return transform_sheet_time_data(value, sheet_title, col_name, col_letter, row_num, col_type)
+        return transform_sheet_time_data(unformatted_value, sheet_title, col_name, col_letter, row_num, col_type)
 
     # NUMBER (INTEGER AND FLOAT)
     elif col_type == 'numberType':
@@ -192,14 +197,14 @@ def get_column_value(value, sheet_title, col_name, col_letter, row_num, col_type
 
 # Transform sheet_data: add spreadsheet_id, sheet_id, and row, convert dates/times
 #  Convert from array of values to JSON with column names as keys
-def transform_sheet_data(spreadsheet_id, sheet_id, sheet_title, from_row, columns, sheet_data_rows):
+def transform_sheet_data(spreadsheet_id, sheet_id, sheet_title, from_row, columns, sheet_data_rows, unformatted_rows):
     sheet_data_tf = []
     row_num = from_row
     # Create sorted list of columns based on columnIndex
     cols = sorted(columns, key=lambda i: i['columnIndex'])
 
     # LOGGER.info('sheet_data_rows: {}'.format(sheet_data_rows))
-    for row in sheet_data_rows:
+    for (row, unformatted_row) in zip(sheet_data_rows, unformatted_rows):
         # If empty row, SKIP
         if row == []:
             LOGGER.info('EMPTY ROW: {}, SKIPPING'.format(row_num))
@@ -210,7 +215,7 @@ def transform_sheet_data(spreadsheet_id, sheet_id, sheet_title, from_row, column
             sheet_data_row_tf['__sdc_sheet_id'] = sheet_id
             sheet_data_row_tf['__sdc_row'] = row_num
             col_num = 1
-            for value in row:
+            for (value, unformatted_value) in zip(row, unformatted_row):
                 # Select column metadata based on column index
                 col = cols[col_num - 1]
                 col_skipped = col.get('columnSkipped')
@@ -221,7 +226,7 @@ def transform_sheet_data(spreadsheet_id, sheet_id, sheet_title, from_row, column
                     col_letter = col.get('columnLetter')
 
                     # get column value based on the type of the value
-                    col_val = get_column_value(value, sheet_title, col_name, col_letter, row_num, col_type, row)
+                    col_val = get_column_value(value, unformatted_value, sheet_title, col_name, col_letter, row_num, col_type, row)
 
                     sheet_data_row_tf[col_name] = col_val
                 col_num = col_num + 1
