@@ -124,6 +124,11 @@ def transform_sheet_boolean_data(value, sheet_title, col_name, col_letter, col_t
             LOGGER.info('WARNING: POSSIBLE DATA TYPE ERROR; SHEET: {}, COL: {}, CELL: {}{}, TYPE: {}'.format(
                 sheet_title, col_name, col_letter, row, col_type))
         return col_val
+    elif isinstance(value, float):
+        col_val = str(value)
+        LOGGER.info('WARNING: POSSIBLE DATA TYPE ERROR; SHEET: {}, COL: {}, CELL: {}{}, TYPE: {}'.format(
+            sheet_title, col_name, col_letter, row, col_type))
+        return col_val
 
 # transform decimal values in the sheet
 def transform_sheet_decimal_data(value, sheet_title, col_name, col_letter, row_num, col_type):
@@ -179,7 +184,7 @@ def get_column_value(value, unformatted_value, sheet_title, col_name, col_letter
 
     # NUMBER (INTEGER AND FLOAT)
     elif col_type == 'numberType':
-        return transform_sheet_number_data(value, sheet_title, col_name, col_letter, row_num, col_type)
+        return transform_sheet_number_data(unformatted_value, sheet_title, col_name, col_letter, row_num, col_type)
 
     # STRING
     elif col_type == 'stringValue':
@@ -187,7 +192,7 @@ def get_column_value(value, unformatted_value, sheet_title, col_name, col_letter
 
     # BOOLEAN
     elif col_type == 'boolValue':
-        return transform_sheet_boolean_data(value, sheet_title, col_name, col_letter, col_type, row)
+        return transform_sheet_boolean_data(unformatted_value, sheet_title, col_name, col_letter, col_type, row)
 
     # OTHER: Convert everything else to a string
     else:
@@ -203,7 +208,6 @@ def transform_sheet_data(spreadsheet_id, sheet_id, sheet_title, from_row, column
     # Create sorted list of columns based on columnIndex
     cols = sorted(columns, key=lambda i: i['columnIndex'])
 
-    # LOGGER.info('sheet_data_rows: {}'.format(sheet_data_rows))
     for (row, unformatted_row) in zip(sheet_data_rows, unformatted_rows):
         # If empty row, SKIP
         if row == []:

@@ -457,7 +457,6 @@ class SheetsLoadData(GoogleSheets):
         """
         Load sheet's records if that sheet is selected for sync
         """
-        # LOGGER.info(f'>>>>>>>>>>>>>>> {catalog} {state} {selected_streams} {json.dumps(sheets)} {spreadsheet_time_extracted}')
         self.state = state
         sheet_metadata = []
         sheets_loaded = []
@@ -469,7 +468,6 @@ class SheetsLoadData(GoogleSheets):
 
                 # GET sheet_metadata and columns
                 sheet_schema, columns = schema.get_sheet_metadata(sheet, self.spreadsheet_id, self.client)
-                # LOGGER.info(f'sheet_schema: {sheet_schema} {columns}')
 
                 # SKIP empty sheets (where sheet_schema and columns are None)
                 if not sheet_schema or not columns:
@@ -477,7 +475,6 @@ class SheetsLoadData(GoogleSheets):
                 else:
                     # Transform sheet_metadata
                     sheet_metadata_transformed = internal_transform.transform_sheet_metadata(self.spreadsheet_id, sheet, columns)
-                    # LOGGER.info('sheet_metadata_transformed = {}'.format(sheet_metadata_transformed))
                     sheet_metadata.append(sheet_metadata_transformed)
 
                     # SHEET_DATA
