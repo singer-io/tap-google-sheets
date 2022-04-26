@@ -11,7 +11,8 @@ setup(name='tap-google-sheets',
       install_requires=[
           'backoff==1.8.0',
           'requests==2.22.0',
-          'singer-python==5.12.2'
+          'singer-python==5.12.2',
+          'cftime==1.6.0'
       ],
       extras_require={
           'test': [
