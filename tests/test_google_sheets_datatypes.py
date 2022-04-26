@@ -232,7 +232,8 @@ class DatatypesTest(GoogleSheetsBaseTest):
                             # verify the expected rows are actually Null
                             self.assertIsNone(value)
 
-                        elif value:
+                        # As "'0" returns false which does not satisfy th below test case for boolean column
+                        elif value is not None or value != "":
 
                             # BUG_TDL-14448 | https://jira.talendforge.org/browse/TDL-14448
                             #                 Skipping Number and Currency columns with boolean values because they do not fallback to string

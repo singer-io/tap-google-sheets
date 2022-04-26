@@ -37,7 +37,6 @@ def get_sheet_schema_columns(sheet):
     # spreadsheet is an OrderedDict, with orderd sheets and rows in the repsonse
     headers = row_data[0].get('values', [])
     first_values = row_data[1].get('values', [])
-    # LOGGER.info(f'>>>>>>> {json.dumps(first_values)}')
     # Pad first row values with default if null
     if len(first_values) < len(headers):
         pad_default_effective_values(headers, first_values)
