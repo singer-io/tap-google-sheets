@@ -447,11 +447,7 @@ class SheetsLoadData(GoogleSheets):
     data_key = "values"
     key_properties = ["spreadsheetId", "sheetId", "loadDate"]
     replication_method = "FULL_TABLE"
-    params = {
-        "dateTimeRenderOption": "SERIAL_NUMBER",
-        "valueRenderOption": "FORMATTED_VALUE",
-        "majorDimension": "ROWS"
-    }
+    params = {}
 
     def load_data(self, catalog, state, selected_streams, sheets, spreadsheet_time_extracted):
         """

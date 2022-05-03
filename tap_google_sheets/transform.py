@@ -105,6 +105,8 @@ def transform_sheet_boolean_data(value, sheet_title, col_name, col_letter, col_t
             col_val = True
         elif value.lower() in ('false', 'f', 'no', 'n'):
             col_val = False
+        # As the float and the int values would be now returned as string itself, we need to check for the special
+        # values as a string match rather than the integer/float match
         elif value in ('1', '-1', '1.00', '-1.00'):
             col_val = True
         elif value in ('0', '0.00'):
