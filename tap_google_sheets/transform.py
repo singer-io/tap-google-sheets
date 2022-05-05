@@ -1,7 +1,7 @@
 import math
 import json
 from datetime import datetime, timedelta
-import cftime
+import pytz
 import singer
 from singer.utils import strftime
 
@@ -48,44 +48,54 @@ def transform_file_metadata(file_metadata):
     return file_metadata_arr
 
 # Convert Excel Date Serial Number (excel_date_sn) to datetime string
-def excel_to_dttm_str(excel_date_sn, timezone_str=None):
-    '''
-    `cftime` provides a wide range of calenders due to its use in climate and forecasting applications.
-    Hence the larger date ranges can obe converted to string which is not available in the python's datetime
-    library. For more information on cftime, refer: https://unidata.github.io/cftime/api.html
-    '''
-    reference_unit ="seconds since 1970-01-01T00:00:00Z"
+# timezone_str: defaults to UTC (which we assume is the timezone for ALL datetimes)
+def excel_to_dttm_str(string_value, excel_date_sn, timezone_str=None):
+    if not timezone_str:
+        timezone_str = 'UTC'
+    is_error = False
+    tzn = pytz.timezone(timezone_str)
     sec_per_day = 86400
     excel_epoch = 25569 # 1970-01-01T00:00:00Z, Lotus Notes Serial Number for Epoch Start Date
     epoch_sec = math.floor((excel_date_sn - excel_epoch) * sec_per_day)
-    excel_dttm =cftime.num2date(epoch_sec, reference_unit, calendar='proleptic_gregorian', only_use_cftime_datetimes=True, only_use_python_datetimes=False, has_year_zero=True)
-    excel_to_dttm_str = excel_dttm.strftime()
-    return excel_to_dttm_str
+    epoch_dttm = datetime(1970, 1, 1)
+    # For out of range values, it will throw OverflowError and it would return the string value
+    # as passed in the sheets without any conversion
+    try:
+        excel_dttm = epoch_dttm + timedelta(seconds=epoch_sec)
+    except OverflowError:
+        is_error = True
+        return str(string_value), is_error
+    utc_dttm = tzn.localize(excel_dttm).astimezone(pytz.utc)
+    utc_dttm_str = strftime(utc_dttm)
+    return utc_dttm_str, is_error
 
 
 # transform datetime values in the sheet
-def transform_sheet_datetime_data(value, sheet_title, col_name, col_letter, row_num, col_type):
-    if isinstance(value, (int, float)):
-        return excel_to_dttm_str(value)
+def transform_sheet_datetime_data(value, unformatted_value, sheet_title, col_name, col_letter, row_num, col_type):
+    if isinstance(unformatted_value, (int, float)):
+        datetime_str, _ = excel_to_dttm_str(value, unformatted_value)
+        return datetime_str
     else:
         LOGGER.info('WARNING: POSSIBLE DATA TYPE ERROR; SHEET: {}, COL: {}, CELL: {}{}, TYPE: {}'.format(
             sheet_title, col_name, col_letter, row_num, col_type))
         return str(value)
 
 # transform date values in the sheet
-def transform_sheet_date_data(value, sheet_title, col_name, col_letter, row_num, col_type):
-    if isinstance(value, (int, float)):
-        return excel_to_dttm_str(value)[:10]
+def transform_sheet_date_data(value, unformatted_value, sheet_title, col_name, col_letter, row_num, col_type):
+    if isinstance(unformatted_value, (int, float)):
+        date_str, is_error =  excel_to_dttm_str(value, unformatted_value)
+        return_str = date_str if is_error else date_str[:10]
+        return return_str
     else:
         LOGGER.info('WARNING: POSSIBLE DATA TYPE ERROR; SHEET: {}, COL: {}, CELL: {}{}, TYPE: {}'.format(
             sheet_title, col_name, col_letter, row_num, col_type))
         return str(value)
 
 # transform time values in the sheet
-def transform_sheet_time_data(value, sheet_title, col_name, col_letter, row_num, col_type):
-    if isinstance(value, (int, float)):
+def transform_sheet_time_data(value, unformatted_value, sheet_title, col_name, col_letter, row_num, col_type):
+    if isinstance(unformatted_value, (int, float)):
         try:
-            total_secs = value * 86400 # seconds in day
+            total_secs = unformatted_value * 86400 # seconds in day
             # Create string formatted like HH:MM:SS
             col_val = str(timedelta(seconds=total_secs))
         except ValueError:
@@ -97,9 +107,9 @@ def transform_sheet_time_data(value, sheet_title, col_name, col_letter, row_num,
         return str(value)
 
 # transform boolean values in the sheet
-def transform_sheet_boolean_data(value, sheet_title, col_name, col_letter, col_type, row):
+def transform_sheet_boolean_data(value, unformatted_value, sheet_title, col_name, col_letter, col_type, row):
     if isinstance(value, bool):
-        return value
+        return unformatted_value
     elif isinstance(value, str):
         if value.lower() in ('true', 't', 'yes', 'y'):
             col_val = True
@@ -174,15 +184,15 @@ def get_column_value(value, unformatted_value, sheet_title, col_name, col_letter
     # Convert dates/times from Lotus Notes Serial Numbers
     # DATE-TIME
     elif col_type == 'numberType.DATE_TIME':
-        return transform_sheet_datetime_data(unformatted_value, sheet_title, col_name, col_letter, row_num, col_type)
+        return transform_sheet_datetime_data(value, unformatted_value, sheet_title, col_name, col_letter, row_num, col_type)
 
     # DATE
     elif col_type == 'numberType.DATE':
-        return transform_sheet_date_data(unformatted_value, sheet_title, col_name, col_letter, row_num, col_type)
+        return transform_sheet_date_data(value, unformatted_value, sheet_title, col_name, col_letter, row_num, col_type)
 
     # TIME ONLY (NO DATE)
     elif col_type == 'numberType.TIME':
-        return transform_sheet_time_data(unformatted_value, sheet_title, col_name, col_letter, row_num, col_type)
+        return transform_sheet_time_data(value, unformatted_value, sheet_title, col_name, col_letter, row_num, col_type)
 
     # NUMBER (INTEGER AND FLOAT)
     elif col_type == 'numberType':
@@ -194,7 +204,7 @@ def get_column_value(value, unformatted_value, sheet_title, col_name, col_letter
 
     # BOOLEAN
     elif col_type == 'boolValue':
-        return transform_sheet_boolean_data(unformatted_value, sheet_title, col_name, col_letter, col_type, row)
+        return transform_sheet_boolean_data(value, unformatted_value, sheet_title, col_name, col_letter, col_type, row)
 
     # OTHER: Convert everything else to a string
     else:
