@@ -53,7 +53,6 @@ class TestBooleanDataType(unittest.TestCase):
         data = "string"
         transformer = MockTransformer()
         transformed_data = new_transform(transformer, data, "boolean", schema, '')
-        print(transformed_data)
         self.assertEqual(transformed_data[1], "string")
 
     def test_boolean_returned_for_boolean_columns(self):
@@ -62,7 +61,6 @@ class TestBooleanDataType(unittest.TestCase):
         data = True
         transformer = MockTransformer()
         transformed_data = new_transform(transformer, data, "boolean", schema, '')
-        print(transformed_data)
         self.assertEqual(transformed_data[1], True)
 
     def test_date_time_with_serial_number_1_in_boolean_col(self):

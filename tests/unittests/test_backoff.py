@@ -11,7 +11,7 @@ class TestBackoffError(unittest.TestCase):
     @mock.patch('tap_google_sheets.client.GoogleClient.get_access_token')
     def test_request_timeout_and_backoff(self, mock_get_token, mock_request):
         """
-        Check whether the request backoffs properly for request() for morthan a minute for Server429Error.
+        Check whether the request backoffs properly for request() for more than a minute for Server429Error.
         """
         mock_request.side_effect = Server429Error
         client = GoogleClient("dummy_client_id", "dummy_client_secret", "dummy_refresh_token")

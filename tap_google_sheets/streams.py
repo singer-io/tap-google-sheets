@@ -112,8 +112,8 @@ def new_format_message(message):
     """To override the ensure_ascii param, overwitten this function"""
     return json.dumps(message.asdict(), ensure_ascii=False, use_decimal=True)
 
-# To override the ensure_ascii param, overwitten this function of messages file of 
-# the singer module
+# To override the ensure_ascii param as while writing record the currency symbols were written as ascii values,
+# overwitten this function of messages file of the singer module
 messages.format_message = new_format_message
 
 class GoogleSheets:
