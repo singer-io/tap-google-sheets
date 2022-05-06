@@ -52,7 +52,6 @@ def transform_file_metadata(file_metadata):
 def excel_to_dttm_str(string_value, excel_date_sn, timezone_str=None):
     if not timezone_str:
         timezone_str = 'UTC'
-    is_error = False
     tzn = pytz.timezone(timezone_str)
     sec_per_day = 86400
     excel_epoch = 25569 # 1970-01-01T00:00:00Z, Lotus Notes Serial Number for Epoch Start Date
@@ -63,16 +62,17 @@ def excel_to_dttm_str(string_value, excel_date_sn, timezone_str=None):
     try:
         excel_dttm = epoch_dttm + timedelta(seconds=epoch_sec)
     except OverflowError:
-        is_error = True
-        return str(string_value), is_error
+        return str(string_value), True
     utc_dttm = tzn.localize(excel_dttm).astimezone(pytz.utc)
     utc_dttm_str = strftime(utc_dttm)
-    return utc_dttm_str, is_error
+    return utc_dttm_str, False
 
 
 # transform datetime values in the sheet
 def transform_sheet_datetime_data(value, unformatted_value, sheet_title, col_name, col_letter, row_num, col_type):
     if isinstance(unformatted_value, (int, float)):
+        # passing both the formatted as well as the unformatted value, so we can use the string value in
+        # case of any errors while datetime transform
         datetime_str, _ = excel_to_dttm_str(value, unformatted_value)
         return datetime_str
     else:
@@ -83,6 +83,8 @@ def transform_sheet_datetime_data(value, unformatted_value, sheet_title, col_nam
 # transform date values in the sheet
 def transform_sheet_date_data(value, unformatted_value, sheet_title, col_name, col_letter, row_num, col_type):
     if isinstance(unformatted_value, (int, float)):
+        # passing both the formatted as well as the unformatted value, so we can use the string value in
+        # case of any errors while date transform
         date_str, is_error =  excel_to_dttm_str(value, unformatted_value)
         return_str = date_str if is_error else date_str[:10]
         return return_str
