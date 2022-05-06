@@ -1,6 +1,7 @@
 import unittest
 from singer.transform import NO_INTEGER_DATETIME_PARSING
 from tap_google_sheets.streams import new_transform
+from tap_google_sheets.transform import transform_sheet_boolean_data
 
 schema = {
     "properties": {
@@ -63,3 +64,23 @@ class TestBooleanDataType(unittest.TestCase):
         transformed_data = new_transform(transformer, data, "boolean", schema, '')
         print(transformed_data)
         self.assertEqual(transformed_data[1], True)
+
+    def test_date_time_with_serial_number_1_in_boolean_col(self):
+        """
+        Verify that dattime with serial number 1 returns string date instead of true.
+        """
+        excel_relative_ts = 1
+        datetime_str = '31-12-1899'
+        return_dttm_str = transform_sheet_boolean_data(datetime_str, excel_relative_ts, "test", "boolean", "A", "boolValue", [1, "abc"])
+        expected_dttm_str = "31-12-1899"
+        self.assertEqual(return_dttm_str, expected_dttm_str) # Verify that string is returned
+
+    def test_date_time_with_serial_number_0_in_boolean_col(self):
+        """
+        Verify that dattime with serial number 0 returns string date instead of false.
+        """
+        excel_relative_ts = 1
+        datetime_str = '30-12-1899'
+        return_dttm_str = transform_sheet_boolean_data(datetime_str, excel_relative_ts, "test", "boolean", "A", "boolValue", [1, "abc"])
+        expected_dttm_str = "30-12-1899"
+        self.assertEqual(return_dttm_str, expected_dttm_str) # Verify that string is returned
