@@ -82,7 +82,7 @@ class DatatypesTest(GoogleSheetsBaseTest):
         Verify tap can support data for all supported datatypes
         """
         sadsheets = {stream for stream in self.expected_sync_streams() if stream.startswith('sadsheet-')}
-        tested_streams = sadsheets.union({'happysheet', 'happysheet-string-fallback', 'sheet_metadata'})
+        tested_streams = sadsheets.union({'happysheet', 'happysheet-string-fallback', 'sheet_metadata', 'sadsheet-date'})
 
         # instantiate connection
         conn_id = connections.ensure_connection(self)
@@ -295,10 +295,6 @@ class DatatypesTest(GoogleSheetsBaseTest):
         #                 Integer is coming across as a decimal, (just the same thing as decimal)
 
 
-        # BUG TDL-14386 | https://jira.talendforge.org/browse/TDL-14386 | sadshseet-date
-        #                 Date value out of range error is not handled, tap throws critical error
-        #                    minimum date	11/21/00-1
-        #                    big date (not max)	7/13/15589
 
         # Other Bugs that do not correspond to specific sadsheet
 
