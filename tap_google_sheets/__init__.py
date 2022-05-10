@@ -20,7 +20,7 @@ REQUIRED_CONFIG_KEYS = [
     'user_agent'
 ]
 
-def do_discover(client, spreadsheet_id, config):
+def do_discover(client, spreadsheet_id, config = None):
 
     LOGGER.info('Starting discover')
     catalog = discover(client, spreadsheet_id, config)

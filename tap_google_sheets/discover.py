@@ -3,7 +3,7 @@ from singer.metadata import to_map, write, to_list
 from tap_google_sheets.schema import STREAMS
 
 
-def discover(client, spreadsheet_id, config):
+def discover(client, spreadsheet_id, config = None):
     catalog = Catalog([])
 
     for stream, stream_obj in STREAMS.items():
@@ -36,7 +36,7 @@ def discover(client, spreadsheet_id, config):
                 key_properties=key_props,
                 schema=schema,
                 metadata=to_list(write(to_map(mdata), (), 'selected', True)) \
-                    if stream_name in config.get('selected', []) else mdata
+                    if stream_name in (config or {}).get('selected', []) else mdata
             ))
 
     return catalog
