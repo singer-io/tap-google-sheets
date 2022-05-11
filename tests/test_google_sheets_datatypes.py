@@ -106,7 +106,7 @@ class DatatypesTest(GoogleSheetsBaseTest):
         # grab all expected sheets
         expected_sheets = {stream
                            for stream in self.expected_streams()
-                           if self.is_sheet(stream)} - {'sad-sheet-effective-format'} # WIP
+                           if self.is_sheet(stream)}
 
         # grab sheet metadata from the replicated records for the sheet_metadata stream
         sheet_metadata_records = [message['data']
