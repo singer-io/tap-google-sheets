@@ -77,7 +77,7 @@ class DatatypesTest(GoogleSheetsBaseTest):
         Assertions:
         Verify that the google defined datatypes in the sheet metadata stream map to the JSON schema as expected
         Verify usage of JSON schema
-        -for a given datatype, we are able to use the string and nullible types 
+        -for a given datatype, we are able to use the string and nullible types
         Verify date, datetime, time formatting meets expectations
         Verify tap can support data for all supported datatypes
         """
@@ -196,7 +196,7 @@ class DatatypesTest(GoogleSheetsBaseTest):
 
                                 if column == 'Time' and 'epoch' in test_case:  # BUG_TDL-14482
                                     continue  # skip assertion
-                                
+
                                 self.assertStringFormat(record[column], string_column_formats[column])
 
         ##########################################################################
@@ -213,7 +213,7 @@ class DatatypesTest(GoogleSheetsBaseTest):
 
         for record in record_data[1:]:  # skip the __sdc_row 2 since it is a valid type
             sdc_row = record['__sdc_row']
-            
+
             with self.subTest(__sdc_row=sdc_row):
                 for column in columns:
 
