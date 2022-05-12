@@ -82,7 +82,7 @@ class DatatypesTest(GoogleSheetsBaseTest):
         Verify tap can support data for all supported datatypes
         """
         sadsheets = {stream for stream in self.expected_sync_streams() if stream.startswith('sadsheet-')}
-        tested_streams = sadsheets.union({'happysheet', 'happysheet-string-fallback', 'sheet_metadata', 'sadsheet-date'})
+        tested_streams = sadsheets.union({'happysheet', 'happysheet-string-fallback', 'sheet_metadata', 'test-sheet-date'})
 
         # instantiate connection
         conn_id = connections.ensure_connection(self)
