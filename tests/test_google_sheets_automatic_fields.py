@@ -27,6 +27,7 @@ class AutomaticFields(GoogleSheetsBaseTest):
         expected_streams = self.expected_sync_streams() - {
             'sad-sheet-effective-format', # WIP
             'test-sheet-date', # WIP
+            'test-sheet-number', # WIP
         }
 
         # instantiate connection

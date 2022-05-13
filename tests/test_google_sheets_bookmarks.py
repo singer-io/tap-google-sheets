@@ -33,6 +33,7 @@ class BookmarksTest(GoogleSheetsBaseTest):
                            for stream in self.expected_streams()
                            if stream.startswith('sadsheet')}.union({
                                    'test-sheet-date', # WIP
+                                   'test-sheet-number', # WIP
                                    'file_metadata' # testing case without file_metadata selected, but still providing bookmark
                            })
         self.expected_test_streams = self.expected_streams() - skipped_streams

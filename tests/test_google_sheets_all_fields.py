@@ -25,6 +25,7 @@ class AllFields(GoogleSheetsBaseTest):
             'sadsheet-column-skip-bug',   # missing data for one column
             'sad-sheet-effective-format', # WIP
             'test-sheet-date', # WIP
+            'test-sheet-number', # WIP
         })
         
         # instantiate connection
