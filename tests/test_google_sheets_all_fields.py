@@ -23,6 +23,7 @@ class AllFields(GoogleSheetsBaseTest):
         expected_streams = self.expected_sync_streams().difference({
             'Item Master',   # missing data for several columns
             'sadsheet-column-skip-bug',   # missing data for one column
+            'test-sheet-number', # WIP
         })
         
         # instantiate connection
