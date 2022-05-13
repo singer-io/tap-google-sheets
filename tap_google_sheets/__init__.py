@@ -49,11 +49,16 @@ def main():
         spreadsheet_id = config.get('spreadsheet_id')
 
         if parsed_args.discover:
-            do_discover(client, spreadsheet_id)
+            do_discover(client, spreadsheet_id, config)
         elif parsed_args.catalog:
             sync(client=client,
                  config=config,
                  catalog=parsed_args.catalog or do_discover(client, spreadsheet_id, config),
+                 state=state)
+        else:
+            sync(client=client,
+                 config=config,
+                 catalog=do_discover(client, spreadsheet_id, config),
                  state=state)
 
 if __name__ == '__main__':
