@@ -116,6 +116,7 @@ class GoogleSheetsBaseTest(unittest.TestCase):
             "sadsheet-duplicate-headers-case": default_sheet,
             "sad-sheet-effective-format": default_sheet,
             "test-sheet-date": default_sheet,
+            "test-sheet-number": default_sheet,
             "sadsheet-column-skip-bug": {
                 self.PRIMARY_KEYS:{"__sdc_row"},
                 self.REPLICATION_METHOD: self.FULL_TABLE,  # DOCS_BUG TDL-14240 | DOCS say INC but it is FULL
