@@ -26,7 +26,6 @@ def do_discover(client, spreadsheet_id, config = None):
     catalog = discover(client, spreadsheet_id, config)
     json.dump(catalog.to_dict(), sys.stdout, indent=2)
     LOGGER.info('Finished discover')
-    return catalog
 
 
 @singer.utils.handle_top_exception(LOGGER)
