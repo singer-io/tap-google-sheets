@@ -148,9 +148,7 @@ class GoogleClient: # pylint: disable=too-many-instance-attributes
         self.base_url = None
 
         # if supportsAllDrives is boolean then use supportsAllDrives
-        if supportsAllDrives is not None:
-            if type(supportsAllDrives) is not bool:
-                raise Exception("You provided a {} type value for the configurable parameter supportsAllDrives, which requires a bool type value.".format(type(supportsAllDrives).__name__))
+        if supportsAllDrives is not None and type(supportsAllDrives) is bool:
             self.supportsAllDrives = supportsAllDrives
         else: #if supportsAllDrives is other than boolean then set default True
             self.supportsAllDrives = True
