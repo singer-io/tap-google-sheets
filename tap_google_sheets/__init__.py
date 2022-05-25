@@ -38,7 +38,7 @@ def main():
                       parsed_args.config['refresh_token'],
                       parsed_args.config.get('request_timeout'),
                       parsed_args.config['user_agent'],
-                      parsed_args.config.get('supportsAllDrives')
+                      parsed_args.config.get('supports_all_drives')
                       ) as client:
 
         state = {}
