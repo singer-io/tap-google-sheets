@@ -103,7 +103,7 @@ The [**Google Sheets Setup & Authentication**](https://drive.google.com/open?id=
     - [singer-tools](https://github.com/singer-io/singer-tools)
     - [target-stitch](https://github.com/singer-io/target-stitch)
 
-3. Create your tap's `config.json` file. Include the client_id, client_secret, refresh_token, site_urls (website URL properties in a comma delimited list; do not include the domain-level property in the list), start_date (UTC format), user_agent (tap name with the api user email address) and supportsAllDrives (To fetch data from shared drive, it is an optional parameter, default value is true).
+3. Create your tap's `config.json` file. Include the client_id, client_secret, refresh_token, site_urls (website URL properties in a comma delimited list; do not include the domain-level property in the list), start_date (UTC format), user_agent (tap name with the api user email address) and supportsAllDrives (To fetch data from shared drive, it is an optional parameter, default value is false).
 
     ```json
     {
@@ -114,7 +114,7 @@ The [**Google Sheets Setup & Authentication**](https://drive.google.com/open?id=
         "start_date": "2019-01-01T00:00:00Z",
         "user_agent": "tap-google-sheets <api_user_email@example.com>",
         "request_timeout": 300,
-        "supportsAllDrives": true
+        "supportsAllDrives": false
     }
     ```
     

@@ -137,7 +137,7 @@ class GoogleClient: # pylint: disable=too-many-instance-attributes
                  refresh_token,
                  request_timeout=REQUEST_TIMEOUT,
                  user_agent=None,
-                 supportsAllDrives=True):
+                 supportsAllDrives=False):
         self.__client_id = client_id
         self.__client_secret = client_secret
         self.__refresh_token = refresh_token
@@ -146,11 +146,11 @@ class GoogleClient: # pylint: disable=too-many-instance-attributes
         self.__expires = None
         self.__session = requests.Session()
         self.base_url = None
-        self.supportsAllDrives = True
+        self.supportsAllDrives = False
 
         # if supportsAllDrives is boolean then use supportsAllDrives
-        if supportsAllDrives in ('false', 'False', False):
-            self.supportsAllDrives = supportsAllDrives
+        if supportsAllDrives in ('true', 'True', True):
+            self.supportsAllDrives = True
 
         # if request_timeout is other than 0,"0" or "" then use request_timeout
         if request_timeout and float(request_timeout):
