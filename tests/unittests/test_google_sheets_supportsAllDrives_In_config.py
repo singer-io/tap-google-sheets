@@ -8,7 +8,7 @@ class TestSupportsAllDrives(unittest.TestCase):
         # supportsAllDrives not in config.json so 
         supportsAllDrives = None
         client = GoogleClient('test', 'test', 'test', None, 'test', supportsAllDrives)
-        self.assertEqual(client.supportsAllDrives, True, "supportsAllDrives get unexpected value")
+        self.assertEqual(client.supportsAllDrives, True, "supportsAllDrives got unexpected value")
         
     def test_supportsAllDrives_other_than_false_in_config(self):
         """To verify that when supportsAllDrives are given other than false value in config.json then set default value True"""
@@ -16,15 +16,15 @@ class TestSupportsAllDrives(unittest.TestCase):
         # provide supportsAllDrives other then boolean value
         supportsAllDrives = 123
         client =  GoogleClient('test', 'test', 'test', None, 'test', supportsAllDrives)
-        self.assertEqual(client.supportsAllDrives, True, "supportsAllDrives get unexpected value")
+        self.assertEqual(client.supportsAllDrives, True, "supportsAllDrives got unexpected value")
         
     def test_supportsAllDrives_str_false_in_config(self):
         """To verify that when supportsAllDrives are given false value string in config.json then use supportsAllDrives"""
         
-        # provide supportsAllDrives boolean value
+        # provide supportsAllDrives false as string value
         supportsAllDrives = 'false'
         client =  GoogleClient('test', 'test', 'test', None, 'test', supportsAllDrives)
-        self.assertEqual(client.supportsAllDrives, supportsAllDrives, "supportsAllDrives get unexpected value")
+        self.assertEqual(client.supportsAllDrives, supportsAllDrives, "supportsAllDrives got unexpected value")
         
     def test_supportsAllDrives_boolean_false_in_config(self):
         """To verify that when supportsAllDrives are given false value boolean in config.json then use supportsAllDrives"""
@@ -32,4 +32,4 @@ class TestSupportsAllDrives(unittest.TestCase):
         # provide supportsAllDrives boolean value
         supportsAllDrives = False
         client =  GoogleClient('test', 'test', 'test', None, 'test', supportsAllDrives)
-        self.assertEqual(client.supportsAllDrives, supportsAllDrives, "supportsAllDrives get unexpected value")
+        self.assertEqual(client.supportsAllDrives, supportsAllDrives, "supportsAllDrives got unexpected value")
