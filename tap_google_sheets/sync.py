@@ -62,6 +62,7 @@ def sync(client, config, catalog, state):
 
         # sync file metadata
         elif stream_name == "file_metadata":
+            stream_obj.params['supportsAllDrives'] = client.supportsAllDrives
             file_changed, file_modified_time = stream_obj.sync(catalog, state, selected_streams)
             if not file_changed:
                 break

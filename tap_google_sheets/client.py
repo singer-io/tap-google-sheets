@@ -136,7 +136,8 @@ class GoogleClient: # pylint: disable=too-many-instance-attributes
                  client_secret,
                  refresh_token,
                  request_timeout=REQUEST_TIMEOUT,
-                 user_agent=None):
+                 user_agent=None,
+                 supportsAllDrives=True):
         self.__client_id = client_id
         self.__client_secret = client_secret
         self.__refresh_token = refresh_token
@@ -145,6 +146,15 @@ class GoogleClient: # pylint: disable=too-many-instance-attributes
         self.__expires = None
         self.__session = requests.Session()
         self.base_url = None
+
+        # if supportsAllDrives is boolean then use supportsAllDrives
+        if supportsAllDrives is not None:
+            if type(supportsAllDrives) is not bool:
+                raise Exception("You provided a {} type value for the configurable parameter supportsAllDrives, which requires a bool type value.".format(type(supportsAllDrives).__name__))
+            self.supportsAllDrives = supportsAllDrives
+        else: #if supportsAllDrives is other than boolean then set default True
+            self.supportsAllDrives = True
+
         # if request_timeout is other than 0,"0" or "" then use request_timeout
         if request_timeout and float(request_timeout):
             request_timeout = float(request_timeout)
