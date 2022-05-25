@@ -148,7 +148,7 @@ class GoogleClient: # pylint: disable=too-many-instance-attributes
         self.base_url = None
         self.supportsAllDrives = False
 
-        # if supportsAllDrives is boolean then use supportsAllDrives
+        # if supportsAllDrives is given as true then use supportsAllDrives
         if supportsAllDrives in ('true', 'True', True):
             self.supportsAllDrives = True
 
