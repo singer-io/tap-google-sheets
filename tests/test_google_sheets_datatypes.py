@@ -82,7 +82,7 @@ class DatatypesTest(GoogleSheetsBaseTest):
         Verify tap can support data for all supported datatypes
         """
         sadsheets = {stream for stream in self.expected_sync_streams() if stream.startswith('sadsheet-')}
-        tested_streams = sadsheets.union({'happysheet', 'happysheet-string-fallback', 'sheet_metadata', 'sad-sheet-effective-format'})
+        tested_streams = sadsheets.union({'happysheet', 'happysheet-string-fallback', 'sheet_metadata', 'sad-sheet-effective-format', 'test-sheet-date'})
 
         # instantiate connection
         conn_id = connections.ensure_connection(self)
@@ -155,7 +155,7 @@ class DatatypesTest(GoogleSheetsBaseTest):
         # Verify that all data has been coerced to the expected column datatype
         record_data = [message['data'] for message in synced_records[test_sheet]['messages'] if message.get('data')]
         data_map = {
-	    "Currency": Decimal, # BUG Currency is being identified as a decimal type rather than string https://jira.talendforge.org/browse/TDL-14360
+	    "Currency": str,
 	    "Datetime": str,
             "Time": str,
             "Date": str,
@@ -273,23 +273,21 @@ class DatatypesTest(GoogleSheetsBaseTest):
                             # verify the expected rows are actually Null
                             self.assertIsNone(value)
 
-                        elif value:
-
-                            # BUG_TDL-14369 | https://jira.talendforge.org/browse/TDL-14369
-                            #                 Skipping boolean column values because they do not correctly fall back to string
-                            if column == 'Boolean': # BUG_TDL-14369
-                                continue  # skip
+                        # As "'0" returns false which does not satisfy th below test case for boolean column
+                        elif value is not None or value != "":
 
                             # BUG_TDL-14448 | https://jira.talendforge.org/browse/TDL-14448
                             #                 Skipping Number and Currency columns with boolean values because they do not fallback to string
-                            elif test_case == 'boolean' and column in {'Currency', 'Number'}: # BUG_TDL-14448
+                            if test_case == 'boolean' and column in {'Currency', 'Number'}: # BUG_TDL-14448
                                 continue  # skip
 
                             # BUG_TDL-14449 |  https://jira.talendforge.org/browse/TDL-14449
                             elif test_case in {'date', 'time', 'datetime'} and column in {'Currency', 'Number'}: # BUG_TDL-14449
                                 continue  # skip
-
-
+                            
+                            if column == 'Boolean' and value  in (-1, 1, 0): # special integer values falls back to boolean
+                                self.assertTrue(isinstance(value, bool), msg=f'test case: {test_case}  value: {value}')
+                                continue
                             # verify the non-standard value has fallen back to a string type
                             self.assertTrue(isinstance(value, str), msg=f'test case: {test_case}  value: {value}')
 
@@ -338,10 +336,6 @@ class DatatypesTest(GoogleSheetsBaseTest):
         #                 Integer is coming across as a decimal, (just the same thing as decimal)
 
 
-        # BUG TDL-14386 | https://jira.talendforge.org/browse/TDL-14386 | sadshseet-date
-        #                 Date value out of range error is not handled, tap throws critical error
-        #                    minimum date	11/21/00-1
-        #                    big date (not max)	7/13/15589
 
         # Other Bugs that do not correspond to specific sadsheet
 
