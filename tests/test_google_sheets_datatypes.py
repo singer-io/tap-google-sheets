@@ -82,7 +82,7 @@ class DatatypesTest(GoogleSheetsBaseTest):
         Verify tap can support data for all supported datatypes
         """
         sadsheets = {stream for stream in self.expected_sync_streams() if stream.startswith('sadsheet-')}
-        tested_streams = sadsheets.union({'happysheet', 'happysheet-string-fallback', 'sheet_metadata'})
+        tested_streams = sadsheets.union({'happysheet', 'happysheet-string-fallback', 'sheet_metadata', 'sad-sheet-effective-format'})
 
         # instantiate connection
         conn_id = connections.ensure_connection(self)
@@ -129,7 +129,7 @@ class DatatypesTest(GoogleSheetsBaseTest):
                                for entry in sheet_metadata_entry}
         md_column_names = set(column_name_to_type.keys())
 
-        # get field names for the tested sheet frome the replicated schema
+        # get field names for the tested sheet from the replicated schema
         test_sheet_schema = synced_records[test_sheet]['schema']
         schema_column_names = {schema_property
                                for schema_property in test_sheet_schema['properties'].keys()
@@ -200,12 +200,53 @@ class DatatypesTest(GoogleSheetsBaseTest):
                                 self.assertStringFormat(record[column], string_column_formats[column])
 
         ##########################################################################
+        ### Test the happy path datatype values
+        ##########################################################################
+
+        test_sheet = 'sad-sheet-effective-format'
+        data_type_map = {
+            "Currency": "numberType",
+            "Datetime": "numberType.DATE_TIME",
+            "Time": "numberType.TIME",
+            "Date": "numberType.DATE",
+            "String": "stringValue",
+            "Number": "numberType",
+            "Boolean": "boolValue",
+        }
+
+        # get column names and google-sheets datatypes from the tested sheet's sheet_metadata record
+        sheet_metadata_entry = [record['columns']
+                                for record in sheet_metadata_records
+                                if record['title'] == test_sheet][0]
+        column_type = {entry['columnName']: entry['columnType']
+                               for entry in sheet_metadata_entry}
+        md_column_names = set(column_type.keys())
+
+        # get field names for the tested sheet from the replicated schema
+        test_sheet_schema = synced_records[test_sheet]['schema']
+        schema_column_names = {schema_property
+                               for schema_property in test_sheet_schema['properties'].keys()
+                               if not schema_property.startswith('__sdc')}
+
+        # Verify the sheet metadata accounts for all columns in the schema
+        self.assertSetEqual(schema_column_names, md_column_names)
+
+        # Verify that the sheet's sheet_metadata column types are as expected
+        for column_name in data_type_map.keys():
+            with self.subTest(column=column_name):
+                column_type = column_name_to_type[column_name]
+
+                expected_type = data_type_map[column_name]
+
+                self.assertEqual(column_type, expected_type)
+
+        ##########################################################################
         ### Test the string fallbacks for each datatype
         ##########################################################################
 
         test_sheet = 'happysheet-string-fallback'
 
-        # get field names for the tested sheet frome the replicated schema
+        # get field names for the tested sheet from the replicated schema
         record_data = [message['data']
                        for message in synced_records[test_sheet]['messages']
                        if message.get('data')]
@@ -235,7 +276,7 @@ class DatatypesTest(GoogleSheetsBaseTest):
                         elif value:
 
                             # BUG_TDL-14369 | https://jira.talendforge.org/browse/TDL-14369
-                            #                 Skipping boolean column values becuase they do not correctly fall back to string
+                            #                 Skipping boolean column values because they do not correctly fall back to string
                             if column == 'Boolean': # BUG_TDL-14369
                                 continue  # skip
 
