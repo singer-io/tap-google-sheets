@@ -168,12 +168,12 @@ def transform_sheet_decimal_data(value, sheet_title, col_name, col_letter, row_n
 
 # transform number values in the sheet
 def transform_sheet_number_data(value, sheet_title, col_name, col_letter, row_num, col_type):
-    if isinstance(value, int):
+    if type(value) == int:
         return int(value)
-    elif isinstance(value, float):
+    elif type(value) == float:
         return transform_sheet_decimal_data(value, sheet_title, col_name, col_letter, row_num, col_type)
     else:
-        LOGGER.info('WARNING: POSSIBLE DATA TYPE ERROR: SHEET: {}, COL: {}, CELL: {}{}, TYPE: {}'.format(
+        LOGGER.info('WARNING: POSSIBLE DATA TYPE ERROR: SHEET: {}, COL: {}, CELL: {}{}, TYPE: {} '.format(
                 sheet_title, col_name, col_letter, row_num, col_type))
         return str(value)
 

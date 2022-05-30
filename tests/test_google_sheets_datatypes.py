@@ -204,7 +204,7 @@ class DatatypesTest(GoogleSheetsBaseTest):
 
         test_sheet = 'sad-sheet-effective-format'
         data_type_map = {
-            "Currency": "numberType",
+            "Currency": "stringValue",
             "Datetime": "numberType.DATE_TIME",
             "Time": "numberType.TIME",
             "Date": "numberType.DATE",
@@ -275,13 +275,8 @@ class DatatypesTest(GoogleSheetsBaseTest):
                         # As "'0" returns false which does not satisfy th below test case for boolean column
                         elif value is not None or value != "":
 
-                            # BUG_TDL-14448 | https://jira.talendforge.org/browse/TDL-14448
-                            #                 Skipping Number and Currency columns with boolean values because they do not fallback to string
-                            if test_case == 'boolean' and column in {'Currency', 'Number'}: # BUG_TDL-14448
-                                continue  # skip
-
                             # BUG_TDL-14449 |  https://jira.talendforge.org/browse/TDL-14449
-                            elif test_case in {'date', 'time', 'datetime'} and column in {'Currency', 'Number'}: # BUG_TDL-14449
+                            if test_case in {'date', 'time', 'datetime'} and column in {'Currency', 'Number'}: # BUG_TDL-14449
                                 continue  # skip
                             
                             if column == 'Boolean' and value  in (-1, 1, 0): # special integer values falls back to boolean
