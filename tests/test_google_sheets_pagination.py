@@ -62,6 +62,7 @@ class PaginationTest(GoogleSheetsBaseTest):
                     # our fake pk value ('id')
                     expected_pk_list = list(range(1, 238))
                     expected_pk_list = [x for x in expected_pk_list if x not in [198, 199]]
+                    expected_pk_list = list(map(str, expected_pk_list))
                     self.assertEqual(expected_pk_list, fake_pk_list)
                     
                     # verify the data for the "sadsheet-pagination" stream is free of any duplicates or breaks by checking
@@ -75,7 +76,7 @@ class PaginationTest(GoogleSheetsBaseTest):
                 # verify the data for the "Pagination" stream is free of any duplicates or breaks by checking
                 # our fake pk value ('id')
                 # THIS ASSERTION CAN BE MADE BECAUSE WE SETUP DATA IN A SPECIFIC WAY. DONT COPY THIS
-                self.assertEqual(list(range(1, 239)), fake_pk_list)
+                self.assertEqual(list(map(str, (range(1, 239)))), fake_pk_list)
 
                 # verify the data for the "Pagination" stream is free of any duplicates or breaks by checking
                 # the actual primary key values (__sdc_row)
