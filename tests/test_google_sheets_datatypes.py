@@ -204,7 +204,7 @@ class DatatypesTest(GoogleSheetsBaseTest):
 
         test_sheet = 'sad-sheet-effective-format'
         data_type_map = {
-            "Currency": "numberType",
+            "Currency": "stringValue",
             "Datetime": "numberType.DATE_TIME",
             "Time": "numberType.TIME",
             "Date": "numberType.DATE",
