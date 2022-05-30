@@ -24,7 +24,7 @@ class AutomaticFields(GoogleSheetsBaseTest):
          - Verify that only the automatic fields are sent to the target.
         """
 
-        expected_streams = self.expected_sync_streams() - {'test-sheet-number'}
+        expected_streams = self.expected_sync_streams()
 
         # instantiate connection
         conn_id = connections.ensure_connection(self)
