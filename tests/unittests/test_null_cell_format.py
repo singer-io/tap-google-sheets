@@ -39,7 +39,7 @@ SHEET = {
 }
 
 class TestNullCellFormat(unittest.TestCase):
-    
+
     def test_null_datetime_effectiveFormat(self):
         """
         Test when no value is given in second row of date-time, discovery is locking at 'effectiveFormat'.
@@ -54,14 +54,13 @@ class TestNullCellFormat(unittest.TestCase):
                             ],
                             "format": "date-time"
                         }
-        
+
         sheet_json_schema, columns = schema.get_sheet_schema_columns(sheet)
         returned_formats = sheet_json_schema["properties"]["Column1"]["anyOf"]
-        
+
         # verify the returned schema has expected field types and format
         self.assertIn(expected_format,returned_formats)
-        
-    
+
     def test_null_date_effectiveFormat(self):
         """
         Test when no value is given in second row of date, discovery is locking at 'effectiveFormat'.
@@ -69,7 +68,7 @@ class TestNullCellFormat(unittest.TestCase):
         """
         sheet = SHEET
         sheet["data"][0]["rowData"][1]["values"][0]["effectiveFormat"]["numberFormat"]["type"] = "DATE"
-        
+
         expected_format = {
                             "type": [
                                 "null",
@@ -77,13 +76,13 @@ class TestNullCellFormat(unittest.TestCase):
                             ],
                             "format": "date"
                         }
-        
+
         sheet_json_schema, columns = schema.get_sheet_schema_columns(sheet)
         returned_formats = sheet_json_schema["properties"]["Column1"]["anyOf"]
-        
+
         # verify the returned schema has expected field types and format
         self.assertIn(expected_format,returned_formats)
-    
+
     def test_null_time_effectiveFormat(self):
         """
         Test when no value is given in second row of time, discovery is locking at 'effectiveFormat'.
@@ -91,37 +90,33 @@ class TestNullCellFormat(unittest.TestCase):
         """
         sheet = SHEET
         sheet["data"][0]["rowData"][1]["values"][0]["effectiveFormat"]["numberFormat"]["type"] = "TIME"
-        
+
         expected_format = {
                             "type": [
                                 "null",
                                 "string"
                             ]
                         }
-        
+
         sheet_json_schema, columns = schema.get_sheet_schema_columns(sheet)
         returned_formats = sheet_json_schema["properties"]["Column1"]["anyOf"]
-        
+
         # verify the returned schema has expected field types and format
         self.assertIn(expected_format,returned_formats)
-    
+
     def test_null_currency_effectiveFormat(self):
         """
         Test when no value is given in second row of currency, discovery is locking at 'effectiveFormat'.
         And returns type and format in schema according to that.
         """
-        
+
         sheet = SHEET
         sheet["data"][0]["rowData"][1]["values"][0]["effectiveFormat"]["numberFormat"]["type"] = "CURRENCY"
         
-        expected_format = {
-                            "type": "number",
-                            "multipleOf": 1e-15
-                        }
-        
+        expected_format = {"type": ["null", "string"]}
+
         sheet_json_schema, columns = schema.get_sheet_schema_columns(sheet)
-        returned_formats = sheet_json_schema["properties"]["Column1"]["anyOf"]
-        
+        returned_formats = sheet_json_schema["properties"]["Column1"]
+
         # verify returned schema has expected field types and format
-        self.assertIn(expected_format,returned_formats)
-        
+        self.assertEqual(expected_format,returned_formats)
