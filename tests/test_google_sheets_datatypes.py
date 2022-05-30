@@ -276,7 +276,7 @@ class DatatypesTest(GoogleSheetsBaseTest):
                         elif value is not None or value != "":
 
                             # BUG_TDL-14449 |  https://jira.talendforge.org/browse/TDL-14449
-                            elif test_case in {'date', 'time', 'datetime'} and column in {'Currency', 'Number'}: # BUG_TDL-14449
+                            if test_case in {'date', 'time', 'datetime'} and column in {'Currency', 'Number'}: # BUG_TDL-14449
                                 continue  # skip
                             
                             if column == 'Boolean' and value  in (-1, 1, 0): # special integer values falls back to boolean
