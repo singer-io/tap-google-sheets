@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.3.1
+  * Number type falls to string for boolean values [#73](https://github.com/singer-io/tap-google-sheets/pull/73)
+  * Changed multipleof to singer.decimal [#74](https://github.com/singer-io/tap-google-sheets/pull/74)
+  * Changed to formatted, and made 2 API calls for datetime values [#75](https://github.com/singer-io/tap-google-sheets/pull/75)
+  * Checked the effective format for null cell values instead of effective value [#76](https://github.com/singer-io/tap-google-sheets/pull/76)
+
 ## 1.3.0
   * Refactor Code from Dictionary to Class based [#66]((https://github.com/singer-io/tap-google-sheets/pull/66)
   * Add Missing tap-tester cases [#65]((https://github.com/singer-io/tap-google-sheets/pull/65)
