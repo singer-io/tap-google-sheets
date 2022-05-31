@@ -213,7 +213,8 @@ class GoogleClient: # pylint: disable=too-many-instance-attributes
     @backoff.on_exception(backoff.expo,
                           (Server5xxError, ConnectionError, Server429Error),
                           max_tries=7,
-                          factor=3)
+                          factor=3,
+                          jitter=None)
     @utils.ratelimit(100, 100)
     def request(self, method, path=None, url=None, api=None, **kwargs):
         self.get_access_token()
