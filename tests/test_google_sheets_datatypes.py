@@ -28,8 +28,7 @@ google_datatypes_to_json_schema = {
                                        {'type': ['null', 'string']}],
                              'inclusion': 'available',
                              'selected': True},
-    'numberType': {'anyOf': [{'multipleOf': Decimal('1E-15'),
-                              'type': 'number'},
+    'numberType': {'anyOf': [{'format': 'singer.decimal', 'type': ['null', 'string']},
                              {'type': ['null', 'string']}],
                    'inclusion': 'available',
                    'selected': True},
@@ -77,12 +76,12 @@ class DatatypesTest(GoogleSheetsBaseTest):
         Assertions:
         Verify that the google defined datatypes in the sheet metadata stream map to the JSON schema as expected
         Verify usage of JSON schema
-        -for a given datatype, we are able to use the string and nullible types 
+        -for a given datatype, we are able to use the string and nullible types
         Verify date, datetime, time formatting meets expectations
         Verify tap can support data for all supported datatypes
         """
         sadsheets = {stream for stream in self.expected_sync_streams() if stream.startswith('sadsheet-')}
-        tested_streams = sadsheets.union({'happysheet', 'happysheet-string-fallback', 'sheet_metadata'})
+        tested_streams = sadsheets.union({'happysheet', 'happysheet-string-fallback', 'sheet_metadata', 'sad-sheet-effective-format', 'test-sheet-date'})
 
         # instantiate connection
         conn_id = connections.ensure_connection(self)
@@ -129,7 +128,7 @@ class DatatypesTest(GoogleSheetsBaseTest):
                                for entry in sheet_metadata_entry}
         md_column_names = set(column_name_to_type.keys())
 
-        # get field names for the tested sheet frome the replicated schema
+        # get field names for the tested sheet from the replicated schema
         test_sheet_schema = synced_records[test_sheet]['schema']
         schema_column_names = {schema_property
                                for schema_property in test_sheet_schema['properties'].keys()
@@ -155,12 +154,12 @@ class DatatypesTest(GoogleSheetsBaseTest):
         # Verify that all data has been coerced to the expected column datatype
         record_data = [message['data'] for message in synced_records[test_sheet]['messages'] if message.get('data')]
         data_map = {
-	    "Currency": Decimal, # BUG Currency is being identified as a decimal type rather than string https://jira.talendforge.org/browse/TDL-14360
+	    "Currency": str,
 	    "Datetime": str,
             "Time": str,
             "Date": str,
 	    "String": str,
-            "Number": Decimal,
+            "Number": str,
             "Boolean": bool,
         }
         string_column_formats = {
@@ -196,8 +195,49 @@ class DatatypesTest(GoogleSheetsBaseTest):
 
                                 if column == 'Time' and 'epoch' in test_case:  # BUG_TDL-14482
                                     continue  # skip assertion
-                                
+
                                 self.assertStringFormat(record[column], string_column_formats[column])
+
+        ##########################################################################
+        ### Test the happy path datatype values
+        ##########################################################################
+
+        test_sheet = 'sad-sheet-effective-format'
+        data_type_map = {
+            "Currency": "stringValue",
+            "Datetime": "numberType.DATE_TIME",
+            "Time": "numberType.TIME",
+            "Date": "numberType.DATE",
+            "String": "stringValue",
+            "Number": "numberType",
+            "Boolean": "boolValue",
+        }
+
+        # get column names and google-sheets datatypes from the tested sheet's sheet_metadata record
+        sheet_metadata_entry = [record['columns']
+                                for record in sheet_metadata_records
+                                if record['title'] == test_sheet][0]
+        column_type = {entry['columnName']: entry['columnType']
+                               for entry in sheet_metadata_entry}
+        md_column_names = set(column_type.keys())
+
+        # get field names for the tested sheet from the replicated schema
+        test_sheet_schema = synced_records[test_sheet]['schema']
+        schema_column_names = {schema_property
+                               for schema_property in test_sheet_schema['properties'].keys()
+                               if not schema_property.startswith('__sdc')}
+
+        # Verify the sheet metadata accounts for all columns in the schema
+        self.assertSetEqual(schema_column_names, md_column_names)
+
+        # Verify that the sheet's sheet_metadata column types are as expected
+        for column_name in data_type_map.keys():
+            with self.subTest(column=column_name):
+                column_type = column_name_to_type[column_name]
+
+                expected_type = data_type_map[column_name]
+
+                self.assertEqual(column_type, expected_type)
 
         ##########################################################################
         ### Test the string fallbacks for each datatype
@@ -205,7 +245,7 @@ class DatatypesTest(GoogleSheetsBaseTest):
 
         test_sheet = 'happysheet-string-fallback'
 
-        # get field names for the tested sheet frome the replicated schema
+        # get field names for the tested sheet from the replicated schema
         record_data = [message['data']
                        for message in synced_records[test_sheet]['messages']
                        if message.get('data')]
@@ -213,7 +253,7 @@ class DatatypesTest(GoogleSheetsBaseTest):
 
         for record in record_data[1:]:  # skip the __sdc_row 2 since it is a valid type
             sdc_row = record['__sdc_row']
-            
+
             with self.subTest(__sdc_row=sdc_row):
                 for column in columns:
 
@@ -232,23 +272,16 @@ class DatatypesTest(GoogleSheetsBaseTest):
                             # verify the expected rows are actually Null
                             self.assertIsNone(value)
 
-                        elif value:
-
-                            # BUG_TDL-14369 | https://jira.talendforge.org/browse/TDL-14369
-                            #                 Skipping boolean column values becuase they do not correctly fall back to string
-                            if column == 'Boolean': # BUG_TDL-14369
-                                continue  # skip
-
-                            # BUG_TDL-14448 | https://jira.talendforge.org/browse/TDL-14448
-                            #                 Skipping Number and Currency columns with boolean values because they do not fallback to string
-                            elif test_case == 'boolean' and column in {'Currency', 'Number'}: # BUG_TDL-14448
-                                continue  # skip
+                        # As "'0" returns false which does not satisfy th below test case for boolean column
+                        elif value is not None or value != "":
 
                             # BUG_TDL-14449 |  https://jira.talendforge.org/browse/TDL-14449
-                            elif test_case in {'date', 'time', 'datetime'} and column in {'Currency', 'Number'}: # BUG_TDL-14449
+                            if test_case in {'date', 'time', 'datetime'} and column in {'Currency', 'Number'}: # BUG_TDL-14449
                                 continue  # skip
-
-
+                            
+                            if column == 'Boolean' and value  in (-1, 1, 0): # special integer values falls back to boolean
+                                self.assertTrue(isinstance(value, bool), msg=f'test case: {test_case}  value: {value}')
+                                continue
                             # verify the non-standard value has fallen back to a string type
                             self.assertTrue(isinstance(value, str), msg=f'test case: {test_case}  value: {value}')
 
@@ -297,10 +330,6 @@ class DatatypesTest(GoogleSheetsBaseTest):
         #                 Integer is coming across as a decimal, (just the same thing as decimal)
 
 
-        # BUG TDL-14386 | https://jira.talendforge.org/browse/TDL-14386 | sadshseet-date
-        #                 Date value out of range error is not handled, tap throws critical error
-        #                    minimum date	11/21/00-1
-        #                    big date (not max)	7/13/15589
 
         # Other Bugs that do not correspond to specific sadsheet
 
