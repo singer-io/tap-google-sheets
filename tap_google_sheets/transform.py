@@ -167,11 +167,12 @@ def transform_sheet_decimal_data(value, sheet_title, col_name, col_letter, row_n
         return col_val
 
 # transform number values in the sheet
-def transform_sheet_number_data(value, sheet_title, col_name, col_letter, row_num, col_type):
-    if type(value) == int:
-        return int(value)
-    elif type(value) == float:
-        return transform_sheet_decimal_data(value, sheet_title, col_name, col_letter, row_num, col_type)
+def transform_sheet_number_data(value, unformatted_value, sheet_title, col_name, col_letter, row_num, col_type):
+    # verify the original value in the sheet matched the value using 'SERIAL_NUMBER'
+    if type(unformatted_value) == int and (value == str(unformatted_value)):
+        return int(unformatted_value)
+    elif type(unformatted_value) == float and (value == str(unformatted_value)):
+        return transform_sheet_decimal_data(unformatted_value, sheet_title, col_name, col_letter, row_num, col_type)
     else:
         LOGGER.info('WARNING: POSSIBLE DATA TYPE ERROR: SHEET: {}, COL: {}, CELL: {}{}, TYPE: {} '.format(
                 sheet_title, col_name, col_letter, row_num, col_type))
@@ -198,7 +199,7 @@ def get_column_value(value, unformatted_value, sheet_title, col_name, col_letter
 
     # NUMBER (INTEGER AND FLOAT)
     elif col_type == 'numberType':
-        return transform_sheet_number_data(unformatted_value, sheet_title, col_name, col_letter, row_num, col_type)
+        return transform_sheet_number_data(value, unformatted_value, sheet_title, col_name, col_letter, row_num, col_type)
 
     # STRING
     elif col_type == 'stringValue':
