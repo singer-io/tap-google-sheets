@@ -173,6 +173,8 @@ def transform_sheet_number_data(value, unformatted_value, sheet_title, col_name,
         return int(unformatted_value)
     elif type(unformatted_value) == float and (value == str(unformatted_value)):
         return transform_sheet_decimal_data(unformatted_value, sheet_title, col_name, col_letter, row_num, col_type)
+    elif type(unformatted_value) == bool:
+        return str(unformatted_value)
     else:
         LOGGER.info('WARNING: POSSIBLE DATA TYPE ERROR: SHEET: {}, COL: {}, CELL: {}{}, TYPE: {} '.format(
                 sheet_title, col_name, col_letter, row_num, col_type))
