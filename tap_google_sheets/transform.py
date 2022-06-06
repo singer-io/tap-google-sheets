@@ -168,17 +168,24 @@ def transform_sheet_decimal_data(value, sheet_title, col_name, col_letter, row_n
 
 # transform number values in the sheet
 def transform_sheet_number_data(value, unformatted_value, sheet_title, col_name, col_letter, row_num, col_type):
-    # verify the original value in the sheet matched the value using 'SERIAL_NUMBER'
-    if type(unformatted_value) == int and (value == str(unformatted_value)):
-        return int(unformatted_value)
-    elif type(unformatted_value) == float and (value == str(unformatted_value)):
-        return transform_sheet_decimal_data(unformatted_value, sheet_title, col_name, col_letter, row_num, col_type)
-    elif type(unformatted_value) == bool:
-        return str(unformatted_value)
+    # value: the original value in the sheet
+    # unformatted_value: the value converted into serial number as per Google API
+    if type(unformatted_value) == int:
+        try:
+            int(value) # verify we can convert original value
+            return int(unformatted_value)
+        except ValueError:
+            return str(value) # return original value in case of ValueError
+    elif type(unformatted_value) == float:
+        try:
+            float(value) # verify we can convert original value
+            return transform_sheet_decimal_data(unformatted_value, sheet_title, col_name, col_letter, row_num, col_type)
+        except ValueError:
+            return str(value) # return original value in case of ValueError
     else:
         LOGGER.info('WARNING: POSSIBLE DATA TYPE ERROR: SHEET: {}, COL: {}, CELL: {}{}, TYPE: {} '.format(
                 sheet_title, col_name, col_letter, row_num, col_type))
-        return str(value)
+        return str(unformatted_value)
 
 # return transformed column the values based on the datatype
 def get_column_value(value, unformatted_value, sheet_title, col_name, col_letter, row_num, col_type, row):
