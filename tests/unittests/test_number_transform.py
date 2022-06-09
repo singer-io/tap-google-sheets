@@ -23,6 +23,20 @@ class TestNumberTransform(unittest.TestCase):
         self.assertIsInstance(transformed_data, int)
         self.assertEqual(transformed_data, 1)
 
+    def test_number_transform_int_exponential_value_as_int(self):
+        """Verify that exponential int values falls back as type int"""
+        value = 1234
+        transformed_data = transform_sheet_number_data("1.23E+03", value, sheet_title='test-sheet', col_name='test-column', col_letter='col', row_num=1, col_type='numberType')
+        self.assertIsInstance(transformed_data, int)
+        self.assertEqual(transformed_data, 1234)
+
+    def test_number_transform_int_US_format_value_as_int(self):
+        """Verify that US format int values falls back as type int"""
+        value = 1234
+        transformed_data = transform_sheet_number_data("1,234", value, sheet_title='test-sheet', col_name='test-column', col_letter='col', row_num=1, col_type='numberType')
+        self.assertIsInstance(transformed_data, int)
+        self.assertEqual(transformed_data, 1234)
+
     def test_number_transform_float_value_as_float(self):
         """Verify that float values falls back as type float"""
         value = 1.1
@@ -36,6 +50,13 @@ class TestNumberTransform(unittest.TestCase):
         transformed_data = transform_sheet_number_data("5.00E-16", value, sheet_title='test-sheet', col_name='test-column', col_letter='col', row_num=1, col_type='numberType')
         self.assertIsInstance(transformed_data, float)
         self.assertEqual(transformed_data, 5e-16)
+
+    def test_number_transform_float_US_format_value_as_float(self):
+        """Verify that US format float values falls back as type float"""
+        value = 1234.1
+        transformed_data = transform_sheet_number_data("1,234.1", value, sheet_title='test-sheet', col_name='test-column', col_letter='col', row_num=1, col_type='numberType')
+        self.assertIsInstance(transformed_data, float)
+        self.assertEqual(transformed_data, 1234.1)
 
     def test_number_transform_datetime_value_as_string(self):
         """Verify that datetime values falls back as type string"""

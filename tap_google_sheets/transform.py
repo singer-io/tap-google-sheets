@@ -172,13 +172,15 @@ def transform_sheet_number_data(value, unformatted_value, sheet_title, col_name,
     # unformatted_value: the value converted into serial number as per Google API
     if type(unformatted_value) == int:
         try:
-            int(value) # verify we can convert original value
+            temp_value = value.replace(",", "") # handle US number type format (123,456)
+            float(temp_value) # verify we can convert original value
             return int(unformatted_value)
         except ValueError:
             return str(value) # return original value in case of ValueError
     elif type(unformatted_value) == float:
         try:
-            float(value) # verify we can convert original value
+            temp_value = value.replace(",", "") # handle US number type format (123,456)
+            float(temp_value) # verify we can convert original value
             return transform_sheet_decimal_data(unformatted_value, sheet_title, col_name, col_letter, row_num, col_type)
         except ValueError:
             return str(value) # return original value in case of ValueError
