@@ -168,14 +168,33 @@ def transform_sheet_decimal_data(value, sheet_title, col_name, col_letter, row_n
 
 # transform number values in the sheet
 def transform_sheet_number_data(formatted_value, unformatted_value, sheet_title, col_name, col_letter, row_num, col_type):
+    """
+        :param
+        formatted_value - The displayed value of a cell in the sheet
+        unformatted_value - The formatted value of a cell in the sheet
+        sheet_title - The title of the sheet
+        col_name - Column name
+        col_letter - Column letter of the record ie. A, B, C, etc.
+        row_num - Row number of the record
+        col_type - Column type of the record (here: numberType)
+
+        if type of unformatted value is int or float:
+            Replace , (comma) in the formatted value to handle US number format and type-cast formatted string into float to verify user has entered numberType data
+            if we recieve ValueError:
+                return string casted formatted value
+            else:
+                return int of float casted unformatted value
+        else:
+            return string casted unformatted value
+    """
     # formatted_value: the value in the google sheet as it is displayed
     # unformatted_value: the value converted into serial number as per Google API
     if type(unformatted_value) == int:
         try:
-            # handle US number type format ie. 123,456.10 -> 123456.10
+            # Removing comma to handle US number type format ie. 123,456.10 -> 123456.10
             numeric_value = formatted_value.replace(",", "")
-            # verify we can convert formatted value to float
-            # for scientific formatted numbers:
+            # verify we can convert formatted value to float for scientific formatted numbers
+            # For example:
             #   formatted value: "1.23E+03"
             #   unformatted value: 1234
             # thus, we can convert "1.23E+03" to float but, for int casting we get error and wrong value will be returned
@@ -185,7 +204,7 @@ def transform_sheet_number_data(formatted_value, unformatted_value, sheet_title,
             return str(formatted_value) # return original value in case of ValueError
     elif type(unformatted_value) == float:
         try:
-            # handle US number type format ie. 123,456.10 -> 123456.10
+            # Removing comma to handle US number type format ie. 123,456.10 -> 123456.10
             numeric_value = formatted_value.replace(",", "")
             # verify we can convert formatted value to float
             float(numeric_value)
