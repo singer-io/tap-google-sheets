@@ -167,23 +167,31 @@ def transform_sheet_decimal_data(value, sheet_title, col_name, col_letter, row_n
         return col_val
 
 # transform number values in the sheet
-def transform_sheet_number_data(value, unformatted_value, sheet_title, col_name, col_letter, row_num, col_type):
-    # value: the original value in the sheet
+def transform_sheet_number_data(formatted_value, unformatted_value, sheet_title, col_name, col_letter, row_num, col_type):
+    # formatted_value: the value in the google sheet as it is displayed
     # unformatted_value: the value converted into serial number as per Google API
     if type(unformatted_value) == int:
         try:
-            temp_value = value.replace(",", "") # handle US number type format (123,456)
-            float(temp_value) # verify we can convert original value
+            # handle US number type format ie. 123,456.10 -> 123456.10
+            temp_value = formatted_value.replace(",", "")
+            # verify we can convert formatted value to float
+            # for scientific formatted numbers:
+            #   formatted value: "1.23E+03"
+            #   unformatted value: 1234
+            # thus, we can convert "1.23E+03" to float but, for int casting we get error and wrong value will be returned
+            float(temp_value)
             return int(unformatted_value)
         except ValueError:
-            return str(value) # return original value in case of ValueError
+            return str(formatted_value) # return original value in case of ValueError
     elif type(unformatted_value) == float:
         try:
-            temp_value = value.replace(",", "") # handle US number type format (123,456)
-            float(temp_value) # verify we can convert original value
+            # handle US number type format ie. 123,456.10 -> 123456.10
+            temp_value = formatted_value.replace(",", "")
+            # verify we can convert formatted value to float
+            float(temp_value)
             return transform_sheet_decimal_data(unformatted_value, sheet_title, col_name, col_letter, row_num, col_type)
         except ValueError:
-            return str(value) # return original value in case of ValueError
+            return str(formatted_value) # return original value in case of ValueError
     else:
         LOGGER.info('WARNING: POSSIBLE DATA TYPE ERROR: SHEET: {}, COL: {}, CELL: {}{}, TYPE: {} '.format(
                 sheet_title, col_name, col_letter, row_num, col_type))
