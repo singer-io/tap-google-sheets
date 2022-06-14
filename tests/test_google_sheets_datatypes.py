@@ -275,10 +275,6 @@ class DatatypesTest(GoogleSheetsBaseTest):
                         # As "'0" returns false which does not satisfy th below test case for boolean column
                         elif value is not None or value != "":
 
-                            # BUG_TDL-14449 |  https://jira.talendforge.org/browse/TDL-14449
-                            if test_case in {'date', 'time', 'datetime'} and column in {'Currency', 'Number'}: # BUG_TDL-14449
-                                continue  # skip
-                            
                             if column == 'Boolean' and value  in (-1, 1, 0): # special integer values falls back to boolean
                                 self.assertTrue(isinstance(value, bool), msg=f'test case: {test_case}  value: {value}')
                                 continue
