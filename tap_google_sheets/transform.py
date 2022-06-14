@@ -173,22 +173,22 @@ def transform_sheet_number_data(formatted_value, unformatted_value, sheet_title,
     if type(unformatted_value) == int:
         try:
             # handle US number type format ie. 123,456.10 -> 123456.10
-            temp_value = formatted_value.replace(",", "")
+            numeric_value = formatted_value.replace(",", "")
             # verify we can convert formatted value to float
             # for scientific formatted numbers:
             #   formatted value: "1.23E+03"
             #   unformatted value: 1234
             # thus, we can convert "1.23E+03" to float but, for int casting we get error and wrong value will be returned
-            float(temp_value)
+            float(numeric_value)
             return int(unformatted_value)
         except ValueError:
             return str(formatted_value) # return original value in case of ValueError
     elif type(unformatted_value) == float:
         try:
             # handle US number type format ie. 123,456.10 -> 123456.10
-            temp_value = formatted_value.replace(",", "")
+            numeric_value = formatted_value.replace(",", "")
             # verify we can convert formatted value to float
-            float(temp_value)
+            float(numeric_value)
             return transform_sheet_decimal_data(unformatted_value, sheet_title, col_name, col_letter, row_num, col_type)
         except ValueError:
             return str(formatted_value) # return original value in case of ValueError
