@@ -169,7 +169,7 @@ def transform_sheet_decimal_data(value, sheet_title, col_name, col_letter, row_n
 # transform number values in the sheet
 def transform_sheet_number_data(formatted_value, unformatted_value, sheet_title, col_name, col_letter, row_num, col_type):
     """
-        Handle numberType records by type-casting into a float to verify the user has entered numberType data.
+        Handled number type records by type-casting into a float to verify the user has entered number type data.
 
         :param
         formatted_value - The displayed value of a cell in the sheet
