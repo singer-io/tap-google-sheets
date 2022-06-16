@@ -145,23 +145,32 @@ def transform_sheet_boolean_data(value, unformatted_value, sheet_title, col_name
         return col_val
 
 # transform decimal values in the sheet
-def transform_sheet_decimal_data(value, sheet_title, col_name, col_letter, row_num, col_type):
+def transform_sheet_decimal_data(value_type, formatted_value, unformatted_value, sheet_title, col_name, col_letter, row_num, col_type):
+    numeric_value = formatted_value.replace(",", "")
+    try:
+        float(numeric_value)
+    except ValueError:
+        return str(formatted_value)
+
+    if value_type == int:
+        return int(unformatted_value)
+
     # Determine float decimal digits
-    decimal_digits = str(value)[::-1].find('.')
+    decimal_digits = str(unformatted_value)[::-1].find('.')
     if decimal_digits > 15:
         try:
             # ROUND to multipleOf: 1e-15
-            col_val = float(round(value, 15))
+            col_val = float(round(unformatted_value, 15))
         except ValueError:
-            col_val = str(value)
+            col_val = str(unformatted_value)
             LOGGER.info('WARNING: POSSIBLE DATA TYPE ERROR; SHEET: {}, COL: {}, CELL: {}{}, TYPE: {}'.format(
                 sheet_title, col_name, col_letter, row_num, col_type))
         return col_val
     else: # decimal_digits <= 15, no rounding
         try:
-            col_val = float(value)
+            col_val = float(unformatted_value)
         except ValueError:
-            col_val = str(value)
+            col_val = str(unformatted_value)
             LOGGER.info('WARNING: POSSIBLE DATA TYPE ERROR: SHEET: {}, COL: {}, CELL: {}{}, TYPE: {}'.format(
                 sheet_title, col_name, col_letter, row_num, col_type))
         return col_val
@@ -180,30 +189,8 @@ def transform_sheet_number_data(formatted_value, unformatted_value, sheet_title,
         row_num - Row number of the record
         col_type - Column type of the record (here: numberType)
     """
-    # formatted_value: the value in the google sheet as it is displayed
-    # unformatted_value: the value converted into serial number as per Google API
-    if type(unformatted_value) == int:
-        try:
-            # Removing comma to handle US number type format ie. 123,456.10 -> 123456.10
-            numeric_value = formatted_value.replace(",", "")
-            # Verify we can convert formatted value to float for scientific formatted numbers
-            # For example:
-            #   formatted value: "1.23E+03"
-            #   unformatted value: 1234
-            # thus, we can convert "1.23E+03" to float but, for int casting we get error and wrong value will be returned
-            float(numeric_value)
-            return int(unformatted_value)
-        except ValueError:
-            return str(formatted_value) # return original value in case of ValueError
-    elif type(unformatted_value) == float:
-        try:
-            # Removing comma to handle US number type format ie. 123,456.10 -> 123456.10
-            numeric_value = formatted_value.replace(",", "")
-            # Verify we can convert formatted value to float
-            float(numeric_value)
-            return transform_sheet_decimal_data(unformatted_value, sheet_title, col_name, col_letter, row_num, col_type)
-        except ValueError:
-            return str(formatted_value) # return original value in case of ValueError
+    if type(unformatted_value) in [int, float]:
+        return transform_sheet_decimal_data(type(unformatted_value), formatted_value, unformatted_value, sheet_title, col_name, col_letter, row_num, col_type)
     else:
         LOGGER.info('WARNING: POSSIBLE DATA TYPE ERROR: SHEET: {}, COL: {}, CELL: {}{}, TYPE: {} '.format(
                 sheet_title, col_name, col_letter, row_num, col_type))
