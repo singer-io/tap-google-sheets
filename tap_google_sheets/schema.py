@@ -96,10 +96,13 @@ def get_sheet_schema_columns(sheet):
 
             col_val = None
             if column_effective_value == {}:
-                column_effective_value_type = 'stringValue'
-                LOGGER.info('WARNING: NO VALUE IN 2ND ROW FOR HEADER. SHEET: {}, COL: {}, CELL: {}2.'.format(
-                    sheet_title, column_name, column_letter))
-                LOGGER.info('   Setting column datatype to STRING')
+                if ("numberFormat" in first_value.get('effectiveFormat', {})):
+                    column_effective_value_type = "numberValue"
+                else:
+                    column_effective_value_type = 'stringValue'
+                    LOGGER.info('WARNING: NO VALUE IN 2ND ROW FOR HEADER. SHEET: {}, COL: {}, CELL: {}2.'.format(
+                        sheet_title, column_name, column_letter))
+                    LOGGER.info('   Setting column datatype to STRING')
             else:
                 for key, val in column_effective_value.items():
                     if key in ('numberValue', 'stringValue', 'boolValue'):
@@ -125,13 +128,8 @@ def get_sheet_schema_columns(sheet):
             #  https://developers.google.com/sheets/api/reference/rest/v4/spreadsheets/cells#NumberFormatType
             #
             column_format = None # Default
-            if column_effective_value == {}:
-                col_properties = {'type': ['null', 'string']}
-                column_gs_type = 'stringValue'
-                LOGGER.info('WARNING: 2ND ROW VALUE IS BLANK: SHEET: {}, COL: {}, CELL: {}2'.format(
-                        sheet_title, column_name, column_letter))
-                LOGGER.info('   Setting column datatype to STRING')
-            elif column_effective_value_type == 'stringValue':
+
+            if column_effective_value_type == 'stringValue':
                 col_properties = {'type': ['null', 'string']}
                 column_gs_type = 'stringValue'
             elif column_effective_value_type == 'boolValue':
@@ -159,10 +157,16 @@ def get_sheet_schema_columns(sheet):
                 elif column_number_format_type == 'TEXT':
                     col_properties = {'type': ['null', 'string']}
                     column_gs_type = 'stringValue'
+                elif column_number_format_type == 'CURRENCY':
+                    col_properties = {'type': ['null', 'string']}
+                    column_gs_type = 'stringValue'
                 else:
                     # Interesting - order in the anyOf makes a difference.
-                    # Number w/ multipleOf must be listed last, otherwise errors occur.
-                    col_properties = {'type': 'number', 'multipleOf': 1e-15}
+                    # Number w/ singer.decimal must be listed last, otherwise errors occur.
+                    col_properties = {
+                        'type': ['null', 'string'],
+                        'format': 'singer.decimal'
+                    }
                     column_gs_type = 'numberType'
             # Catch-all to deal with other types and set to string
             # column_effective_value_type: formulaValue, errorValue, or other

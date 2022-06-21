@@ -2,12 +2,15 @@ import json
 import os
 import time
 import re
+import simplejson as json
 from collections import OrderedDict
 import urllib.parse
 import singer
-from singer import metrics, metadata, Transformer, utils
+import decimal
+from singer import metrics, metadata, Transformer, utils, messages
 from singer.utils import strptime_to_utc, strftime
 from singer.messages import RecordMessage
+from singer.transform import SchemaKey
 import tap_google_sheets.transform as internal_transform
 import tap_google_sheets.schema as schema
 
@@ -104,6 +107,14 @@ def get_selected_fields(catalog, stream_name):
         except IndexError:
             pass
     return selected_fields
+
+def new_format_message(message):
+    """To override the ensure_ascii param, overwitten this function"""
+    return json.dumps(message.asdict(), ensure_ascii=False, use_decimal=True)
+
+# To override the ensure_ascii param as while writing record the currency symbols were written as ascii values,
+# overwitten this function of messages file of the singer module
+messages.format_message = new_format_message
 
 class GoogleSheets:
     stream_name = None
@@ -343,17 +354,101 @@ class SpreadSheetMetadata(GoogleSheets):
         # Sync spreadsheet_metadata if selected
         self.sync_stream(spreadsheet_metadata_transformed, catalog, time_extracted)
 
+def new_transform(self, data, typ, schema, path):
+    '''The new _transform function to replace in the singer module'''
+    if self.pre_hook:
+        data = self.pre_hook(data, typ, schema)
+
+    if typ == "null":
+        if data is None or data == "":
+            return True, None
+        else:
+            return False, None
+
+    elif schema.get("format") == "date-time":
+        data = self._transform_datetime(data)
+        if data is None:
+            return False, None
+
+        return True, data
+    elif schema.get("format") == "singer.decimal":
+        if data is None:
+            return False, None
+
+        if isinstance(data, (str, float, int)):
+            try:
+                return True, str(decimal.Decimal(str(data)))
+            except:
+                return False, None
+        elif isinstance(data, decimal.Decimal):
+            try:
+                if data.is_snan():
+                    return True, 'NaN'
+                else:
+                    return True, str(data)
+            except:
+                return False, None
+
+        return False, None
+    elif typ == "object":
+        # Objects do not necessarily specify properties
+        return self._transform_object(data,
+                                        schema.get("properties", {}),
+                                        path,
+                                        schema.get(SchemaKey.pattern_properties))
+
+    elif typ == "array":
+        return self._transform_array(data, schema["items"], path)
+
+    elif typ == "string":
+        if data is not None:
+            try:
+                return True, str(data)
+            except:
+                return False, None
+        else:
+            return False, None
+
+    elif typ == "integer":
+        if isinstance(data, str):
+            data = data.replace(",", "")
+
+        try:
+            return True, int(data)
+        except:
+            return False, None
+
+    elif typ == "number":
+        if isinstance(data, str):
+            data = data.replace(",", "")
+        try:
+            return True, float(data)
+        except:
+            return False, None
+
+    elif typ == "boolean":
+        # return the data as string itself if the value is of type string
+        if isinstance(data, str) and data is not None:
+            return True, data
+        try:
+            return True, bool(data)
+        except:
+            return False, None
+
+    else:
+        return False, None
+
+# To cast the boolean values differently, overwriting this function of Transformer class of 
+# the singer module
+Transformer._transform = new_transform
+
 class SheetsLoadData(GoogleSheets):
     api = "sheets"
     path = "spreadsheets/{spreadsheet_id}/values/'{sheet_title}'!{range_rows}"
     data_key = "values"
     key_properties = ["spreadsheetId", "sheetId", "loadDate"]
     replication_method = "FULL_TABLE"
-    params = {
-        "dateTimeRenderOption": "SERIAL_NUMBER",
-        "valueRenderOption": "UNFORMATTED_VALUE",
-        "majorDimension": "ROWS"
-    }
+    params = {}
 
     def load_data(self, catalog, state, selected_streams, sheets, spreadsheet_time_extracted):
         """
@@ -428,10 +523,22 @@ class SheetsLoadData(GoogleSheets):
                         while not is_last_row and from_row < sheet_max_row and to_row <= sheet_max_row:
                             range_rows = 'A{}:{}{}'.format(from_row, sheet_last_col_letter, to_row)
 
+                            self.params = {
+                                "dateTimeRenderOption": "SERIAL_NUMBER",
+                                "valueRenderOption": "FORMATTED_VALUE",
+                                "majorDimension": "ROWS"
+                            }
                             # GET sheet_data for a worksheet tab
                             sheet_data, time_extracted = self.get_data(stream_name=sheet_title, range_rows=range_rows)
                             # Data is returned as a list of arrays, an array of values for each row
                             sheet_data_rows = sheet_data.get('values', [])
+                            self.params = {
+                                "dateTimeRenderOption": "SERIAL_NUMBER",
+                                "valueRenderOption": "UNFORMATTED_VALUE",
+                                "majorDimension": "ROWS"
+                            }
+                            unformatted_sheet_data, _ = self.get_data(stream_name=sheet_title, range_rows=range_rows)
+                            unformatted_sheet_data_rows = unformatted_sheet_data.get('values', [])
 
                             # Transform batch of rows to JSON with keys for each column
                             sheet_data_transformed, row_num = internal_transform.transform_sheet_data(
@@ -440,7 +547,8 @@ class SheetsLoadData(GoogleSheets):
                                 sheet_title=sheet_title,
                                 from_row=from_row,
                                 columns=columns,
-                                sheet_data_rows=sheet_data_rows)
+                                sheet_data_rows=sheet_data_rows, 
+                                unformatted_rows = unformatted_sheet_data_rows)
 
                             # Here row_num is the addition of from_row and total records get in response(per batch).
                             # Condition row_num < to_row was checking that if records on the current page are less than expected(to_row) or not.
