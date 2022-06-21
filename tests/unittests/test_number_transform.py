@@ -61,15 +61,15 @@ class TestNumberTransform(unittest.TestCase):
     def test_number_transform_datetime_value_as_string(self):
         """Verify that datetime values falls back as type string"""
 
-        datetime_type = transform_sheet_number_data("01/01/2022 0:00:00", 44562, "test_sheet", "Number Column", "A", 4, "numberType")
+        datetime_expected_value = transform_sheet_number_data("01/01/2022 0:00:00", 44562, "test_sheet", "Number Column", "A", 4, "numberType")
 
-        self.assertEqual(datetime_type, "01/01/2022 0:00:00")
-        self.assertIsInstance(datetime_type, str)
+        self.assertEqual(datetime_expected_value, "01/01/2022 0:00:00")
+        self.assertIsInstance(datetime_expected_value, str)
 
     def test_number_transform_time_value_as_string(self):
         """Verify that time values falls back as type string"""
 
-        time_type = transform_sheet_number_data("5:00 PM", 0.7083333333333334, "test_sheet", "Number Column", "A", 5, "numberType")
+        time_expected_value = transform_sheet_number_data("5:00 PM", 0.7083333333333334, "test_sheet", "Number Column", "A", 5, "numberType")
 
-        self.assertEqual(time_type, "5:00 PM")
-        self.assertIsInstance(time_type, str)
+        self.assertEqual(time_expected_value, "5:00 PM")
+        self.assertIsInstance(time_expected_value, str)

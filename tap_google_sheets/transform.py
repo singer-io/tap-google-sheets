@@ -176,7 +176,7 @@ def transform_sheet_decimal_data(formatted_value, unformatted_value, sheet_title
         return str(formatted_value) # Return original value in case of ValueError
 
     if type(unformatted_value) == int:
-        return int(unformatted_value)
+        return unformatted_value
 
     # For float type data, round off to 15 decimal digits
     # Determine float decimal digits
