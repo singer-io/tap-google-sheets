@@ -151,7 +151,7 @@ def transform_sheet_decimal_data(formatted_value, unformatted_value, sheet_title
 
         :param
         formatted_value - The displayed value of a cell in the sheet ie. 2022-01-01
-        unformatted_value - The formatted value of a cell in the sheet ie. 44562,
+        unformatted_value - The calculated value of the field as per the value type ie. 44562,
             (the date values are converted into serial numbers by Google's API)
         sheet_title - The title of the sheet
         col_name - Column name
