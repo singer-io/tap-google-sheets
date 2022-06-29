@@ -281,12 +281,12 @@ class DatatypesTest(GoogleSheetsBaseTest):
                             # verify the non-standard value has fallen back to a string type
                             self.assertTrue(isinstance(value, str), msg=f'test case: {test_case}  value: {value}')
 
-                            # BUG_TDL-14431 [https://jira.talendforge.org/browse/TDL-14431]
+                            # BUG_TDL-18932 [https://jira.talendforge.org/browse/TDL-18932]
                             #               Date and Datetime do not fall back to string for boolean, time, or numbers
 
                             # verify dates, times and datetimes DO NOT COERCE VALUES to the standard format
                             if column in string_column_formats.keys():
-                                if column in ["Date", "Datetime"] and sdc_row in [3, 4, 6, 7]:  # BUG_TDL-14431
+                                if column in ["Date", "Datetime"] and sdc_row in [3, 4, 6, 7]:  # BUG_TDL-18932
                                     continue  # skip assertion
 
                                 self.assertNotStringFormat(value, string_column_formats[column])
