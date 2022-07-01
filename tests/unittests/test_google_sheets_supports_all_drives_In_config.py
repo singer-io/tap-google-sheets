@@ -1,3 +1,4 @@
+from shutil import ExecError
 import unittest
 from unittest import mock
 from tap_google_sheets import GoogleClient
@@ -11,12 +12,13 @@ class Testsupports_all_drives(unittest.TestCase):
         self.assertEqual(client.supports_all_drives, False, "supports_all_drives got unexpected value")
         
     def test_supports_all_drives_other_than_true_in_config(self):
-        """To verify that when the supports_all_drives value is given other than true value in config.json then set default value False"""
+        """To verify that when an invalid value of the supports_all_drives is given then raise proper exception"""
         
         # provide supports_all_drives other then true value
         supports_all_drives = 123
-        client =  GoogleClient('test', 'test', 'test', None, 'test', supports_all_drives)
-        self.assertEqual(client.supports_all_drives, False, "supports_all_drives got unexpected value")
+        with self.assertRaises(Exception) as e:
+            client =  GoogleClient('test', 'test', 'test', None, 'test', supports_all_drives)
+        self.assertEqual(str(e.exception), "Invalid Parameter value: The given value of the supports_all_drives is an invalid value.")
         
     def test_supports_all_drives_str_true_in_config(self):
         """To verify that when the supports_all_drives value is given true as a string in config.json then set True"""
