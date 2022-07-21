@@ -146,15 +146,13 @@ class GoogleClient: # pylint: disable=too-many-instance-attributes
         self.__expires = None
         self.__session = requests.Session()
         self.base_url = None
-        self.supports_all_drives = False
 
         # if supports_all_drives is given as invalid value then raise exception
         if supports_all_drives not in ('true', 'True', True, 'false', 'False', False, None):
             raise Exception("Invalid Parameter value: The given value of the supports_all_drives is an invalid value.")
 
          # if supports_all_drives is given as true then use supports_all_drives
-        if supports_all_drives in ('true', 'True', True):
-            self.supports_all_drives = True
+        self.supports_all_drives = supports_all_drives in ('true', 'True', True)
 
         # if request_timeout is other than 0,"0" or "" then use request_timeout
         if request_timeout and float(request_timeout):
