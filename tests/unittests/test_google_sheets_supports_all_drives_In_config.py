@@ -1,37 +1,40 @@
-from shutil import ExecError
 import unittest
 from unittest import mock
-from tap_google_sheets import GoogleClient
+from tap_google_sheets import _sync
+import datetime
 
+class Mocked:
+    stream = "file_metadata"
+    params = {}
+    def __init__(self, client, spreadsheet_id, start_date):
+        pass
+    def sync(self, catalog, state, selected_streams):
+        return "test", datetime.datetime.now()
+    def get_selected_streams(state):
+        return [Mocked]
+
+@mock.patch("tap_google_sheets.sync.strftime", return_value="test")
+@mock.patch("tap_google_sheets.sync.STREAMS.items", return_value={("file_metadata", Mocked)})
 class Testsupports_all_drives(unittest.TestCase):
-    def test_supports_all_drives_not_in_config_file(self):
+    config = {
+        "start_date": "test", 
+        "spreadsheet_id": "test"
+    }
+    def test_supports_all_drives_not_in_config_file(self, mocked_STREAMS, mocked_strftime):
         """To verify that when the supports_all_drives value is not given in config.json then set default value as False"""
-        # supports_all_drives not in config.json so 
-        supports_all_drives = None
-        client = GoogleClient('test', 'test', 'test', None, 'test', supports_all_drives)
-        self.assertEqual(client.supports_all_drives, False, "supports_all_drives got unexpected value")
         
-    def test_supports_all_drives_other_than_true_in_config(self):
-        """To verify that when an invalid value of the supports_all_drives is given then raise proper exception"""
+        _sync("test_client", self.config, Mocked, {})
+        self.assertEqual(Mocked.params["supportsAllDrives"], False, "supportsAllDrives got unexpected value" )
         
-        # provide supports_all_drives other then true value
-        supports_all_drives = 123
-        with self.assertRaises(Exception) as e:
-            client =  GoogleClient('test', 'test', 'test', None, 'test', supports_all_drives)
-        self.assertEqual(str(e.exception), "Invalid Parameter value: The given value of the supports_all_drives is an invalid value.")
+    def test_supports_all_drives_other_than_true_in_config(self, mocked_STREAMS, mocked_strftime):
+        """To verify that when the supports_all_drives value is given other than True in config.json then use False"""
         
-    def test_supports_all_drives_str_true_in_config(self):
-        """To verify that when the supports_all_drives value is given true as a string in config.json then set True"""
+        config = self.config | {"supports_all_drives": False}
+        _sync("test_client", config, Mocked, {})
+        self.assertEqual(Mocked.params["supportsAllDrives"], False, "supportsAllDrives got unexpected value" )
         
-        # provide supports_all_drives true as string as string value
-        supports_all_drives = 'true'
-        client =  GoogleClient('test', 'test', 'test', None, 'test', supports_all_drives)
-        self.assertEqual(client.supports_all_drives, True, "supports_all_drives got unexpected value")
-        
-    def test_supports_all_drives_boolean_true_in_config(self):
+    def test_supports_all_drives_boolean_true_in_config(self,  mocked_STREAMS, mocked_strftime):
         """To verify that when the supports_all_drives value is given True as boolean in config.json then use supports_all_drives"""
         
-        # provide supports_all_drives True as boolean value
-        supports_all_drives = True
-        client =  GoogleClient('test', 'test', 'test', None, 'test', supports_all_drives)
-        self.assertEqual(client.supports_all_drives, supports_all_drives, "supports_all_drives got unexpected value")
+        _sync("test_client", self.config | {"supports_all_drives": True}, Mocked, {})
+        self.assertEqual(Mocked.params["supportsAllDrives"], True, "supportsAllDrives got unexpected value" )
