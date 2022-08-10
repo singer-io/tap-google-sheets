@@ -270,22 +270,18 @@ class DatatypesTest(GoogleSheetsBaseTest):
                         # As "'0" returns false which does not satisfy th below test case for boolean column
                         elif value is not None or value != "":
 
-                            # BUG_TDL-14449 |  https://jira.talendforge.org/browse/TDL-14449
-                            if test_case in {'date', 'time', 'datetime'} and column in {'Currency', 'Number'}: # BUG_TDL-14449
-                                continue  # skip
-                            
                             if column == 'Boolean' and value  in (-1, 1, 0): # special integer values falls back to boolean
                                 self.assertTrue(isinstance(value, bool), msg=f'test case: {test_case}  value: {value}')
                                 continue
                             # verify the non-standard value has fallen back to a string type
                             self.assertTrue(isinstance(value, str), msg=f'test case: {test_case}  value: {value}')
 
-                            # BUG_TDL-14431 [https://jira.talendforge.org/browse/TDL-14431]
+                            # BUG_TDL-18932 [https://jira.talendforge.org/browse/TDL-18932]
                             #               Date and Datetime do not fall back to string for boolean, time, or numbers
 
                             # verify dates, times and datetimes DO NOT COERCE VALUES to the standard format
                             if column in string_column_formats.keys():
-                                if column in ["Date", "Datetime"] and sdc_row in [3, 4, 6, 7]:  # BUG_TDL-14431
+                                if column in ["Date", "Datetime"] and sdc_row in [3, 4, 6, 7]:  # BUG_TDL-18932
                                     continue  # skip assertion
 
                                 self.assertNotStringFormat(value, string_column_formats[column])
