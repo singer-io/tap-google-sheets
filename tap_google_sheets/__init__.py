@@ -49,10 +49,10 @@ def main():
 
         if parsed_args.discover:
             do_discover(client, spreadsheet_id)
-        elif parsed_args.catalog:
+        else:
             sync(client=client,
                  config=config,
-                 catalog=parsed_args.catalog,
+                 catalog=parsed_args.catalog or discover(client, spreadsheet_id),
                  state=state)
 
 if __name__ == '__main__':
