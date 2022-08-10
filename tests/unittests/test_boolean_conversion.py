@@ -63,6 +63,15 @@ class TestBooleanDataType(unittest.TestCase):
         transformed_data = new_transform(transformer, data, "boolean", schema, '')
         self.assertEqual(transformed_data[1], True)
 
+    def test_null_returned_for_boolean_col(self):
+        '''
+        Verify that null value should not be replicated as False and it should be replicated as null.
+        '''
+        data = None
+        transformer = MockTransformer()
+        transformed_data = new_transform(transformer, data, "boolean", schema, '')
+        self.assertEqual(transformed_data[1], None)
+
     def test_date_time_with_serial_number_1_in_boolean_col(self):
         """
         Verify that dattime with serial number 1 returns string date instead of true.

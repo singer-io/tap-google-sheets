@@ -145,37 +145,80 @@ def transform_sheet_boolean_data(value, unformatted_value, sheet_title, col_name
         return col_val
 
 # transform decimal values in the sheet
-def transform_sheet_decimal_data(value, sheet_title, col_name, col_letter, row_num, col_type):
+def transform_sheet_decimal_data(formatted_value, unformatted_value, sheet_title, col_name, col_letter, row_num, col_type):
+    """
+        Transform number type data and return according to the datatype in the sheet
+
+        :param
+        formatted_value - The displayed value of a cell in the sheet ie. 2022-01-01
+        unformatted_value - The calculated value of the field as per the value type ie. 44562,
+            (the date values are converted into serial numbers by Google's API)
+        sheet_title - The title of the sheet
+        col_name - Column name
+        col_letter - Column letter of the record ie. A, B, C, etc.
+        row_num - Row number of the record
+        col_type - Column type of the record (here: numberType)
+    """
+
+    # Removing comma to handle US number type format ie. 123,456.10 -> 123456.10
+    numeric_value = formatted_value.replace(",", "")
+    try:
+        # Verify we can convert formatted value to float for scientific formatted numbers
+        # For example:
+        #   formatted value: "1.23E+03"
+        #   unformatted value: 1234
+        # thus, we can convert "1.23E+03" to float but, for int casting we get error and wrong value will be returned
+        float(numeric_value)
+    except ValueError:
+        LOGGER.info('Received the value for sheet: {}, column: {}, cell: {}{} with unexpected data type. Ingesting this value with string format in the target'.format(
+            sheet_title, col_name, col_letter, row_num
+        ))
+        return str(formatted_value) # Return original value in case of ValueError
+
+    if type(unformatted_value) == int:
+        return unformatted_value
+
+    # For float type data, round off to 15 decimal digits
     # Determine float decimal digits
-    decimal_digits = str(value)[::-1].find('.')
+    decimal_digits = str(unformatted_value)[::-1].find('.')
     if decimal_digits > 15:
         try:
             # ROUND to multipleOf: 1e-15
-            col_val = float(round(value, 15))
+            col_val = float(round(unformatted_value, 15))
         except ValueError:
-            col_val = str(value)
+            col_val = str(unformatted_value)
             LOGGER.info('WARNING: POSSIBLE DATA TYPE ERROR; SHEET: {}, COL: {}, CELL: {}{}, TYPE: {}'.format(
                 sheet_title, col_name, col_letter, row_num, col_type))
         return col_val
     else: # decimal_digits <= 15, no rounding
         try:
-            col_val = float(value)
+            col_val = float(unformatted_value)
         except ValueError:
-            col_val = str(value)
+            col_val = str(unformatted_value)
             LOGGER.info('WARNING: POSSIBLE DATA TYPE ERROR: SHEET: {}, COL: {}, CELL: {}{}, TYPE: {}'.format(
                 sheet_title, col_name, col_letter, row_num, col_type))
         return col_val
 
 # transform number values in the sheet
-def transform_sheet_number_data(value, sheet_title, col_name, col_letter, row_num, col_type):
-    if type(value) == int:
-        return int(value)
-    elif type(value) == float:
-        return transform_sheet_decimal_data(value, sheet_title, col_name, col_letter, row_num, col_type)
+def transform_sheet_number_data(formatted_value, unformatted_value, sheet_title, col_name, col_letter, row_num, col_type):
+    """
+        Handled number type records by type-casting into a float to verify the user has entered number type data.
+
+        :param
+        formatted_value - The displayed value of a cell in the sheet
+        unformatted_value - The formatted value of a cell in the sheet
+        sheet_title - The title of the sheet
+        col_name - Column name
+        col_letter - Column letter of the record ie. A, B, C, etc.
+        row_num - Row number of the record
+        col_type - Column type of the record (here: numberType)
+    """
+    if type(unformatted_value) in [int, float]:
+        return transform_sheet_decimal_data(formatted_value, unformatted_value, sheet_title, col_name, col_letter, row_num, col_type)
     else:
         LOGGER.info('WARNING: POSSIBLE DATA TYPE ERROR: SHEET: {}, COL: {}, CELL: {}{}, TYPE: {} '.format(
                 sheet_title, col_name, col_letter, row_num, col_type))
-        return str(value)
+        return str(unformatted_value)
 
 # return transformed column the values based on the datatype
 def get_column_value(value, unformatted_value, sheet_title, col_name, col_letter, row_num, col_type, row):
@@ -198,7 +241,7 @@ def get_column_value(value, unformatted_value, sheet_title, col_name, col_letter
 
     # NUMBER (INTEGER AND FLOAT)
     elif col_type == 'numberType':
-        return transform_sheet_number_data(unformatted_value, sheet_title, col_name, col_letter, row_num, col_type)
+        return transform_sheet_number_data(value, unformatted_value, sheet_title, col_name, col_letter, row_num, col_type)
 
     # STRING
     elif col_type == 'stringValue':
