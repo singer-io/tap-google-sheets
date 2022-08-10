@@ -7,7 +7,7 @@ import singer
 from singer import metadata, utils
 from tap_google_sheets.client import GoogleClient
 from tap_google_sheets.discover import discover
-from tap_google_sheets.sync import sync
+from tap_google_sheets.sync import sync as _sync
 
 LOGGER = singer.get_logger()
 
@@ -50,7 +50,7 @@ def main():
         if parsed_args.discover:
             do_discover(client, spreadsheet_id)
         else:
-            sync(client=client,
+            _sync(client=client,
                  config=config,
                  catalog=parsed_args.catalog or discover(client, spreadsheet_id),
                  state=state)
