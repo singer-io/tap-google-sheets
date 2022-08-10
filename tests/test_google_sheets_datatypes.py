@@ -264,11 +264,6 @@ class DatatypesTest(GoogleSheetsBaseTest):
 
                         if test_case is None or 'empty' in test_case: # some rows we expect empty values rather than strings
 
-                            # BUG_TDL-14450 | https://jira.talendforge.org/browse/TDL-14450
-                            #                 The boolean empty rows are getting parsed as False...but only when it's not the last column
-                            if column == 'Boolean': # BUG_TDL-14450
-                                continue  # skip
-
                             # verify the expected rows are actually Null
                             self.assertIsNone(value)
 
