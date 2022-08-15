@@ -8,7 +8,7 @@ from datetime import timedelta
 from datetime import datetime as dt
 
 from tap_tester import connections, menagerie, runner, LOGGER
-from tap_tester.base_cas import BaseCase
+from tap_tester.base_case import BaseCase
 
 
 class GoogleSheetsBaseTest(BaseCase):
