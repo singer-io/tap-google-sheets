@@ -11,7 +11,8 @@ from base import GoogleSheetsBaseTest
 class PaginationTest(GoogleSheetsBaseTest):
     """ Test the tap pagination to get multiple pages of data """
 
-    def name(self):
+    @staticmethod
+    def name():
         return "tap_tester_google_sheets_pagination_test"
 
 
