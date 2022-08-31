@@ -12,7 +12,7 @@ class MockedParseArgs:
 @mock.patch("tap_google_sheets.discover")
 @mock.patch("tap_google_sheets.singer.utils.parse_args", return_value=MockedParseArgs)
 @mock.patch("tap_google_sheets.GoogleClient.__enter__", return_value="test")
-@mock.patch("tap_google_sheets._sync")
+@mock.patch("tap_google_sheets.sync")
 class TestCatalog(unittest.TestCase):
     def test_catalog_is_given_in_sync(self, mocked_sync, mocked_google_client, mocked_parse_args, mocked_discover):
         """
