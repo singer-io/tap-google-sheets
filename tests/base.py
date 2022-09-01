@@ -7,9 +7,11 @@ import os
 from datetime import timedelta
 from datetime import datetime as dt
 
-from tap_tester import connections, menagerie, runner
+from tap_tester import connections, menagerie, runner, LOGGER
+from tap_tester.base_case import BaseCase
 
-class GoogleSheetsBaseTest(unittest.TestCase):
+
+class GoogleSheetsBaseTest(BaseCase):
     """
     Setup expectations for test sub classes.
     Metadata describing streams.
@@ -215,7 +217,7 @@ class GoogleSheetsBaseTest(unittest.TestCase):
         found_catalog_names = set(map(lambda c: c['stream_name'], found_catalogs))
 
         self.assertSetEqual(self.expected_streams(), found_catalog_names, msg="discovered schemas do not match")
-        print("discovered schemas are OK")
+        LOGGER.info("discovered schemas are OK")
 
         return found_catalogs
 
@@ -238,7 +240,7 @@ class GoogleSheetsBaseTest(unittest.TestCase):
             sum(sync_record_count.values()), 0,
             msg="failed to replicate any data: {}".format(sync_record_count)
         )
-        print("total replicated row count: {}".format(sum(sync_record_count.values())))
+        LOGGER.info("total replicated row count: %s", sum(sync_record_count.values()))
 
         return sync_record_count
 
@@ -270,7 +272,7 @@ class GoogleSheetsBaseTest(unittest.TestCase):
             top_level_md = [md_entry for md_entry in catalog_entry['metadata']
                             if md_entry['breadcrumb'] == []]
             selected = top_level_md[0]['metadata'].get('selected')
-            print("Validating selection on {}: {}".format(cat['stream_name'], selected))
+            LOGGER.info("Validating selection on %s: %s", cat['stream_name'], selected)
             if cat['stream_name'] not in expected_selected:
                 self.assertFalse(selected, msg="Stream selected, but not testable.")
                 continue # Skip remaining assertions if we aren't selecting this stream
@@ -283,8 +285,8 @@ class GoogleSheetsBaseTest(unittest.TestCase):
                 for field_md in field_level_md:
                     field = field_md['breadcrumb'][1]
                     field_selected = field_md['metadata'].get('selected')
-                    print("\tValidating selection on {}.{}: {}".format(
-                        cat['stream_name'], field, field_selected))
+                    LOGGER.info("\tValidating selection on %s.%s: %s",
+                                cat['stream_name'], field, field_selected)
                     self.assertTrue(field_selected, msg="Field not selected.")
             else:
                 # Verify only automatic fields are selected

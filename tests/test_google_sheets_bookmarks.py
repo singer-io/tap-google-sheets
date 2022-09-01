@@ -1,7 +1,7 @@
 import copy
 import datetime
 import os
-from tap_tester import runner, connections, menagerie
+from tap_tester import runner, connections, menagerie, LOGGER
 
 from base import GoogleSheetsBaseTest
 
@@ -116,7 +116,7 @@ class BookmarksTest(GoogleSheetsBaseTest):
         found_catalog_names = set(map(lambda c: c['stream_name'], found_catalogs))
 
         self.assertSetEqual(self.expected_streams(), found_catalog_names, msg="discovered schemas do not match")
-        print("discovered schemas are OK")
+        LOGGER.info("discovered schemas are OK")
 
         
         # table and field selection
@@ -142,7 +142,7 @@ class BookmarksTest(GoogleSheetsBaseTest):
             sum(self.record_count_by_stream_1.values()), 0,
             msg="failed to replicate any data: {}".format(self.record_count_by_stream_1)
         )
-        print("total replicated row count: {}".format(sum(self.record_count_by_stream_1.values())))
+        LOGGER.info("total replicated row count: %s", sum(self.record_count_by_stream_1.values()))
 
        
     
