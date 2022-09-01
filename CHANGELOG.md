@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.0.0
+  * Google Sheets will now support shared drives [#80](https://github.com/singer-io/tap-google-sheets/pull/80)
+  * Non-boolean values in boolean columns will fallback to string [#83](https://github.com/singer-io/tap-google-sheets/pull/83)
+  * When a datetime value is not supported, it will fallback to string [#84](https://github.com/singer-io/tap-google-sheets/pull/84)
+  * Currency values will now be stored as strings [#85](https://github.com/singer-io/tap-google-sheets/pull/85)
+  * Instead of assigning a string datatype to an empty row, the actual format will be used to determine the datatype [#89](https://github.com/singer-io/tap-google-sheets/pull/89)
+
 ## 1.3.1
   * Number type falls to string for boolean values [#73](https://github.com/singer-io/tap-google-sheets/pull/73)
   * Changed multipleof to singer.decimal [#74](https://github.com/singer-io/tap-google-sheets/pull/74)
