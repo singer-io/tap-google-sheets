@@ -251,7 +251,8 @@ class FileMetadata(GoogleSheets):
     replication_method = "INCREMENTAL"
     replication_keys = ["modifiedTime"]
     params = {
-        "fields": "id,name,createdTime,modifiedTime,version,teamDriveId,driveId,lastModifyingUser"
+        "fields": "id,name,createdTime,modifiedTime,version,teamDriveId,driveId,lastModifyingUser",
+        "supportsAllDrives": True
     }
 
     def sync(self, catalog, state, selected_streams):
@@ -426,8 +427,9 @@ def new_transform(self, data, typ, schema, path):
             return False, None
 
     elif typ == "boolean":
-        # return the data as string itself if the value is of type string
-        if isinstance(data, str) and data is not None:
+        if data is None: # returns "null" if data is none
+            return True, None
+        if isinstance(data, str):  # return the data as string itself if the value is of type string
             return True, data
         try:
             return True, bool(data)
