@@ -61,15 +61,15 @@ class PaginationTest(GoogleSheetsBaseTest):
                     # verify the data for the "Pagination" stream is free of any duplicates or breaks by checking
                     # our fake pk value ('id')
                     # THIS ASSERTION CAN BE MADE BECAUSE WE SETUP DATA IN A SPECIFIC WAY. DONT COPY THIS
+
                     self.assertEqual(list(map(str, (range(1, 239)))), fake_pk_list)
-    
                     # verify the data for the "Pagination" stream is free of any duplicates or breaks by checking
                     # the actual primary key values (__sdc_row)
                     self.assertEqual(list(range(2, 240)), actual_pk_list)
                 else:
                     # Setup max rows to check and null rows to check as per the testcase
                     max_range = 1007
-                    if stream == "sadsheet-pagination": 
+                    if stream == "sadsheet-pagination":
                         max_range = 238
                         null_rows = [198, 199]
                         sdc_null_rows = [199, 200]
@@ -83,16 +83,16 @@ class PaginationTest(GoogleSheetsBaseTest):
                         null_rows = [999]
                         sdc_null_rows = [1000]
 
-                    # verify the data for the "sadsheet-pagination" stream is free of any duplicates or breaks by checking
-                    # our fake pk value ('id')
-                    expected_pk_list = list(range(1, max_range))
+                    # verify the data for the rest of the streams in testable_streams is free of any duplicates or breaks by
+                    # checking our fake pk value ('id')
+                    expected_pk_list = range(1, max_range)
                     expected_pk_list = [x for x in expected_pk_list if x not in null_rows]
                     expected_pk_list = list(map(str, expected_pk_list))
                     self.assertEqual(expected_pk_list, fake_pk_list)
                     
-                    # verify the data for the "sadsheet-pagination" stream is free of any duplicates or breaks by checking
-                    # the actual primary key values (__sdc_row)
-                    expected_pk_list = list(range(2, max_range+1))
+                    # verify the data for the rest of the streams in testable_streams is free of any duplicates or breaks by
+                    # checking the actual primary key values (__sdc_row)
+                    expected_pk_list = range(2, max_range + 1)
                     expected_pk_list = [x for x in expected_pk_list if x not in sdc_null_rows]
                     self.assertEqual(expected_pk_list, actual_pk_list)
                     
