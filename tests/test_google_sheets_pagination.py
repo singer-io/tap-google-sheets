@@ -31,7 +31,7 @@ class PaginationTest(GoogleSheetsBaseTest):
         found_catalogs = self.run_and_verify_check_mode(conn_id)
 
         # Select all applicable streams and all fields within those streams
-        testable_streams = {"Pagination", "sadsheet-pagination"}
+        testable_streams = {"Pagination", "sadsheet-pagination", "Pagination-1000-empty", "Pagination-1001-empty", "Pagination-999-empty" }
         test_catalogs = [catalog for catalog in found_catalogs if
                          catalog.get('tap_stream_id') in testable_streams]
         self.perform_and_verify_table_and_field_selection(conn_id, test_catalogs, select_all_fields=True)
@@ -57,28 +57,42 @@ class PaginationTest(GoogleSheetsBaseTest):
                 # verify that we can paginate with all fields selected
                 self.assertGreater(record_count_by_stream.get(stream, 0), self.API_LIMIT)
 
-
-                if stream == "sadsheet-pagination":
-                    # verify the data for the "sadsheet-pagination" stream is free of any duplicates or breaks by checking
+                if stream == "Pagination":
+                    # verify the data for the "Pagination" stream is free of any duplicates or breaks by checking
                     # our fake pk value ('id')
-                    expected_pk_list = list(range(1, 238))
-                    expected_pk_list = [x for x in expected_pk_list if x not in [198, 199]]
+                    # THIS ASSERTION CAN BE MADE BECAUSE WE SETUP DATA IN A SPECIFIC WAY. DONT COPY THIS
+
+                    self.assertEqual(list(map(str, (range(1, 239)))), fake_pk_list)
+                    # verify the data for the "Pagination" stream is free of any duplicates or breaks by checking
+                    # the actual primary key values (__sdc_row)
+                    self.assertEqual(list(range(2, 240)), actual_pk_list)
+                else:
+                    # Setup max rows to check and null rows to check as per the testcase
+                    max_range = 1007
+                    if stream == "sadsheet-pagination":
+                        max_range = 238
+                        null_rows = [198, 199]
+                        sdc_null_rows = [199, 200]
+                    elif stream == "Pagination-1000-empty":
+                        null_rows = [1000]
+                        sdc_null_rows = [1001]
+                    elif stream == "Pagination-1001-empty":
+                        null_rows = [1001]
+                        sdc_null_rows = [1002]
+                    elif stream == "Pagination-999-empty":
+                        null_rows = [999]
+                        sdc_null_rows = [1000]
+
+                    # verify the data for the rest of the streams in testable_streams is free of any duplicates or breaks by
+                    # checking our fake pk value ('id')
+                    expected_pk_list = range(1, max_range)
+                    expected_pk_list = [x for x in expected_pk_list if x not in null_rows]
                     expected_pk_list = list(map(str, expected_pk_list))
                     self.assertEqual(expected_pk_list, fake_pk_list)
                     
-                    # verify the data for the "sadsheet-pagination" stream is free of any duplicates or breaks by checking
-                    # the actual primary key values (__sdc_row)
-                    expected_pk_list = list(range(2, 239))
-                    expected_pk_list = [x for x in expected_pk_list if x not in [199, 200]]
+                    # verify the data for the rest of the streams in testable_streams is free of any duplicates or breaks by
+                    # checking the actual primary key values (__sdc_row)
+                    expected_pk_list = range(2, max_range + 1)
+                    expected_pk_list = [x for x in expected_pk_list if x not in sdc_null_rows]
                     self.assertEqual(expected_pk_list, actual_pk_list)
                     
-                    continue
-
-                # verify the data for the "Pagination" stream is free of any duplicates or breaks by checking
-                # our fake pk value ('id')
-                # THIS ASSERTION CAN BE MADE BECAUSE WE SETUP DATA IN A SPECIFIC WAY. DONT COPY THIS
-                self.assertEqual(list(map(str, (range(1, 239)))), fake_pk_list)
-
-                # verify the data for the "Pagination" stream is free of any duplicates or breaks by checking
-                # the actual primary key values (__sdc_row)
-                self.assertEqual(list(range(2, 240)), actual_pk_list)
