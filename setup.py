@@ -10,7 +10,7 @@ setup(name='tap-google-sheets',
       py_modules=['tap_google_sheets'],
       install_requires=[
           'backoff==2.2.1',
-          'requests==2.22.0',
+          'requests==2.31.0',
           'singer-python==6.0.0'
       ],
       extras_require={

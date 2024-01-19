@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.1.0
+  * Updates to run on python 3.11.7 [#94](https://github.com/singer-io/tap-google-sheets/pull/94)
+
 ## 2.0.0
   * Google Sheets will now support shared drives [#80](https://github.com/singer-io/tap-google-sheets/pull/80)
   * Non-boolean values in boolean columns will fallback to string [#83](https://github.com/singer-io/tap-google-sheets/pull/83)
