@@ -28,9 +28,8 @@ jobs:
           name: 'Unit Tests'
           command: |
             source /usr/local/share/virtualenvs/tap-google-sheets/bin/activate
-            pip install nose coverage
-            nosetests --with-coverage --cover-erase --cover-package=tap_google_sheets --cover-html-dir=htmlcov tests/unittests
-            coverage html
+            pip install nose2 parameterized nose2[coverage_plugin]>=0.6.5
+            nose2 --with-coverage -v -s tests/unittests
       - store_test_results:
           path: test_output/report.xml
       - store_artifacts:
