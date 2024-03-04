@@ -123,7 +123,7 @@ def get_sheet_schema_columns(sheet):
             #  INVALID: errorType, formulaType
             #  https://developers.google.com/sheets/api/reference/rest/v4/spreadsheets/other#ExtendedValue
             #
-            # column_number_format_type = UNEPECIFIED, TEXT, NUMBER, PERCENT, CURRENCY, DATE,
+            # column_number_format_type = UNEPECIFIED, TEXT, NUMBER, PERCENT, CURRENCY,
             #   TIME, DATE_TIME, SCIENTIFIC
             #  https://developers.google.com/sheets/api/reference/rest/v4/spreadsheets/cells#NumberFormatType
             #
@@ -142,12 +142,6 @@ def get_sheet_schema_columns(sheet):
                         'format': 'date-time'
                     }
                     column_gs_type = 'numberType.DATE_TIME'
-                elif column_number_format_type == 'DATE':
-                    col_properties = {
-                        'type': ['null', 'string'],
-                        'format': 'date'
-                    }
-                    column_gs_type = 'numberType.DATE'
                 elif column_number_format_type == 'TIME':
                     col_properties = {
                         'type': ['null', 'string'],
@@ -215,11 +209,11 @@ def get_sheet_schema_columns(sheet):
             }
             columns.append(column)
 
-            if column_gs_type in {'numberType.DATE_TIME', 'numberType.DATE', 'numberType.TIME', 'numberType'}:
+            if column_gs_type in {'numberType.DATE_TIME', 'numberType.TIME', 'numberType'}:
                 col_properties = {
                     'anyOf': [
                         col_properties,
-                        {'type': ['null', 'string']} # all the date, time has string types in schema
+                        {'type': ['null', 'string']} # all the time has string types in schema
                     ]
                 }
             # add the column properties in the `properties` in json schema for the respective column name
