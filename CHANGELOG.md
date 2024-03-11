@@ -1,5 +1,8 @@
 # Changelog
 
+## 3.0.0
+  * Remove support for date datatype [#95](https://github.com/singer-io/tap-google-sheets/pull/95)
+
 ## 2.1.0
   * Updates to run on python 3.11.7 [#94](https://github.com/singer-io/tap-google-sheets/pull/94)
 
