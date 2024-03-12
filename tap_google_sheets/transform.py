@@ -80,19 +80,6 @@ def transform_sheet_datetime_data(value, unformatted_value, sheet_title, col_nam
             sheet_title, col_name, col_letter, row_num, col_type))
         return str(value)
 
-# transform date values in the sheet
-def transform_sheet_date_data(value, unformatted_value, sheet_title, col_name, col_letter, row_num, col_type):
-    if isinstance(unformatted_value, (int, float)):
-        # passing both the formatted as well as the unformatted value, so we can use the string value in
-        # case of any errors while date transform
-        date_str, is_error =  excel_to_dttm_str(value, unformatted_value)
-        return_str = date_str if is_error else date_str[:10]
-        return return_str
-    else:
-        LOGGER.info('WARNING: POSSIBLE DATA TYPE ERROR; SHEET: {}, COL: {}, CELL: {}{}, TYPE: {}'.format(
-            sheet_title, col_name, col_letter, row_num, col_type))
-        return str(value)
-
 # transform time values in the sheet
 def transform_sheet_time_data(value, unformatted_value, sheet_title, col_name, col_letter, row_num, col_type):
     if isinstance(unformatted_value, (int, float)):
@@ -230,10 +217,6 @@ def get_column_value(value, unformatted_value, sheet_title, col_name, col_letter
     # DATE-TIME
     elif col_type == 'numberType.DATE_TIME':
         return transform_sheet_datetime_data(value, unformatted_value, sheet_title, col_name, col_letter, row_num, col_type)
-
-    # DATE
-    elif col_type == 'numberType.DATE':
-        return transform_sheet_date_data(value, unformatted_value, sheet_title, col_name, col_letter, row_num, col_type)
 
     # TIME ONLY (NO DATE)
     elif col_type == 'numberType.TIME':

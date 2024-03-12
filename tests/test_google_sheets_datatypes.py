@@ -164,8 +164,7 @@ class DatatypesTest(GoogleSheetsBaseTest):
         }
         string_column_formats = {
 	    "Datetime": "%Y-%m-%dT%H:%M:%S.%fZ",
-            "Time":  "%H:%M:%S",
-            "Date": "%Y-%m-%d",
+            "Time":  "%H:%M:%S"
         }
 
         for record in record_data:
@@ -207,7 +206,6 @@ class DatatypesTest(GoogleSheetsBaseTest):
             "Currency": "stringValue",
             "Datetime": "numberType.DATE_TIME",
             "Time": "numberType.TIME",
-            "Date": "numberType.DATE",
             "String": "stringValue",
             "Number": "numberType",
             "Boolean": "boolValue",

@@ -74,7 +74,7 @@ class TestNullCellFormat(unittest.TestCase):
                                 "null",
                                 "string"
                             ],
-                            "format": "date"
+                            "format": "date-time"
                         }
 
         sheet_json_schema, columns = schema.get_sheet_schema_columns(sheet)

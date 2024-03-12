@@ -48,13 +48,13 @@ This tap:
           - Invalid types: formulaValue, errorValue
       - Then check:
         - [effectiveFormat.numberFormat.type](https://developers.google.com/sheets/api/reference/rest/v4/spreadsheets/cells#NumberFormatType)
-          - Valid types: UNEPECIFIED, TEXT, NUMBER, PERCENT, CURRENCY, DATE, TIME, DATE_TIME, SCIENTIFIC
+          - Valid types: UNEPECIFIED, TEXT, NUMBER, PERCENT, CURRENCY, TIME, DATE_TIME, SCIENTIFIC
           - Determine JSON schema column data type based on the value and the above cell metadata settings.
-          - If DATE, DATE_TIME, or TIME, set JSON schema format accordingly
+          - If DATE_TIME, or TIME, set JSON schema format accordingly
 
 [**values (GET)**](https://developers.google.com/sheets/api/reference/rest/v4/spreadsheets.values/get)
 - Endpoint: https://sheets.googleapis.com/v4/spreadsheets/${spreadsheet_id}/values/'${sheet_name}'!${row_range}?dateTimeRenderOption=SERIAL_NUMBER&valueRenderOption=UNFORMATTED_VALUE&majorDimension=ROWS
-- This endpoint loops through sheets and row ranges to get the [unformatted values](https://developers.google.com/sheets/api/reference/rest/v4/ValueRenderOption) (effective values only), dates and datetimes as [serial numbers](https://developers.google.com/sheets/api/reference/rest/v4/DateTimeRenderOption)
+- This endpoint loops through sheets and row ranges to get the [unformatted values](https://developers.google.com/sheets/api/reference/rest/v4/ValueRenderOption) (effective values only), datetimes as [serial numbers](https://developers.google.com/sheets/api/reference/rest/v4/DateTimeRenderOption)
 - Primary keys: _sdc_row
 - Replication strategy: Full (GET file audit data for spreadsheet_id in config)
 - Process/Transformations:
@@ -62,7 +62,7 @@ This tap:
     - Send metadata for sheet
   - Loop through ALL columns for columns having a column header
   - Loop through ranges of rows for ALL rows in sheet available area max row (from sheet metadata)
-  - Transform values, if necessary (dates, date-times, times, boolean). 
+  - Transform values, if necessary (date-times, times, boolean). 
     - Date/time serial numbers converted to date, date-time, and time strings. Google Sheets uses Lotus 1-2-3 [Serial Number](https://developers.google.com/sheets/api/reference/rest/v4/DateTimeRenderOption) format for date/times. These are converted to normal UTC date-time strings.
   - Process/send records to target
 
