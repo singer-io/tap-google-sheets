@@ -14,6 +14,8 @@ def sync(client, config, catalog, state):
         "sheets_loaded" & "sheet_metadata" -> get the data lists from the "spreadsheet_metadata" stream and sync the records if selected
     """
     last_stream = singer.get_currently_syncing(state)
+    # preset to none
+    file_modified_time = None
     LOGGER.info("last/currently syncing stream: %s", last_stream)
 
     selected_streams = []
@@ -61,7 +63,8 @@ def sync(client, config, catalog, state):
                 stream_obj.sync(catalog, state, sheets_loaded_records)
 
         # sync file metadata
-        elif stream_name == "file_metadata":
+        elif stream_name == "file_metadata" and "file_metadata" in selected_streams:
+            LOGGER.warning("This Stream might not work, please de-select if you face any issues")
             file_changed, file_modified_time = stream_obj.sync(catalog, state, selected_streams)
             if not file_changed:
                 break
@@ -70,4 +73,5 @@ def sync(client, config, catalog, state):
 
     # write "file_metadata" bookmark, as we have successfully synced all the sheet's records
     # it will force to re-sync of there is any interrupt between the sync
-    write_bookmark(state, 'file_metadata', strftime(file_modified_time))
+    if file_modified_time:
+        write_bookmark(state, 'file_metadata', strftime(file_modified_time))
