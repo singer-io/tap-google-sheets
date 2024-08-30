@@ -71,7 +71,6 @@ def sync(client, config, catalog, state):
                 if not file_changed:
                     break
             except GoogleForbiddenError as err:
-                LOGGER.info("Stream file_metadata cannot be synced due to insufficeint permissions, please de-select it")
                 raise GoogleForbiddenError("Stream file_metadata cannot be synced due to insufficeint permissions, please de-select it")
 
         LOGGER.info("FINISHED Syncing: %s", stream_name)
