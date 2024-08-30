@@ -1,5 +1,6 @@
 import singer
 from tap_google_sheets.streams import STREAMS, SheetsLoadData, write_bookmark, strftime
+from tap_google_sheets.client import GoogleForbiddenError
 
 LOGGER = singer.get_logger()
 
@@ -65,9 +66,13 @@ def sync(client, config, catalog, state):
         # sync file metadata
         elif stream_name == "file_metadata" and "file_metadata" in selected_streams:
             LOGGER.warning("This Stream might not work, please de-select if you face any issues")
-            file_changed, file_modified_time = stream_obj.sync(catalog, state, selected_streams)
-            if not file_changed:
-                break
+            try:
+                file_changed, file_modified_time = stream_obj.sync(catalog, state, selected_streams)
+                if not file_changed:
+                    break
+            except GoogleForbiddenError as err:
+                LOGGER.info("Stream file_metadata cannot be synced due to insufficeint permissions, please de-select it")
+                raise GoogleForbiddenError("Stream file_metadata cannot be synced due to insufficeint permissions, please de-select it")
 
         LOGGER.info("FINISHED Syncing: %s", stream_name)
 

@@ -1,5 +1,8 @@
 # Changelog
 
+## 3.1.0
+  * Updates Sync condition and exception handling for file_metadata stream[#96](https://github.com/singer-io/tap-google-sheets/pull/95)
+
 ## 3.0.0
   * Remove support for date datatype [#95](https://github.com/singer-io/tap-google-sheets/pull/95)
 
