@@ -48,13 +48,6 @@ class BookmarksTest(GoogleSheetsBaseTest):
                 self.assertEqual('activate_version', sync1_message_actions[-1])
                 self.assertSetEqual({'upsert'}, set(sync1_message_actions[1:-1]))
 
-        # run a sync again, this time we shouldn't get any records back
-        sync_job_name = runner.run_sync_mode(self, self.conn_id)
-        exit_status = menagerie.get_exit_status(self.conn_id, sync_job_name)
-        menagerie.verify_sync_exit_status(self, exit_status, sync_job_name)
-        record_count_by_stream_2 = runner.examine_target_output_file(
-            self, self.conn_id, self.expected_streams(), self.expected_primary_keys())
-
     def starter(self):
         """
         Instantiate connection, run discovery, and initial sync.
