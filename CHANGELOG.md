@@ -1,5 +1,8 @@
 # Changelog
 
+## 3.1.0
+  * Remove deprecated stream file_metadata [#96](https://github.com/singer-io/tap-google-sheets/pull/96)
+
 ## 3.0.0
   * Remove support for date datatype [#95](https://github.com/singer-io/tap-google-sheets/pull/95)
 

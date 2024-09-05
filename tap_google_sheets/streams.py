@@ -243,49 +243,6 @@ class GoogleSheets:
         LOGGER.info('FINISHED Syncing {}, Total Records: {}'.format(self.stream_name, record_count))
         update_currently_syncing(self.state, None)
 
-class FileMetadata(GoogleSheets):
-    stream_name = "file_metadata"
-    api = "files"
-    path = "files/{spreadsheet_id}"
-    key_properties = ["id"]
-    replication_method = "INCREMENTAL"
-    replication_keys = ["modifiedTime"]
-    params = {
-        "fields": "id,name,createdTime,modifiedTime,version,teamDriveId,driveId,lastModifyingUser",
-        "supportsAllDrives": True
-    }
-
-    def sync(self, catalog, state, selected_streams):
-        """
-        sync file's metadata
-        """
-        self.state = state
-        # variable to check if file is changed or not
-
-        # get date to start sync from, ie. start date or bookmark date
-        start_date = strptime_to_utc(get_bookmark(state, self.stream_name, self.config_start_date))
-
-        LOGGER.info("GET file_metadata")
-        file_metadata, time_extracted = self.get_data(stream_name=self.stream_name)
-        LOGGER.info("Transform file_metadata")
-
-        file_modified_time = strptime_to_utc(file_metadata.get("modifiedTime"))
-        LOGGER.info("last_datetime = {}, file_modified_time = {}".format(start_date, file_modified_time))
-        if file_modified_time <= start_date:
-            # if file is not changed, update the variable
-            LOGGER.info("file_modified_time <= last_datetime, FILE NOT CHANGED. EXITING.")
-            # return and stop syncing the next streams, as the file is not changed
-            return False, file_modified_time
-
-        # only perform sync if file metadata stream is selected and file is changed
-        if self.stream_name in selected_streams:
-            # transform file metadata records
-            file_metadata_transformed = internal_transform.transform_file_metadata(file_metadata)
-            # do sync
-            self.sync_stream(file_metadata_transformed, catalog, time_extracted)
-
-        return True, file_modified_time
-
 class SpreadSheetMetadata(GoogleSheets):
     stream_name = "spreadsheet_metadata"
     api = "sheets"
@@ -641,11 +598,9 @@ class SheetsLoaded(GoogleSheets):
 
 
 # create OrderDict, as the order matters for syncing the streams
-# "file_metadata" -> do not sync other streams, if file is not changed
 # "spreadsheet_metadata" -> get sheets in the spreadsheet and load sheet's records
 #       and prepare records for "sheet_metadata" and "sheets_loaded" streams
 STREAMS = OrderedDict()
-STREAMS['file_metadata'] = FileMetadata
 STREAMS['spreadsheet_metadata'] = SpreadSheetMetadata
 STREAMS['sheet_metadata'] = SheetMetadata
 STREAMS['sheets_loaded'] = SheetsLoaded

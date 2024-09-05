@@ -33,20 +33,6 @@ def transform_spreadsheet_metadata(spreadsheet_metadata):
     spreadsheet_metadata_arr.append(spreadsheet_metadata_tf)
     return spreadsheet_metadata_arr
 
-# Tranform file_metadata: remove nodes from lastModifyingUser, format as array
-def transform_file_metadata(file_metadata):
-    # Convert to dict
-    file_metadata_tf = json.loads(json.dumps(file_metadata))
-    # Remove keys
-    if file_metadata_tf.get('lastModifyingUser'):
-        file_metadata_tf['lastModifyingUser'].pop('photoLink', None)
-        file_metadata_tf['lastModifyingUser'].pop('me', None)
-        file_metadata_tf['lastModifyingUser'].pop('permissionId', None)
-    # Add record to an array of 1
-    file_metadata_arr = []
-    file_metadata_arr.append(file_metadata_tf)
-    return file_metadata_arr
-
 # Convert Excel Date Serial Number (excel_date_sn) to datetime string
 # timezone_str: defaults to UTC (which we assume is the timezone for ALL datetimes)
 def excel_to_dttm_str(string_value, excel_date_sn, timezone_str=None):

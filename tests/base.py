@@ -72,11 +72,6 @@ class GoogleSheetsBaseTest(BaseCase):
             # self.REPLICATION_KEYS: {"modified_at"}
         }
         return {
-            "file_metadata": {
-                self.PRIMARY_KEYS: {"id", },
-                self.REPLICATION_METHOD: self.INCREMENTAL,
-                self.REPLICATION_KEYS: {"modifiedTime"}
-            },
             "sheet_metadata": {
                 self.PRIMARY_KEYS: {"sheetId"}, # "spreadsheetId"}, # BUG? | This is not in the real tap, "spreadsheetId"},
                 self.REPLICATION_METHOD: self.FULL_TABLE,
@@ -295,9 +290,6 @@ class GoogleSheetsBaseTest(BaseCase):
                 # Verify only automatic fields are selected
                 expected_automatic_fields = self.expected_automatic_fields().get(cat['stream_name'])
                 selected_fields = self.get_selected_fields_from_metadata(catalog_entry['metadata'])
-                # BUG TDL-14241 | Replication keys are not automatic
-                if cat['stream_name'] == "file_metadata":
-                    expected_automatic_fields.remove('modifiedTime')
                 self.assertEqual(expected_automatic_fields, selected_fields)
 
     @staticmethod
@@ -373,7 +365,7 @@ class GoogleSheetsBaseTest(BaseCase):
     ##########################################################################
 
     def is_sheet(self, stream):
-        non_sheets_streams = {'sheet_metadata', 'file_metadata', 'sheets_loaded', 'spreadsheet_metadata'}
+        non_sheets_streams = {'sheet_metadata', 'sheets_loaded', 'spreadsheet_metadata'}
         return stream in self.expected_streams().difference(non_sheets_streams)
 
     def undiscoverable_sheets(self):

@@ -68,7 +68,6 @@ This tap:
 
 ## Authentication
 The [**Google Sheets Setup & Authentication**](https://drive.google.com/open?id=1FojlvtLwS0-BzGS37R0jEXtwSHqSiO1Uw-7RKQQO-C4) Google Doc provides instructions show how to configure the Google Cloud API credentials to enable Google Drive and Google Sheets APIs, configure Google Cloud to authorize/verify your domain ownership, generate an API key (client_id, client_secret), authenticate and generate a refresh_token, and prepare your tap config.json with the necessary parameters.
-- Enable Googe Drive APIs and Authorization Scope: https://www.googleapis.com/auth/drive.metadata.readonly
 - Enable Google Sheets API and Authorization Scope: https://www.googleapis.com/auth/spreadsheets.readonly
 - Tap config.json parameters:
   - client_id: identifies your application
@@ -122,10 +121,7 @@ The [**Google Sheets Setup & Authentication**](https://drive.google.com/open?id=
 
     ```json
     {
-        "currently_syncing": "file_metadata",
-        "bookmarks": {
-            "file_metadata": "2019-09-27T22:34:39.000000Z"
-        }
+        "currently_syncing": "sheet_metadata",
     }
     ```
 
@@ -185,7 +181,6 @@ The [**Google Sheets Setup & Authentication**](https://drive.google.com/open?id=
     +----------------------+---------+---------+
     | stream               | records | schemas |
     +----------------------+---------+---------+
-    | file_metadata        | 1       | 1       |
     | spreadsheet_metadata | 1       | 1       |
     | Test-1               | 9       | 1       |
     | Test 2               | 2       | 1       |
