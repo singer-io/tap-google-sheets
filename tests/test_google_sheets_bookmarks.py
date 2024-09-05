@@ -7,7 +7,7 @@ from base import GoogleSheetsBaseTest
 
 
 class BookmarksTest(GoogleSheetsBaseTest):
-    """Ensure all sheets streams will replicate full table """
+    """Ensure all sheets streams will replicate in full table mode and create appropriate bookmarks"""
 
     conn_id = ""
     expected_test_streams = ""
