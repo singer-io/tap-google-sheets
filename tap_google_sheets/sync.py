@@ -13,8 +13,6 @@ def sync(client, config, catalog, state):
         "sheets_loaded" & "sheet_metadata" -> get the data lists from the "spreadsheet_metadata" stream and sync the records if selected
     """
     last_stream = singer.get_currently_syncing(state)
-    # preset to none
-    file_modified_time = None
     LOGGER.info("last/currently syncing stream: %s", last_stream)
 
     selected_streams = []
