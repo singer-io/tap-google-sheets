@@ -7,7 +7,7 @@ from base import GoogleSheetsBaseTest
 
 
 class BookmarksTest(GoogleSheetsBaseTest):
-    """Ensure all sheets streams will replicate based off of the most recent bookmarked state for 'file_metadata'"""
+    """Ensure all sheets streams will replicate full table """
 
     conn_id = ""
     expected_test_streams = ""
@@ -20,7 +20,6 @@ class BookmarksTest(GoogleSheetsBaseTest):
     def test_run(self):
         """
         Run check mode, perform table and field selection, and run a sync.
-
         - Verify initial sync message actions include activate versions and the upserts
         """
         skipped_streams = {stream
@@ -47,6 +46,7 @@ class BookmarksTest(GoogleSheetsBaseTest):
                 self.assertEqual('activate_version', sync1_message_actions[0])
                 self.assertEqual('activate_version', sync1_message_actions[-1])
                 self.assertSetEqual({'upsert'}, set(sync1_message_actions[1:-1]))
+                self.assertIn(stream, state["bookmark"].keys())
 
     def starter(self):
         """
