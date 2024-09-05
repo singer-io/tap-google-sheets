@@ -58,9 +58,5 @@ class AutomaticFields(GoogleSheetsBaseTest):
                 # Verify that you get some records for each stream
                 self.assertGreater(record_count_by_stream.get(stream, -1), 0)
 
-                # Verify that only the automatic fields are sent to the target
-                # BUG TDL-14241 | Replication keys are not automatic
-                if stream == "file_metadata":
-                    expected_keys.remove('modifiedTime')
                 for actual_keys in record_messages_keys:
                     self.assertSetEqual(expected_keys, actual_keys)

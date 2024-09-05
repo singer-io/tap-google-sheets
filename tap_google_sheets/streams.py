@@ -598,7 +598,6 @@ class SheetsLoaded(GoogleSheets):
 
 
 # create OrderDict, as the order matters for syncing the streams
-# "file_metadata" -> do not sync other streams, if file is not changed
 # "spreadsheet_metadata" -> get sheets in the spreadsheet and load sheet's records
 #       and prepare records for "sheet_metadata" and "sheets_loaded" streams
 STREAMS = OrderedDict()

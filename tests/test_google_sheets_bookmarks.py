@@ -21,6 +21,7 @@ class BookmarksTest(GoogleSheetsBaseTest):
         """
         Run check mode, perform table and field selection, and run a sync.
         - Verify initial sync message actions include activate versions and the upserts
+        - check if bookmark include activate versions for all streams
         """
         skipped_streams = {stream
                            for stream in self.expected_streams()

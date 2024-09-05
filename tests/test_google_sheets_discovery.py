@@ -123,8 +123,6 @@ class DiscoveryTest(GoogleSheetsBaseTest):
                 # verify that primary keys and replication keys
                 # are given the inclusion of automatic in metadata.
                 # BUG TDL-14241 | Replication keys are not automatic
-                if stream  == 'file_metadata':
-                    expected_automatic_fields.remove('modifiedTime')
                 self.assertSetEqual(expected_automatic_fields, actual_automatic_fields)
 
                 # verify missing values where __sdc_row = 2
