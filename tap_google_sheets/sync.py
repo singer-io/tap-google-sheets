@@ -7,7 +7,6 @@ LOGGER = singer.get_logger()
 def sync(client, config, catalog, state):
     """
     Sync the streams, loop over STREAMS
-        "file_metadata" -> get the file's metadata and if the spreadsheet file is updated then continue the sync else stop the sync
         "spreadsheet_metadata" -> get the spreadsheet's metadata
             - sync the spreadsheet_metadata stream if selected
             - get the sheets in the spreadsheet and loop over the sheets and sync the sheet's records if selected
@@ -63,19 +62,4 @@ def sync(client, config, catalog, state):
             else:
                 stream_obj.sync(catalog, state, sheets_loaded_records)
 
-        # sync file metadata
-        elif stream_name == "file_metadata" and "file_metadata" in selected_streams:
-            LOGGER.warning("This Stream might not work, please de-select if you face any issues")
-            try:
-                file_changed, file_modified_time = stream_obj.sync(catalog, state, selected_streams)
-                if not file_changed:
-                    break
-            except GoogleForbiddenError as err:
-                raise GoogleForbiddenError("Stream file_metadata cannot be synced due to insufficeint permissions, please de-select it")
-
         LOGGER.info("FINISHED Syncing: %s", stream_name)
-
-    # write "file_metadata" bookmark, as we have successfully synced all the sheet's records
-    # it will force to re-sync of there is any interrupt between the sync
-    if file_modified_time:
-        write_bookmark(state, 'file_metadata', strftime(file_modified_time))

@@ -72,11 +72,6 @@ class GoogleSheetsBaseTest(BaseCase):
             # self.REPLICATION_KEYS: {"modified_at"}
         }
         return {
-            "file_metadata": {
-                self.PRIMARY_KEYS: {"id", },
-                self.REPLICATION_METHOD: self.INCREMENTAL,
-                self.REPLICATION_KEYS: {"modifiedTime"}
-            },
             "sheet_metadata": {
                 self.PRIMARY_KEYS: {"sheetId"}, # "spreadsheetId"}, # BUG? | This is not in the real tap, "spreadsheetId"},
                 self.REPLICATION_METHOD: self.FULL_TABLE,
