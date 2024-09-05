@@ -46,7 +46,7 @@ class BookmarksTest(GoogleSheetsBaseTest):
                 self.assertEqual('activate_version', sync1_message_actions[0])
                 self.assertEqual('activate_version', sync1_message_actions[-1])
                 self.assertSetEqual({'upsert'}, set(sync1_message_actions[1:-1]))
-                self.assertIn(stream, state["bookmark"].keys())
+                self.assertIn(stream, state["bookmarks"].keys())
 
     def starter(self):
         """
