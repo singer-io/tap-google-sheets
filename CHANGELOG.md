@@ -1,5 +1,8 @@
 # Changelog
 
+## 3.1.1
+  * Dependency upgrades [#98](https://github.com/singer-io/tap-google-sheets/pull/98)
+
 ## 3.1.0
   * Remove deprecated stream file_metadata [#96](https://github.com/singer-io/tap-google-sheets/pull/96)
 
