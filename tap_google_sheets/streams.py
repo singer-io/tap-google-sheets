@@ -123,6 +123,7 @@ class GoogleSheets:
     key_properties = None
     replication_method = None
     replication_keys = None
+    parent = None
     params = None
     state = None
 
@@ -167,6 +168,11 @@ class GoogleSheets:
             valid_replication_keys=self.replication_keys,
             replication_method=self.replication_method
         )
+        
+        # Add parent-tap-stream-id for child streams
+        if hasattr(self, 'parent') and self.parent:
+            mdata = metadata.write(mdata, (), 'parent-tap-stream-id', self.parent)
+        
         field_metadata[self.stream_name] = mdata
 
         return schemas, field_metadata
@@ -285,6 +291,10 @@ class SpreadSheetMetadata(GoogleSheets):
                         valid_replication_keys=None,
                         replication_method='FULL_TABLE'
                     )
+                    
+                    # Add parent-tap-stream-id for individual sheet streams
+                    sheet_mdata = metadata.write(sheet_mdata, (), 'parent-tap-stream-id', self.stream_name)
+                    
                     # for each column check if the `columnSkipped` value is true and the `prior_column_skipped` is false or None
                     # in the columns dict. The `prior_column_skipped` would be true  when it is the first column of the two
                     # consecutive empty headers column if true: update the incusion property to `unsupported`
@@ -564,6 +574,7 @@ class SheetMetadata(GoogleSheets):
     path = "spreadsheets/{spreadsheet_id}"
     key_properties = ["sheetId"]
     replication_method = "FULL_TABLE"
+    parent = "spreadsheet_metadata"
     params = {
         "includeGridData": "true",
         "ranges": "'{sheet_title}'!1:2"
@@ -583,6 +594,7 @@ class SheetsLoaded(GoogleSheets):
     data_key = "values"
     key_properties = ["spreadsheetId", "sheetId", "loadDate"]
     replication_method = "FULL_TABLE"
+    parent = "spreadsheet_metadata"
     params = {
         "dateTimeRenderOption": "SERIAL_NUMBER",
         "valueRenderOption": "UNFORMATTED_VALUE",
