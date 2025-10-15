@@ -64,6 +64,7 @@ class DiscoveryTest(GoogleSheetsBaseTest):
                 expected_automatic_fields = self.expected_automatic_fields()[stream]
                 expected_unsupported_fields = self.expected_unsupported_fields()[stream]
                 expected_replication_method = self.expected_replication_method()[stream]
+                expected_parent_stream = self.expected_parent_streams()[stream]
 
                 # collecting actual values...
                 schema_and_metadata = menagerie.get_annotated_schema(conn_id, catalog['stream_id'])
@@ -79,6 +80,8 @@ class DiscoveryTest(GoogleSheetsBaseTest):
                 )
                 actual_replication_method = stream_properties[0].get(
                     "metadata", {self.REPLICATION_METHOD: None}).get(self.REPLICATION_METHOD)
+                actual_parent_stream_id = stream_properties[0].get(
+                    "metadata", {}).get("parent-tap-stream-id")
                 actual_automatic_fields = set(
                     item.get("breadcrumb", ["properties", None])[1] for item in metadata
                     if item.get("metadata").get("inclusion") == "automatic"
@@ -113,6 +116,9 @@ class DiscoveryTest(GoogleSheetsBaseTest):
 
                 # verify the replication method matches our expectations
                 self.assertEqual(expected_replication_method, actual_replication_method)
+
+                # verify parent-tap-stream-id for child streams
+                self.assertEqual(expected_parent_stream, actual_parent_stream_id)
 
                 # verify that if there is a replication key we are doing INCREMENTAL otherwise FULL
                 if expected_replication_keys:

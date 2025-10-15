@@ -30,6 +30,7 @@ class GoogleSheetsBaseTest(BaseCase):
     FULL_TABLE = "FULL_TABLE"
     START_DATE_FORMAT = "%Y-%m-%dT00:00:00Z"
     BOOKMARK_COMPARISON_FORMAT =  "%Y-%m-%dT%H:%M:%S.%fZ"
+    EXPECTED_PARENT_STREAM = "expected-parent-stream"
 
     start_date = ""
 
@@ -69,16 +70,19 @@ class GoogleSheetsBaseTest(BaseCase):
         default_sheet = {
             self.PRIMARY_KEYS:{"__sdc_row"},
             self.REPLICATION_METHOD: self.FULL_TABLE,  # DOCS_BUG TDL-14240 | DOCS say INC but it is FULL
+            self.EXPECTED_PARENT_STREAM: "spreadsheet_metadata",
             # self.REPLICATION_KEYS: {"modified_at"}
         }
         return {
             "sheet_metadata": {
                 self.PRIMARY_KEYS: {"sheetId"}, # "spreadsheetId"}, # BUG? | This is not in the real tap, "spreadsheetId"},
                 self.REPLICATION_METHOD: self.FULL_TABLE,
+                self.EXPECTED_PARENT_STREAM: "spreadsheet_metadata",
             },
             "sheets_loaded":{
                 self.PRIMARY_KEYS:{"spreadsheetId", "sheetId", "loadDate"},  # DOCS_BUG  TDL-14240 | loadDate
-                self.REPLICATION_METHOD: self.FULL_TABLE
+                self.REPLICATION_METHOD: self.FULL_TABLE,
+                self.EXPECTED_PARENT_STREAM: "spreadsheet_metadata",
             },
             "spreadsheet_metadata": {
                 self.PRIMARY_KEYS: {"spreadsheetId"},
@@ -176,6 +180,12 @@ class GoogleSheetsBaseTest(BaseCase):
     def expected_replication_method(self):
         """return a dictionary with key of table name nd value of replication method"""
         return {table: properties.get(self.REPLICATION_METHOD, None)
+                for table, properties
+                in self.expected_metadata().items()}
+
+    def expected_parent_streams(self):
+        """return a dictionary with key of table name and value of expected parent stream"""
+        return {table: properties.get(self.EXPECTED_PARENT_STREAM, None)
                 for table, properties
                 in self.expected_metadata().items()}
 
