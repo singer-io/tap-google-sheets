@@ -1,5 +1,8 @@
 # Changelog
 
+## 3.1.2
+  * Adds parent-tap-stream-id field to catalog for child streams [#101](https://github.com/singer-io/tap-google-sheets/pull/101)
+
 ## 3.1.1
   * Dependency upgrades [#98](https://github.com/singer-io/tap-google-sheets/pull/98)
 
