@@ -170,8 +170,10 @@ class GoogleSheets:
         )
         
         # Add parent-tap-stream-id for child streams
-        if hasattr(self, 'parent') and self.parent:
+        if self.parent:
+            mdata = metadata.to_map(mdata)
             mdata = metadata.write(mdata, (), 'parent-tap-stream-id', self.parent)
+            mdata = metadata.to_list(mdata)
         
         field_metadata[self.stream_name] = mdata
 
