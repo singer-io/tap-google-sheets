@@ -293,7 +293,9 @@ class SpreadSheetMetadata(GoogleSheets):
                     )
                     
                     # Add parent-tap-stream-id for individual sheet streams
-                    sheet_mdata = metadata.write(sheet_mdata, (), 'parent-tap-stream-id', self.stream_name)
+                    mdata = metadata.to_map(sheet_mdata)
+                    mdata = metadata.write(mdata, (), 'parent-tap-stream-id', self.stream_name)
+                    sheet_mdata = metadata.to_list(mdata)
                     
                     # for each column check if the `columnSkipped` value is true and the `prior_column_skipped` is false or None
                     # in the columns dict. The `prior_column_skipped` would be true  when it is the first column of the two
