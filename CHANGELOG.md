@@ -1,5 +1,8 @@
 # Changelog
 
+## 3.1.2
+  * Increase the wait time while retrying on failure [#102](https://github.com/singer-io/tap-google-sheets/pull/102)
+
 ## 3.1.1
   * Dependency upgrades [#98](https://github.com/singer-io/tap-google-sheets/pull/98)
 
