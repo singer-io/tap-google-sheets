@@ -1,9 +1,17 @@
 {
+    "_comment": "Option 1: OAuth2 Authentication (for user-delegated access)",
     "client_id": "YOUR_CLIENT_ID",
     "client_secret": "YOUR_CLIENT_SECRET",
     "refresh_token": "YOUR_REFRESH_TOKEN",
+
+    "_comment2": "Option 2: Service Account Authentication (for automated pipelines)",
+    "_comment3": "Use either credentials_file OR credentials_json, not both",
+    "credentials_file": "/path/to/service-account-key.json",
+    "credentials_json": "{\"type\": \"service_account\", \"project_id\": \"...\", ...}",
+
+    "_comment4": "Required fields for all authentication methods",
     "spreadsheet_id": "YOUR_GOOGLE_SPREADSHEET_ID",
     "start_date": "2019-01-01T00:00:00Z",
-    "user_agent": "tap-google-search-console <api_user_email@example.com>",
+    "user_agent": "tap-google-sheets <api_user_email@example.com>",
     "request_timeout": 300
 }
