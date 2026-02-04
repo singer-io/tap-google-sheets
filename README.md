@@ -187,7 +187,7 @@ This approach makes it easier to:
 
     **Optional Configuration Parameters:**
 
-    - `sheet_names` (array of strings): Specify which sheets to extract from the spreadsheet. If omitted, all sheets are discovered and available for selection. This is useful when working with Meltano or when you want to limit discovery to specific sheets.
+    - `sheet_names` (array of strings): Specify which sheets to extract from the spreadsheet. If provided, only these sheets will be discovered, and they will be automatically selected for extraction. If omitted, all sheets are discovered (but not automatically selected). This parameter works seamlessly with `meltano el` without requiring manual catalog editing.
     
     Example with sheet filtering:
     ```json
@@ -198,6 +198,8 @@ This approach makes it easier to:
         "user_agent": "tap-google-sheets <api_user_email@example.com>"
     }
     ```
+    
+    **Note:** When `sheet_names` is specified, the filtered sheets are automatically selected in the catalog, making them immediately available for extraction without additional configuration.
     
     Optionally, also create a `state.json` file. `currently_syncing` is an optional attribute used for identifying the last object to be synced in case the job is interrupted mid-stream. The next run would begin where the last job left off.
     Only the `performance_reports` uses a bookmark. The date-time bookmark is stored in a nested structure based on the endpoint, site, and sub_type.The `request_timeout` is an optional paramater to set timeout for requests. Default: 300 seconds
