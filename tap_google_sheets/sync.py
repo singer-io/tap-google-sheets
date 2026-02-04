@@ -45,12 +45,16 @@ def sync(client, config, catalog, state):
             # class to load sheet's data
             sheets_load_data = SheetsLoadData(client, config.get("spreadsheet_id"), config.get("start_date"))
 
+            # get sheet_names filter from config
+            sheet_names_filter = config.get("sheet_names", [])
+
             # perform sheet's sync and get sheet's metadata and sheet loaded records for "sheet_metadata" and "sheets_loaded" streams
             sheet_metadata_records, sheets_loaded_records = sheets_load_data.load_data(catalog=catalog,
                                                                                         state=state,
                                                                                         selected_streams=selected_streams,
                                                                                         sheets=sheets,
-                                                                                        spreadsheet_time_extracted=time_extracted)
+                                                                                        spreadsheet_time_extracted=time_extracted,
+                                                                                        sheet_names_filter=sheet_names_filter)
 
         # sync "sheet_metadata" and "sheets_loaded" based on the records from spreadsheet metadata
         elif stream_name in ["sheet_metadata", "sheets_loaded"] and stream_name in selected_streams:

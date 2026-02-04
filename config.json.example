@@ -13,5 +13,8 @@
     "spreadsheet_id": "YOUR_GOOGLE_SPREADSHEET_ID",
     "start_date": "2019-01-01T00:00:00Z",
     "user_agent": "tap-google-sheets <api_user_email@example.com>",
-    "request_timeout": 300
+    "request_timeout": 300,
+
+    "_comment5": "Optional: Filter to specific sheets (if omitted, all sheets are discovered)",
+    "sheet_names": ["Sheet1", "Sheet2", "Marco"]
 }

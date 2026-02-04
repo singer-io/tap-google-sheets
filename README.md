@@ -81,6 +81,7 @@ The [**Google Sheets Setup & Authentication**](https://drive.google.com/open?id=
   - spreadsheet_id: unique identifier for each spreadsheet in Google Drive
   - start_date: absolute minimum start date to check file modified
   - user_agent: tap-name and email address; identifies your application in the Remote API server logs
+  - sheet_names (optional): array of sheet names to extract; if omitted, all sheets are discovered
 
 ### Service Account Authentication
 
@@ -181,6 +182,20 @@ This approach makes it easier to:
         "start_date": "2019-01-01T00:00:00Z",
         "user_agent": "tap-google-sheets <api_user_email@example.com>",
         "request_timeout": 300
+    }
+    ```
+
+    **Optional Configuration Parameters:**
+
+    - `sheet_names` (array of strings): Specify which sheets to extract from the spreadsheet. If omitted, all sheets are discovered and available for selection. This is useful when working with Meltano or when you want to limit discovery to specific sheets.
+    
+    Example with sheet filtering:
+    ```json
+    {
+        "spreadsheet_id": "YOUR_GOOGLE_SPREADSHEET_ID",
+        "sheet_names": ["Marco", "Sheet1", "Q4 Results"],
+        "start_date": "2019-01-01T00:00:00Z",
+        "user_agent": "tap-google-sheets <api_user_email@example.com>"
     }
     ```
     

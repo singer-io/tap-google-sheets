@@ -68,10 +68,10 @@ def validate_auth_config(config):
         LOGGER.info('Using OAuth2 authentication')
         return 'oauth2'
 
-def do_discover(client, spreadsheet_id):
+def do_discover(client, config):
 
     LOGGER.info('Starting discover')
-    catalog = discover(client, spreadsheet_id)
+    catalog = discover(client, config)
     json.dump(catalog.to_dict(), sys.stdout, indent=2)
     LOGGER.info('Finished discover')
 
@@ -108,11 +108,11 @@ def main():
         spreadsheet_id = config.get('spreadsheet_id')
 
         if parsed_args.discover:
-            do_discover(client, spreadsheet_id)
+            do_discover(client, config)
         else:
             sync(client=client,
                  config=config,
-                 catalog=parsed_args.catalog or discover(client, spreadsheet_id),
+                 catalog=parsed_args.catalog or discover(client, config),
                  state=state)
 
 if __name__ == '__main__':
