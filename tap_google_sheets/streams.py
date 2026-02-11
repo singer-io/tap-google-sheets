@@ -110,7 +110,7 @@ def get_selected_fields(catalog, stream_name):
 
 def new_format_message(message):
     """To override the ensure_ascii param, overwitten this function"""
-    return json.dumps(message.asdict(), ensure_ascii=False, use_decimal=True)
+    return json.dumps(message.asdict(), ensure_ascii=False, allow_nan=False)
 
 # To override the ensure_ascii param as while writing record the currency symbols were written as ascii values,
 # overwitten this function of messages file of the singer module
