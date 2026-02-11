@@ -65,26 +65,26 @@ def write_record(stream_name, record, time_extracted, version=None):
         LOGGER.info('OS Error writing record for: {}'.format(stream_name))
         raise err
 
-def get_bookmark(state, stream, default):
+def get_version(state, stream, default):
     """
-    Get bookmark for the stream
+    Get bookmark for the stream -- old
+    Get activate_version for the stream -- new
     """
-    if (state is None) or ('bookmarks' not in state):
-        return default
-    return (
-        state
-        .get('bookmarks', {})
-        .get(stream, default)
-    )
+    if 'bookmarks' in state:
+        return state.get('bookmarks', {}).get(stream, default)
+    return singer.get_version(state, stream, default)
 
-def write_bookmark(state, stream, value):
+def clear_bookmark_set_version(state, stream, version):
     """
-    Write bookmark for the stream
+    Clear the bookmark for the stream and write the state
+    with the activate_version
     """
-    if 'bookmarks' not in state:
-        state['bookmarks'] = {}
-    state['bookmarks'][stream] = value
-    LOGGER.info('Write state for stream: {}, value: {}'.format(stream, value))
+    state.pop('bookmarks', None)
+    if version is None:
+        state = singer.clear_version(state, stream)
+    else:
+        state = singer.set_version(state, stream, version)
+    LOGGER.info('Write state for stream: {}, activate_version: {}'.format(stream, version))
     singer.write_state(state)
 
 def get_abs_path(path):
@@ -447,7 +447,7 @@ class SheetsLoadData(GoogleSheets):
                         # everytime after each sheet sync is complete.
                         # This forces hard deletes on the data downstream if fewer records are sent.
                         # https://github.com/singer-io/singer-python/blob/master/singer/messages.py#L137
-                        last_integer = int(get_bookmark(self.state, sheet_title, 0))
+                        last_integer = int(get_version(self.state, sheet_title, 0))
                         activate_version = int(time.time() * 1000)
                         activate_version_message = singer.ActivateVersionMessage(
                                 stream=sheet_title,
@@ -540,7 +540,7 @@ class SheetsLoadData(GoogleSheets):
 
                         # End of Stream: Send Activate Version and update State
                         singer.write_message(activate_version_message)
-                        write_bookmark(self.state, sheet_title, activate_version)
+                        clear_bookmark_set_version(self.state, sheet_title, activate_version)
                         LOGGER.info('COMPLETE SYNC, Stream: {}, Activate Version: {}'.format(sheet_title, activate_version))
                         LOGGER.info('FINISHED Syncing Sheet {}, Total Rows: {}'.format(
                             sheet_title, row_num - 2)) # subtract 1 for header row
