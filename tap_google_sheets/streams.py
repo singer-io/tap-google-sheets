@@ -70,8 +70,8 @@ def get_version(state, stream, default):
     Get bookmark for the stream -- old
     Get activate_version for the stream -- new
     """
-    if 'bookmarks' in state:
-        return state.get('bookmarks', {}).get(stream, default)
+    if state.get('bookmarks', {}).get(stream, False):
+        return -1
     return singer.get_version(state, stream, default)
 
 def clear_bookmark_set_version(state, stream, version):
@@ -79,7 +79,8 @@ def clear_bookmark_set_version(state, stream, version):
     Clear the bookmark for the stream and write the state
     with the activate_version
     """
-    state.pop('bookmarks', None)
+    if 'bookmarks' in state:
+        state['bookmarks'].pop(stream, None)
     if version is None:
         state = singer.clear_version(state, stream)
     else:
