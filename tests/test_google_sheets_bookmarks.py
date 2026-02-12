@@ -65,7 +65,7 @@ class BookmarksTest(GoogleSheetsBaseTest):
         for stream in final_test_streams:
             with self.subTest(stream=stream):
                 sync1_message_actions = [message['action'] for message in synced_records_2[stream]['messages']]
-                self.assertNotIn(stream, state["bookmark"].keys())
+                self.assertNotIn(stream, state["bookmarks"].keys())
                 self.assertIn(stream, state["activate_versions"].keys())
 
     def starter(self):
