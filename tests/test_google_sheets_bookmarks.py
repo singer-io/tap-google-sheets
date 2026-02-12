@@ -41,12 +41,31 @@ class BookmarksTest(GoogleSheetsBaseTest):
         # BUG there are no activate version messages in the sheet_metadata, spreadsheet_metadata
         #          or sheets_loaded streams, even though they are full table https://jira.talendforge.org/browse/TDL-14346
         # verify message actions are correct
-        for stream in self.expected_test_streams.difference({'sheet_metadata', 'spreadsheet_metadata', 'sheets_loaded'}):
+        final_test_streams = self.expected_test_streams.difference({'sheet_metadata', 'spreadsheet_metadata', 'sheets_loaded'})
+        for stream in final_test_streams:
             with self.subTest(stream=stream):
                 sync1_message_actions = [message['action'] for message in synced_records_1[stream]['messages']]
                 self.assertEqual('activate_version', sync1_message_actions[0])
                 self.assertEqual('activate_version', sync1_message_actions[-1])
                 self.assertSetEqual({'upsert'}, set(sync1_message_actions[1:-1]))
+                self.assertIn(stream, state["activate_versions"].keys())
+
+        new_state = {'bookmarks': {final_test_streams[0]: 123}}
+        menagerie.set_state(conn_id, new_state)
+
+        # run another sync with final_test_streams[0] in the depreciated state format
+        with self.assertLogs() as sync_log_lines:
+            sync_job_2 = runner.run_sync_mode(self, conn_id)
+            exit_status_2 = menagerie.get_exit_status(conn_id, sync_job_2)
+            menagerie.verify_sync_exit_status(self, exit_status_2, sync_job_2)
+
+        # gather results
+        state_2 = menagerie.get_state(conn_id)
+        synced_records_2 = runner.get_records_from_target_output()
+        for stream in final_test_streams:
+            with self.subTest(stream=stream):
+                sync1_message_actions = [message['action'] for message in synced_records_2[stream]['messages']]
+                self.assertNotIn(stream, state["bookmark"].keys())
                 self.assertIn(stream, state["activate_versions"].keys())
 
     def starter(self):
