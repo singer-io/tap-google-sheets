@@ -51,7 +51,7 @@ class BookmarksTest(GoogleSheetsBaseTest):
                 self.assertIn(stream, state["activate_versions"].keys())
 
         new_state = {'bookmarks': {list(final_test_streams)[0]: 123}}
-        menagerie.set_state(conn_id, new_state)
+        menagerie.set_state(self.conn_id, new_state)
 
         # run another sync with final_test_streams[0] in the depreciated state format
         with self.assertLogs() as sync_log_lines:
