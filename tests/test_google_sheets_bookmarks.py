@@ -55,12 +55,12 @@ class BookmarksTest(GoogleSheetsBaseTest):
 
         # run another sync with final_test_streams[0] in the depreciated state format
         with self.assertLogs() as sync_log_lines:
-            sync_job_2 = runner.run_sync_mode(self, conn_id)
-            exit_status_2 = menagerie.get_exit_status(conn_id, sync_job_2)
+            sync_job_2 = runner.run_sync_mode(self, self.conn_id)
+            exit_status_2 = menagerie.get_exit_status(self.conn_id, sync_job_2)
             menagerie.verify_sync_exit_status(self, exit_status_2, sync_job_2)
 
         # gather results
-        state_2 = menagerie.get_state(conn_id)
+        state_2 = menagerie.get_state(self.conn_id)
         synced_records_2 = runner.get_records_from_target_output()
         for stream in final_test_streams:
             with self.subTest(stream=stream):
