@@ -50,7 +50,8 @@ class BookmarksTest(GoogleSheetsBaseTest):
                 self.assertSetEqual({'upsert'}, set(sync1_message_actions[1:-1]))
                 self.assertIn(stream, state["activate_versions"].keys())
 
-        new_state = {'bookmarks': {list(final_test_streams)[0]: 123}}
+        new_state = {'bookmarks': {list(final_test_streams)[0]: 123,
+                                   "unselected_stream": 111}}
         menagerie.set_state(self.conn_id, new_state)
 
         # run another sync with final_test_streams[0] in the depreciated state format
@@ -67,6 +68,9 @@ class BookmarksTest(GoogleSheetsBaseTest):
                 sync1_message_actions = [message['action'] for message in synced_records_2[stream]['messages']]
                 self.assertNotIn(stream, state_2["bookmarks"].keys())
                 self.assertIn(stream, state_2["activate_versions"].keys())
+
+        self.assertIn("unselected_stream", state_2["bookmarks"].keys())
+        self.assertNotIn("unselected_stream", state_2["activate_versions"].keys())
 
     def starter(self):
         """
