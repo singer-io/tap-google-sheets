@@ -67,9 +67,10 @@ def write_record(stream_name, record, time_extracted, version=None):
 
 def get_version(state, stream, default):
     """
-    Get activate_version for the stream
+    Get bookmark for the stream -- old
+    Get activate_version for the stream --new
     """
-    return singer.get_version(state, stream, default)
+    return state.get('bookmarks', {}).get(stream, False) or singer.get_version(state, stream, default)
 
 def clear_bookmark_set_version(state, stream, version):
     """
