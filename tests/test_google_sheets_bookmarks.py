@@ -62,12 +62,11 @@ class BookmarksTest(GoogleSheetsBaseTest):
         # gather results
         state_2 = menagerie.get_state(self.conn_id)
         synced_records_2 = runner.get_records_from_target_output()
-        print(state_2)
         for stream in final_test_streams:
             with self.subTest(stream=stream):
                 sync1_message_actions = [message['action'] for message in synced_records_2[stream]['messages']]
-                self.assertNotIn(stream, state["bookmarks"].keys())
-                self.assertIn(stream, state["activate_versions"].keys())
+                self.assertNotIn(stream, state_2["bookmarks"].keys())
+                self.assertIn(stream, state_2["activate_versions"].keys())
 
     def starter(self):
         """
