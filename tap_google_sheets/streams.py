@@ -68,7 +68,7 @@ def write_record(stream_name, record, time_extracted, version=None):
 def get_version(state, stream, default):
     """
     First look for the stream under the 'bookmarks' key for backwards compatibility.
-    Then look for stream in 'activate_versions' (modern structure of state).
+    Then look for stream in 'versions' (modern structure of state).
     Use default if not found.
     """
     return state.get('bookmarks', {}).get(stream) or singer.get_version(state, stream, default)
@@ -76,7 +76,7 @@ def get_version(state, stream, default):
 def clear_bookmark_set_version(state, stream, version):
     """
     Clear the bookmark for the stream and write the state
-    with the activate_version
+    with the versions
     """
     if state.get('bookmarks',{}).get(stream):
         state['bookmarks'].pop(stream, None)
@@ -84,7 +84,7 @@ def clear_bookmark_set_version(state, stream, version):
         state = singer.clear_version(state, stream)
     else:
         state = singer.set_version(state, stream, version)
-    LOGGER.info('Write state for stream: {}, activate_version: {}'.format(stream, version))
+    LOGGER.info('Write state for stream: {}, versions: {}'.format(stream, version))
     singer.write_state(state)
 
 def get_abs_path(path):
