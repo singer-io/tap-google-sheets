@@ -121,7 +121,8 @@ class GoogleSheetsBaseTest(BaseCase):
                 self.PRIMARY_KEYS:{"__sdc_row"},
                 self.REPLICATION_METHOD: self.FULL_TABLE,  # DOCS_BUG TDL-14240 | DOCS say INC but it is FULL
                 self.UNSUPPORTED_FIELDS: {'__sdc_skip_col_06'},
-            }
+            },
+            "TestForCDC": default_sheet
         }
 
     def expected_streams(self):
