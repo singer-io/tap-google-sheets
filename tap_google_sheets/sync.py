@@ -1,5 +1,5 @@
 import singer
-from tap_google_sheets.streams import STREAMS, SheetsLoadData, write_bookmark, strftime
+from tap_google_sheets.streams import STREAMS, SheetsLoadData, strftime
 
 LOGGER = singer.get_logger()
 

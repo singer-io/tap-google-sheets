@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.3.0
+  * Bump singer-python to 6.8.0 and update tests to use renamed state key `versions` [#105](https://github.com/singer-io/tap-google-sheets/pull/105)
+
+## 3.2.0
+  * Update to new singer-python state functions and keep activate_versions separate from bookmarks in state [#104](https://github.com/singer-io/tap-google-sheets/pull/104)
+
 ## 3.1.2
   * Increase the wait time while retrying on failure [#102](https://github.com/singer-io/tap-google-sheets/pull/102)
 

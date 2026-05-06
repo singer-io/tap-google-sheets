@@ -65,26 +65,26 @@ def write_record(stream_name, record, time_extracted, version=None):
         LOGGER.info('OS Error writing record for: {}'.format(stream_name))
         raise err
 
-def get_bookmark(state, stream, default):
+def get_version(state, stream, default):
     """
-    Get bookmark for the stream
+    First look for the stream under the 'bookmarks' key for backwards compatibility.
+    Then look for stream in 'versions' (modern structure of state).
+    Use default if not found.
     """
-    if (state is None) or ('bookmarks' not in state):
-        return default
-    return (
-        state
-        .get('bookmarks', {})
-        .get(stream, default)
-    )
+    return state.get('bookmarks', {}).get(stream) or singer.get_version(state, stream, default)
 
-def write_bookmark(state, stream, value):
+def clear_bookmark_set_version(state, stream, version):
     """
-    Write bookmark for the stream
+    Clear the bookmark for the stream and write the state
+    with the versions
     """
-    if 'bookmarks' not in state:
-        state['bookmarks'] = {}
-    state['bookmarks'][stream] = value
-    LOGGER.info('Write state for stream: {}, value: {}'.format(stream, value))
+    if state.get('bookmarks',{}).get(stream):
+        state['bookmarks'].pop(stream, None)
+    if version is None:
+        state = singer.clear_version(state, stream)
+    else:
+        state = singer.set_version(state, stream, version)
+    LOGGER.info('Write state for stream: {}, versions: {}'.format(stream, version))
     singer.write_state(state)
 
 def get_abs_path(path):
@@ -108,9 +108,9 @@ def get_selected_fields(catalog, stream_name):
             pass
     return selected_fields
 
-def new_format_message(message):
+def new_format_message(message, ensure_ascii=False, allow_nan=False):
     """To override the ensure_ascii param, overwitten this function"""
-    return json.dumps(message.asdict(), ensure_ascii=False, use_decimal=True)
+    return json.dumps(message.asdict(), use_decimal=True, ensure_ascii=False, allow_nan=allow_nan)
 
 # To override the ensure_ascii param as while writing record the currency symbols were written as ascii values,
 # overwitten this function of messages file of the singer module
@@ -460,7 +460,7 @@ class SheetsLoadData(GoogleSheets):
                         # everytime after each sheet sync is complete.
                         # This forces hard deletes on the data downstream if fewer records are sent.
                         # https://github.com/singer-io/singer-python/blob/master/singer/messages.py#L137
-                        last_integer = int(get_bookmark(self.state, sheet_title, 0))
+                        last_integer = int(get_version(self.state, sheet_title, 0))
                         activate_version = int(time.time() * 1000)
                         activate_version_message = singer.ActivateVersionMessage(
                                 stream=sheet_title,
@@ -553,7 +553,7 @@ class SheetsLoadData(GoogleSheets):
 
                         # End of Stream: Send Activate Version and update State
                         singer.write_message(activate_version_message)
-                        write_bookmark(self.state, sheet_title, activate_version)
+                        clear_bookmark_set_version(self.state, sheet_title, activate_version)
                         LOGGER.info('COMPLETE SYNC, Stream: {}, Activate Version: {}'.format(sheet_title, activate_version))
                         LOGGER.info('FINISHED Syncing Sheet {}, Total Rows: {}'.format(
                             sheet_title, row_num - 2)) # subtract 1 for header row
