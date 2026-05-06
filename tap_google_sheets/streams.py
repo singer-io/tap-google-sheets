@@ -144,7 +144,7 @@ class GoogleSheets:
         # return path and query string
         return path, querystring
 
-    def get_schemas(self):
+    def get_schemas(self, sheet_names_filter=None):
         """
         return schema for streams
         """
@@ -253,12 +253,12 @@ class SpreadSheetMetadata(GoogleSheets):
         "includeGridData": "false"
     }
 
-    def get_schemas(self):
+    def get_schemas(self, sheet_names_filter=None):
         """
         Get schema for spreadsheet and generate schema for the sheets in the spreadsheet
         """
         # get schema of spreadsheet metadata
-        schemas, field_metadata = super().get_schemas()
+        schemas, field_metadata = super().get_schemas(sheet_names_filter=sheet_names_filter)
 
         # prepare schema for sheets in the spreadsheet
         api = self.api
@@ -271,12 +271,19 @@ class SpreadSheetMetadata(GoogleSheets):
         if sheets:
             # Loop thru each worksheet in spreadsheet
             for sheet in sheets:
+                sheet_title = sheet.get('properties', {}).get('title')
+                
+                # Apply sheet_names filter if provided
+                if sheet_names_filter and len(sheet_names_filter) > 0:
+                    if sheet_title not in sheet_names_filter:
+                        LOGGER.info('Skipping sheet (not in sheet_names filter): %s', sheet_title)
+                        continue
+                
                 # GET sheet_json_schema for each worksheet (from function above)
                 sheet_json_schema, columns = schema.get_sheet_metadata(sheet, self.spreadsheet_id, self.client)
 
                 # SKIP empty sheets (where sheet_json_schema and columns are None)
                 if sheet_json_schema and columns:
-                    sheet_title = sheet.get('properties', {}).get('title')
                     schemas[sheet_title] = sheet_json_schema
                     sheet_mdata = metadata.new()
                     sheet_mdata = metadata.get_standard_metadata(
@@ -408,7 +415,7 @@ class SheetsLoadData(GoogleSheets):
     replication_method = "FULL_TABLE"
     params = {}
 
-    def load_data(self, catalog, state, selected_streams, sheets, spreadsheet_time_extracted):
+    def load_data(self, catalog, state, selected_streams, sheets, spreadsheet_time_extracted, sheet_names_filter=None):
         """
         Load sheet's records if that sheet is selected for sync
         """
@@ -420,6 +427,12 @@ class SheetsLoadData(GoogleSheets):
             for sheet in sheets:
                 sheet_title = sheet.get('properties', {}).get('title')
                 sheet_id = sheet.get('properties', {}).get('sheetId')
+
+                # Apply sheet_names filter if provided
+                if sheet_names_filter and len(sheet_names_filter) > 0:
+                    if sheet_title not in sheet_names_filter:
+                        LOGGER.info('Skipping sheet (not in sheet_names filter): %s', sheet_title)
+                        continue
 
                 # GET sheet_metadata and columns
                 sheet_schema, columns = schema.get_sheet_metadata(sheet, self.spreadsheet_id, self.client)

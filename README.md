@@ -67,6 +67,11 @@ This tap:
   - Process/send records to target
 
 ## Authentication
+
+This tap supports two authentication methods: OAuth2 (user credentials) and Service Account (for automated pipelines).
+
+### OAuth2 Authentication (User Credentials)
+
 The [**Google Sheets Setup & Authentication**](https://drive.google.com/open?id=1FojlvtLwS0-BzGS37R0jEXtwSHqSiO1Uw-7RKQQO-C4) Google Doc provides instructions show how to configure the Google Cloud API credentials to enable Google Drive and Google Sheets APIs, configure Google Cloud to authorize/verify your domain ownership, generate an API key (client_id, client_secret), authenticate and generate a refresh_token, and prepare your tap config.json with the necessary parameters.
 - Enable Google Sheets API and Authorization Scope: https://www.googleapis.com/auth/spreadsheets.readonly
 - Tap config.json parameters:
@@ -76,6 +81,70 @@ The [**Google Sheets Setup & Authentication**](https://drive.google.com/open?id=
   - spreadsheet_id: unique identifier for each spreadsheet in Google Drive
   - start_date: absolute minimum start date to check file modified
   - user_agent: tap-name and email address; identifies your application in the Remote API server logs
+  - sheet_names (optional): array of sheet names to extract; if omitted, all sheets are discovered
+
+### Service Account Authentication
+
+Service accounts are ideal for automated pipelines, CI/CD environments, and server-to-server integrations where user interaction is not possible.
+
+#### Setup Instructions
+
+1. **Create a Service Account**
+   - Go to [GCP Console > IAM & Admin > Service Accounts](https://console.cloud.google.com/iam-admin/serviceaccounts)
+   - Click "Create Service Account"
+   - Give it a descriptive name (e.g., `tap-google-sheets-reader`)
+   - Click "Create and Continue", then "Done"
+
+2. **Enable Required APIs**
+   - Go to [APIs & Services > Library](https://console.cloud.google.com/apis/library)
+   - Enable "Google Sheets API"
+   - Enable "Google Drive API"
+
+3. **Create and Download JSON Key**
+   - In Service Accounts, click on your service account
+   - Go to "Keys" tab > "Add Key" > "Create new key"
+   - Select "JSON" format and click "Create"
+   - Save the downloaded key file securely
+
+4. **Share Spreadsheets with Service Account**
+   - Copy the service account email (e.g., `sa-name@project-id.iam.gserviceaccount.com`)
+   - Open your Google Spreadsheet
+   - Click "Share" and add the service account email with "Viewer" permission
+
+#### Configuration Examples
+
+**Using a credentials file path:**
+```json
+{
+    "credentials_file": "/path/to/service-account-key.json",
+    "spreadsheet_id": "YOUR_SPREADSHEET_ID",
+    "start_date": "2024-01-01T00:00:00Z",
+    "user_agent": "tap-google-sheets <sa@project.iam.gserviceaccount.com>"
+}
+```
+
+**Using inline JSON (for CI/CD environments):**
+```json
+{
+    "credentials_json": "{\"type\": \"service_account\", \"project_id\": \"...\", ...}",
+    "spreadsheet_id": "YOUR_SPREADSHEET_ID",
+    "start_date": "2024-01-01T00:00:00Z",
+    "user_agent": "tap-google-sheets <sa@project.iam.gserviceaccount.com>"
+}
+```
+
+#### Pro Tip: Google Groups for Permission Management
+
+Instead of sharing spreadsheets individually with service accounts, use Google Groups:
+
+1. Create a Google Group (e.g., `data-readers@yourdomain.com`)
+2. Add your service account email as a member of the group
+3. Share spreadsheets with the Google Group instead
+
+This approach makes it easier to:
+- Manage permissions across multiple service accounts
+- Grant access to new spreadsheets by sharing with one group
+- Audit who has access to your data
 
 ## Quick Start
 
@@ -115,6 +184,22 @@ The [**Google Sheets Setup & Authentication**](https://drive.google.com/open?id=
         "request_timeout": 300
     }
     ```
+
+    **Optional Configuration Parameters:**
+
+    - `sheet_names` (array of strings): Specify which sheets to extract from the spreadsheet. If provided, only these sheets will be discovered, and they will be automatically selected for extraction. If omitted, all sheets are discovered (but not automatically selected). This parameter works seamlessly with `meltano el` without requiring manual catalog editing.
+    
+    Example with sheet filtering:
+    ```json
+    {
+        "spreadsheet_id": "YOUR_GOOGLE_SPREADSHEET_ID",
+        "sheet_names": ["Marco", "Sheet1", "Q4 Results"],
+        "start_date": "2019-01-01T00:00:00Z",
+        "user_agent": "tap-google-sheets <api_user_email@example.com>"
+    }
+    ```
+    
+    **Note:** When `sheet_names` is specified, the filtered sheets are automatically selected in the catalog, making them immediately available for extraction without additional configuration.
     
     Optionally, also create a `state.json` file. `currently_syncing` is an optional attribute used for identifying the last object to be synced in case the job is interrupted mid-stream. The next run would begin where the last job left off.
     Only the `performance_reports` uses a bookmark. The date-time bookmark is stored in a nested structure based on the endpoint, site, and sub_type.The `request_timeout` is an optional paramater to set timeout for requests. Default: 300 seconds

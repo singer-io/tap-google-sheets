@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 from collections import OrderedDict
+import json
 import backoff
 import requests
 import singer
@@ -7,10 +8,19 @@ from singer import metrics
 from singer import utils
 from requests.exceptions import Timeout, ConnectionError
 
+from google.oauth2 import service_account
+from google.auth.transport.requests import Request as GoogleAuthRequest
+
 BASE_URL = 'https://www.googleapis.com'
 GOOGLE_TOKEN_URI = 'https://oauth2.googleapis.com/token'
 LOGGER = singer.get_logger()
 REQUEST_TIMEOUT = 300
+
+# API scopes required for Google Sheets and Drive access
+SCOPES = [
+    'https://www.googleapis.com/auth/spreadsheets.readonly',
+    'https://www.googleapis.com/auth/drive.readonly'
+]
 
 class Server5xxError(Exception):
     pass
@@ -132,14 +142,29 @@ def raise_for_error(response):
 
 class GoogleClient: # pylint: disable=too-many-instance-attributes
     def __init__(self,
-                 client_id,
-                 client_secret,
-                 refresh_token,
+                 client_id=None,
+                 client_secret=None,
+                 refresh_token=None,
                  request_timeout=REQUEST_TIMEOUT,
-                 user_agent=None):
+                 user_agent=None,
+                 credentials_file=None,
+                 credentials_json=None):
+        # OAuth2 credentials
         self.__client_id = client_id
         self.__client_secret = client_secret
         self.__refresh_token = refresh_token
+
+        # Service account credentials
+        self.__credentials_file = credentials_file
+        self.__credentials_json = credentials_json
+        self.__sa_credentials = None
+
+        # Determine auth type
+        if credentials_file or credentials_json:
+            self.__auth_type = 'service_account'
+        else:
+            self.__auth_type = 'oauth2'
+
         self.__user_agent = user_agent
         self.__access_token = None
         self.__expires = None
@@ -166,11 +191,33 @@ class GoogleClient: # pylint: disable=too-many-instance-attributes
     def __exit__(self, exception_type, exception_value, traceback):
         self.__session.close()
 
+    def _load_service_account_credentials(self):
+        """Load and return service account credentials from file or JSON string."""
+        if self.__sa_credentials is not None:
+            return self.__sa_credentials
+
+        if self.__credentials_file:
+            LOGGER.info('Loading service account credentials from file: {}'.format(self.__credentials_file))
+            self.__sa_credentials = service_account.Credentials.from_service_account_file(
+                self.__credentials_file,
+                scopes=SCOPES
+            )
+        elif self.__credentials_json:
+            LOGGER.info('Loading service account credentials from inline JSON')
+            credentials_info = json.loads(self.__credentials_json)
+            self.__sa_credentials = service_account.Credentials.from_service_account_info(
+                credentials_info,
+                scopes=SCOPES
+            )
+
+        return self.__sa_credentials
+
     @backoff.on_exception(backoff.expo,
                           Server5xxError,
                           max_tries=5,
                           factor=2)
-    def get_access_token(self):
+    def _get_oauth2_token(self):
+        """Get access token using OAuth2 refresh token flow."""
         # The refresh_token never expires and may be used many times to generate each access_token
         # Since the refresh_token does not expire, it is not included in get access_token response
         if self.__access_token is not None and self.__expires > datetime.utcnow():
@@ -200,7 +247,38 @@ class GoogleClient: # pylint: disable=too-many-instance-attributes
         data = response.json()
         self.__access_token = data['access_token']
         self.__expires = datetime.utcnow() + timedelta(seconds=data['expires_in'])
-        LOGGER.info('Authorized, token expires = {}'.format(self.__expires))
+        LOGGER.info('Authorized via OAuth2, token expires = {}'.format(self.__expires))
+
+    @backoff.on_exception(backoff.expo,
+                          Server5xxError,
+                          max_tries=5,
+                          factor=2)
+    def _get_service_account_token(self):
+        """Get access token using service account credentials."""
+        credentials = self._load_service_account_credentials()
+
+        # Check if token needs refresh (expired or not yet obtained)
+        if credentials.token is None or (credentials.expiry and credentials.expiry <= datetime.utcnow()):
+            LOGGER.info('Refreshing service account token')
+            credentials.refresh(GoogleAuthRequest())
+
+        self.__access_token = credentials.token
+        self.__expires = credentials.expiry
+        LOGGER.info('Authorized via service account, token expires = {}'.format(self.__expires))
+
+    @backoff.on_exception(backoff.expo,
+                          Server5xxError,
+                          max_tries=5,
+                          factor=2)
+    def get_access_token(self):
+        """Get access token using appropriate authentication method."""
+        if self.__access_token is not None and self.__expires and self.__expires > datetime.utcnow():
+            return
+
+        if self.__auth_type == 'service_account':
+            self._get_service_account_token()
+        else:
+            self._get_oauth2_token()
 
 
     # Backoff request for 5 times at an interval of 10 seconds when we get Timeout error
