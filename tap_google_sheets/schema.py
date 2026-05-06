@@ -249,8 +249,8 @@ def get_sheet_metadata(sheet, spreadsheet_id, client):
     try:
         sheet_json_schema, columns = get_sheet_schema_columns(sheet_metadata)
     except Exception as err:
-        LOGGER.warning('{}'.format(err))
-        LOGGER.warning('SKIPPING Malformed sheet: {}'.format(sheet_title))
-        sheet_json_schema, columns = None, None
+        LOGGER.error('{}'.format(err))
+        LOGGER.error('SKIPPING Malformed sheet: {}'.format(sheet_title))
+        raise
 
     return sheet_json_schema, columns
