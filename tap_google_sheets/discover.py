@@ -1,8 +1,40 @@
+import singer
 from singer.catalog import Catalog, CatalogEntry, Schema
 from tap_google_sheets.schema import STREAMS
+from tap_google_sheets.client import (
+    GoogleError,
+    GoogleUnauthorizedError,
+    GoogleForbiddenError,
+    GoogleNotFoundError,
+    GoogleMethodNotAllowedError,
+)
+
+LOGGER = singer.get_logger()
+
+
+def check_stream_access(client, spreadsheet_id) -> bool:
+    """Probe the spreadsheet endpoint to verify the credentials can access it.
+    Returns False on 401/403/404/405; True on success or any other API error.
+    """
+    path = 'spreadsheets/{}?includeGridData=false'.format(spreadsheet_id)
+    LOGGER.info("Checking spreadsheet access for spreadsheet_id '%s'", spreadsheet_id)
+    try:
+        client.get(path=path, api='sheets', endpoint='spreadsheet_metadata')
+        return True
+    except (GoogleUnauthorizedError, GoogleForbiddenError,
+            GoogleNotFoundError, GoogleMethodNotAllowedError):
+        return False
+    except GoogleError:
+        return True
 
 
 def discover(client, spreadsheet_id):
+    if not check_stream_access(client, spreadsheet_id):
+        raise Exception(
+            "The credentials do not have access to spreadsheet '{}'. "
+            "Verify that the API credentials have the required permissions.".format(spreadsheet_id)
+        )
+
     catalog = Catalog([])
 
     for stream, stream_obj in STREAMS.items():
