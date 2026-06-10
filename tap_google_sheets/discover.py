@@ -14,7 +14,7 @@ LOGGER = singer.get_logger()
 
 def check_stream_access(client, spreadsheet_id) -> bool:
     """Probe the spreadsheet endpoint to verify the credentials can access it.
-    Returns False on 401/403/404/405; True on success or any other API error.
+    Returns False on 401/403/404/405; returns True on success; re-raises other API errors.
     """
     path = 'spreadsheets/{}?includeGridData=false'.format(spreadsheet_id)
     LOGGER.info("Checking spreadsheet access for spreadsheet_id '%s'", spreadsheet_id)
@@ -25,14 +25,15 @@ def check_stream_access(client, spreadsheet_id) -> bool:
             GoogleNotFoundError, GoogleMethodNotAllowedError):
         return False
     except GoogleError:
-        return True
+        # Non-auth API errors aren't access-related; preserve the original failure.
+         raise
 
 
 def discover(client, spreadsheet_id):
     if not check_stream_access(client, spreadsheet_id):
         raise Exception(
-            "The credentials do not have access to spreadsheet '{}'. "
-            "Verify that the API credentials have the required permissions.".format(spreadsheet_id)
+           "Spreadsheet '{}' was not found or the credentials do not have access to it. "
+            "Verify the spreadsheet ID and that the API credentials have the required permissions.".format(spreadsheet_id)
         )
 
     catalog = Catalog([])

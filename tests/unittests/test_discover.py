@@ -58,11 +58,11 @@ class TestCheckStreamAccess(unittest.TestCase):
         self.assertFalse(result)
 
     def test_returns_true_on_non_auth_google_error(self):
-        """Non-auth API errors mean the server responded — access assumed."""
+        """Non-auth API errors aren't access-related; preserve the original failure."""
         client = self._client()
         client.get.side_effect = GoogleBadRequestError('400')
-        result = check_stream_access(client, 'spreadsheet123')
-        self.assertTrue(result)
+        with self.assertRaises(GoogleBadRequestError):
+             check_stream_access(client, 'spreadsheet123')
 
     def test_reraises_non_google_errors(self):
         client = self._client()
