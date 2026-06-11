@@ -84,7 +84,7 @@ class TestDiscover(unittest.TestCase):
     def test_inaccessible_spreadsheet_raises_exception(self, mock_check):
         with self.assertRaises(Exception) as ctx:
             discover(self._client(), 'spreadsheet123')
-        self.assertIn('Spreadsheet 'spreadsheet123' was not found or the credentials do not have access to it.', str(ctx.exception))
+        self.assertIn("Spreadsheet 'spreadsheet123' was not found or the credentials do not have access to it.", str(ctx.exception))
 
     @patch('tap_google_sheets.discover.check_stream_access', return_value=True)
     def test_accessible_spreadsheet_proceeds_to_schema_loading(self, mock_check):
