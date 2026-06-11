@@ -2,7 +2,6 @@ import singer
 from singer.catalog import Catalog, CatalogEntry, Schema
 from tap_google_sheets.schema import STREAMS
 from tap_google_sheets.client import (
-    GoogleError,
     GoogleUnauthorizedError,
     GoogleForbiddenError,
     GoogleNotFoundError,
@@ -24,9 +23,6 @@ def check_stream_access(client, spreadsheet_id) -> bool:
     except (GoogleUnauthorizedError, GoogleForbiddenError,
             GoogleNotFoundError, GoogleMethodNotAllowedError):
         return False
-    except GoogleError:
-        # Non-auth API errors aren't access-related; preserve the original failure.
-         raise
 
 
 def discover(client, spreadsheet_id):
