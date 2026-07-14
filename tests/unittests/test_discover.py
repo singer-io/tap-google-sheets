@@ -62,7 +62,7 @@ class TestCheckStreamAccess(unittest.TestCase):
         client = self._client()
         client.get.side_effect = GoogleBadRequestError('400')
         with self.assertRaises(GoogleBadRequestError):
-             check_stream_access(client, 'spreadsheet123')
+            check_stream_access(client, 'spreadsheet123')
 
     def test_reraises_non_google_errors(self):
         client = self._client()
