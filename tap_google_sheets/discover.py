@@ -28,8 +28,8 @@ def check_stream_access(client, spreadsheet_id) -> bool:
 def discover(client, spreadsheet_id):
     if not check_stream_access(client, spreadsheet_id):
         raise Exception(
-           "Spreadsheet '{}' was not found or the credentials do not have access to it. "
-            "Verify the spreadsheet ID and that the API credentials have the required permissions.".format(spreadsheet_id)
+            f"Spreadsheet '{spreadsheet_id}' was not found or the credentials do not have access to it. "
+            "Verify the spreadsheet ID and that the API credentials have the required permissions."
         )
 
     catalog = Catalog([])
