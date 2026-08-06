@@ -1,5 +1,6 @@
 import json
 import os
+import sys
 import time
 import re
 import simplejson as json
@@ -109,8 +110,22 @@ def get_selected_fields(catalog, stream_name):
     return selected_fields
 
 def new_format_message(message, ensure_ascii=False, allow_nan=False):
-    """To override the ensure_ascii param, overwitten this function"""
-    return json.dumps(message.asdict(), use_decimal=True, ensure_ascii=False, allow_nan=allow_nan)
+    """Serialize Singer messages with UTF-8 preference and safe stdout fallback."""
+    payload = message.asdict()
+
+    if ensure_ascii:
+        return json.dumps(payload, use_decimal=True, ensure_ascii=True, allow_nan=allow_nan)
+
+    formatted_message = json.dumps(payload, use_decimal=True, ensure_ascii=False, allow_nan=allow_nan)
+    stdout_encoding = getattr(sys.stdout, "encoding", None)
+
+    if stdout_encoding:
+        try:
+            formatted_message.encode(stdout_encoding)
+        except (UnicodeEncodeError, LookupError):
+            return json.dumps(payload, use_decimal=True, ensure_ascii=True, allow_nan=allow_nan)
+
+    return formatted_message
 
 # To override the ensure_ascii param as while writing record the currency symbols were written as ascii values,
 # overwitten this function of messages file of the singer module
@@ -433,6 +448,7 @@ class SheetsLoadData(GoogleSheets):
                     sheet_metadata_transformed = internal_transform.transform_sheet_metadata(self.spreadsheet_id, sheet, columns)
                     # LOGGER.info('sheet_metadata_transformed = {}'.format(sheet_metadata_transformed))
                     sheet_metadata.append(sheet_metadata_transformed)
+                    last_row_number = sheet.get('properties', {}).get('gridProperties', {}).get('rowCount', 0)
 
                     # SHEET_DATA
                     # Should this worksheet tab be synced?
@@ -545,15 +561,18 @@ class SheetsLoadData(GoogleSheets):
                         LOGGER.info('FINISHED Syncing Sheet {}, Total Rows: {}'.format(
                             sheet_title, row_num - 2)) # subtract 1 for header row
                         update_currently_syncing(self.state, None)
+                        last_row_number = row_num
 
-                        # SHEETS_LOADED
-                        # Add sheet to sheets_loaded
+                    # SHEETS_LOADED
+                    # Add sheet to sheets_loaded if the stream is selected.
+                    # This must not depend on worksheet tab selection.
+                    if 'sheets_loaded' in selected_streams:
                         sheet_loaded = {}
                         sheet_loaded['spreadsheetId'] = self.spreadsheet_id
                         sheet_loaded['sheetId'] = sheet_id
                         sheet_loaded['title'] = sheet_title
                         sheet_loaded['loadDate'] = strftime(utils.now())
-                        sheet_loaded['lastRowNumber'] = row_num
+                        sheet_loaded['lastRowNumber'] = last_row_number
                         sheets_loaded.append(sheet_loaded)
 
         return sheet_metadata, sheets_loaded
