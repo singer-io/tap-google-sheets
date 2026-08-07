@@ -435,6 +435,7 @@ class SheetsLoadData(GoogleSheets):
             for sheet in sheets:
                 sheet_title = sheet.get('properties', {}).get('title')
                 sheet_id = sheet.get('properties', {}).get('sheetId')
+                last_row_number = sheet.get('properties', {}).get('gridProperties', {}).get('rowCount', 0)
 
                 # GET sheet_metadata and columns
                 sheet_schema, columns = schema.get_sheet_metadata(sheet, self.spreadsheet_id, self.client)
@@ -448,7 +449,6 @@ class SheetsLoadData(GoogleSheets):
                     sheet_metadata_transformed = internal_transform.transform_sheet_metadata(self.spreadsheet_id, sheet, columns)
                     # LOGGER.info('sheet_metadata_transformed = {}'.format(sheet_metadata_transformed))
                     sheet_metadata.append(sheet_metadata_transformed)
-                    last_row_number = sheet.get('properties', {}).get('gridProperties', {}).get('rowCount', 0)
 
                     # SHEET_DATA
                     # Should this worksheet tab be synced?
@@ -563,17 +563,17 @@ class SheetsLoadData(GoogleSheets):
                         update_currently_syncing(self.state, None)
                         last_row_number = row_num
 
-                    # SHEETS_LOADED
-                    # Add sheet to sheets_loaded if the stream is selected.
-                    # This must not depend on worksheet tab selection.
-                    if 'sheets_loaded' in selected_streams:
-                        sheet_loaded = {}
-                        sheet_loaded['spreadsheetId'] = self.spreadsheet_id
-                        sheet_loaded['sheetId'] = sheet_id
-                        sheet_loaded['title'] = sheet_title
-                        sheet_loaded['loadDate'] = strftime(utils.now())
-                        sheet_loaded['lastRowNumber'] = last_row_number
-                        sheets_loaded.append(sheet_loaded)
+                # SHEETS_LOADED
+                # Add sheet to sheets_loaded if the stream is selected.
+                # This must not depend on worksheet tab selection.
+                if 'sheets_loaded' in selected_streams:
+                    sheet_loaded = {}
+                    sheet_loaded['spreadsheetId'] = self.spreadsheet_id
+                    sheet_loaded['sheetId'] = sheet_id
+                    sheet_loaded['title'] = sheet_title
+                    sheet_loaded['loadDate'] = strftime(utils.now())
+                    sheet_loaded['lastRowNumber'] = last_row_number
+                    sheets_loaded.append(sheet_loaded)
 
         return sheet_metadata, sheets_loaded
 
