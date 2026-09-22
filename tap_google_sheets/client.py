@@ -110,25 +110,32 @@ def raise_for_error(response):
     try:
         response.raise_for_status()
     except (requests.HTTPError, requests.ConnectionError) as error:
-        try:
-            content_length = len(response.content)
-            if content_length == 0:
-                # There is nothing we can do here since Google has neither sent
-                # us a 2xx response nor a response content.
-                return
-            # Fetch the status code from the response object itself.
-            status_code = response.status_code
-            response = response.json()
-            if ('error' in response) or ('errorCode' in response):
-                # To form the error message, first, check for the message. If the message is not available, check for `error_description` in response.
-                # If both are not available, raise an Unknown Error.
-                message = 'HTTP-error-code: %s %s: %s' % (status_code, response.get('error', str(error)),
-                                      response.get('message',  response.get('error_description', 'Unknown Error')))
-                ex = get_exception_for_error_code(status_code)
-                raise ex(message)
-            raise GoogleError(error)
-        except (ValueError, TypeError):
-            raise GoogleError(error)
+        # Fetch the status code from the response object itself. We must always
+        # raise an exception mapped from the status code below (even when the
+        # response body is empty or unparsable), so that callers relying on
+        # specific Google*Error subclasses (e.g. discover.check_stream_access)
+        # can reliably detect auth/permission failures. Silently returning here
+        # previously let empty-body 401/403/404/405 responses fall through as
+        # if the request had succeeded.
+        status_code = response.status_code
+        message = 'HTTP-error-code: %s %s' % (status_code, str(error))
+        content_length = len(response.content)
+        if content_length > 0:
+            try:
+                response_json = response.json()
+                if ('error' in response_json) or ('errorCode' in response_json):
+                    # To form the error message, first, check for the message. If the message is not available,
+                    # check for `error_description` in response. If both are not available, raise an Unknown Error.
+                    message = 'HTTP-error-code: %s %s: %s' % (
+                        status_code,
+                        response_json.get('error', str(error)),
+                        response_json.get('message', response_json.get('error_description', 'Unknown Error')))
+            except (ValueError, TypeError):
+                # Response body was non-empty but not valid JSON; fall back to the
+                # generic status-code-based message set above.
+                pass
+        ex = get_exception_for_error_code(status_code)
+        raise ex(message)
 
 class GoogleClient: # pylint: disable=too-many-instance-attributes
     def __init__(self,

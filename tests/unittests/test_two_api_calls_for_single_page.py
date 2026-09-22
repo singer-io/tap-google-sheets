@@ -39,3 +39,31 @@ class TestUnsupportedFields(unittest.TestCase):
         self.assertEqual(mock.call(api='sheets', endpoint='Sheet13', params='dateTimeRenderOption=SERIAL_NUMBER&valueRenderOption=UNFORMATTED_VALUE&majorDimension=ROWS', path="spreadsheets/id/values/'Sheet13'!A2:B100"), mocked_get.mock_calls[2]) # because also calling sheet.get('values', []) in the code
         # Verify that the get() is called 2 times
         self.assertEqual(mocked_get.call_count, 2)
+
+    @mock.patch('tap_google_sheets.streams.schema.get_sheet_metadata', return_value=[None, None])
+    def test_sheets_loaded_emitted_for_empty_sheet(self, _mocked_sheet_metadata):
+        """Verify sheets_loaded gets records even when worksheet data schema is unavailable."""
+        config = {
+            "spreadsheet_id": "id",
+            "start_date": "2019-01-01T00:00:00Z"
+        }
+        sheets = [{
+            "properties": {
+                "sheetId": 1260142713,
+                "title": "Sheet13",
+                "gridProperties": {
+                    "rowCount": 100,
+                    "columnCount": 5
+                }
+            }
+        }]
+
+        client = GoogleClient("dummy_client_id", "dummy_client_secret", "dummy_refresh_token", 300)
+        sheets_load_data = SheetsLoadData(client, config.get("spreadsheet_id"), config.get("start_date"))
+        _, sheets_loaded = sheets_load_data.load_data({}, {}, ["sheets_loaded"], sheets, "time")
+
+        self.assertEqual(1, len(sheets_loaded))
+        self.assertEqual("id", sheets_loaded[0]["spreadsheetId"])
+        self.assertEqual(1260142713, sheets_loaded[0]["sheetId"])
+        self.assertEqual("Sheet13", sheets_loaded[0]["title"])
+        self.assertEqual(100, sheets_loaded[0]["lastRowNumber"])
