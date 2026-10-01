@@ -110,13 +110,7 @@ def raise_for_error(response):
     try:
         response.raise_for_status()
     except (requests.HTTPError, requests.ConnectionError) as error:
-        # Fetch the status code from the response object itself. We must always
-        # raise an exception mapped from the status code below (even when the
-        # response body is empty or unparsable), so that callers relying on
-        # specific Google*Error subclasses (e.g. discover.check_stream_access)
-        # can reliably detect auth/permission failures. Silently returning here
-        # previously let empty-body 401/403/404/405 responses fall through as
-        # if the request had succeeded.
+        # Preserve status-specific exceptions for callers that handle auth failures.
         status_code = response.status_code
         message = 'HTTP-error-code: %s %s' % (status_code, str(error))
         content_length = len(response.content)
