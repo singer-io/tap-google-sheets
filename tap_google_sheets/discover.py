@@ -12,9 +12,7 @@ LOGGER = singer.get_logger()
 
 
 def check_stream_access(client, spreadsheet_id) -> bool:
-    """Probe the spreadsheet endpoint to verify the credentials can access it.
-    Returns False on 401/403/404/405; returns True on success; re-raises other API errors.
-    """
+    """Return False for known access errors and re-raise other API errors."""
     path = 'spreadsheets/{}?includeGridData=false'.format(spreadsheet_id)
     LOGGER.info("Checking spreadsheet access for spreadsheet_id '%s'", spreadsheet_id)
     try:

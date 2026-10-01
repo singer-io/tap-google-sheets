@@ -124,15 +124,12 @@ def raise_for_error(response):
             try:
                 response_json = response.json()
                 if ('error' in response_json) or ('errorCode' in response_json):
-                    # To form the error message, first, check for the message. If the message is not available,
-                    # check for `error_description` in response. If both are not available, raise an Unknown Error.
                     message = 'HTTP-error-code: %s %s: %s' % (
                         status_code,
                         response_json.get('error', str(error)),
                         response_json.get('message', response_json.get('error_description', 'Unknown Error')))
             except (ValueError, TypeError):
-                # Response body was non-empty but not valid JSON; fall back to the
-                # generic status-code-based message set above.
+                # Ignore malformed error bodies and keep the status-based message.
                 pass
         ex = get_exception_for_error_code(status_code)
         raise ex(message)
