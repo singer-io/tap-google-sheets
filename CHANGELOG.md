@@ -1,5 +1,8 @@
 # Changelog
 
+## 3.4.0
+  * Added spreadsheet access check during discovery; returns a clear error if credentials lack access (401/403/404/405) instead of crashing [#106](https://github.com/singer-io/tap-google-sheets/pull/106)
+
 ## 3.3.0
   * Bump singer-python to 6.8.0 and update tests to use renamed state key `versions` [#105](https://github.com/singer-io/tap-google-sheets/pull/105)
 
